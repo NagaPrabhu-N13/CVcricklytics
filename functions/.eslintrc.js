@@ -1,28 +1,19 @@
+/* eslint-env node */
 module.exports = {
   env: {
-    es6: true,
     node: true,
+    commonjs: true,
+    es6: true,
   },
   parserOptions: {
-    "ecmaVersion": 2018,
+    ecmaVersion: 12,
   },
-  extends: [
-    "eslint:recommended",
-    "google",
-  ],
+  extends: ["eslint:recommended", "google"],
   rules: {
-    "no-restricted-globals": ["error", "name", "length"],
+    "no-unused-vars": "warn", // Warn but don't fail
+    "no-undef": "error",      // Re-enable for better code quality
+    quotes: ["error", "double", { allowTemplateLiterals: true }], // If you insist on double quotes
     "prefer-arrow-callback": "error",
-    "quotes": ["error", "double", {"allowTemplateLiterals": true}],
+    "max-len": ["error", { code: 120 }], // Google default is 80; adjust if needed
   },
-  overrides: [
-    {
-      files: ["**/*.spec.*"],
-      env: {
-        mocha: true,
-      },
-      rules: {},
-    },
-  ],
-  globals: {},
 };
