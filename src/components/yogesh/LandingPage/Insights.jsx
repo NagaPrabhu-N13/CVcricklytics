@@ -256,10 +256,9 @@ const Insights = () => {
     };
   };
 
-  // [Rest of the component rendering code remains exactly the same...]
   return (
     <div
-      className="min-h-full bg-fixed text-white p-5"
+      className="min-h-screen bg-fixed text-white p-4 md:p-5"
       style={{
         backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
         backgroundRepeat: 'no-repeat',
@@ -268,23 +267,7 @@ const Insights = () => {
       }}
     >
       {/* Top Navigation Bar */}
-      <div className="flex flex-col mt-0">
-        <div className="flex items-start">
-          <img
-            src={logo}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-cover block select-none"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/photo3.jpg";
-            }}
-          />
-          <span className="p-2 text-2xl font-bold text-white whitespace-nowrap shadow-[1px_1px_10px_rgba(255,255,255,0.5)]">
-            Cricklytics
-          </span>
-        </div>
-      </div>
-      <div className="md:absolute flex items-center gap-4">
+       <div className="md:absolute flex items-center gap-4">
         <img
           src={backButton}
           alt="Back"
@@ -294,28 +277,28 @@ const Insights = () => {
       </div>
 
       {/* User Profile */}
-      <div className="max-w-5xl mx-auto mt-6">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="max-w-5xl mx-auto mt-4 md:mt-6">
+        <div className="flex items-center gap-3 mb-4 md:mb-6">
           <img
             src={userProfile?.profileImageUrl || "/images/user-placeholder.png"}
             alt="User Pic"
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover aspect-square"
+            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full object-cover aspect-square"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/images/user-placeholder.png";
             }}
           />
-          <div className="text-2xl sm:text-3xl md:text-4xl font-['Alegreya'] text-gray-300">
+          <div className="text-xl sm:text-2xl md:text-3xl font-['Alegreya'] text-gray-300">
             {userProfile?.firstName || "User"}
           </div>
         </div>
 
         {/* Horizontal Navigation Bar */}
-        <div className="flex overflow-x-auto justify-center whitespace-nowrap gap-4 border-b border-white/20 mb-10 px-4">
+        <div className="flex overflow-x-auto scrollbar-hide whitespace-nowrap gap-2 md:gap-4 border-b border-white/20 mb-6 md:mb-10 px-2 md:px-4">
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
+              className={`px-3 py-1 md:px-4 md:py-2 text-sm md:text-lg font-['Alegreya'] transition-all duration-300 ${
                 activeTab === tab.id
                   ? "text-cyan-300 border-b-2 border-cyan-300"
                   : "text-gray-300 hover:text-white"
@@ -331,17 +314,17 @@ const Insights = () => {
         </div>
 
         {/* Content Area */}
-        <div className="p-8 rounded-xl border border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.9)] hover:-translate-y-2 transition duration-300">
+        <div className="p-4 md:p-6 lg:p-8 rounded-xl border border-white/20 shadow-lg hover:-translate-y-1 transition duration-300">
           {activeTab !== "overall" && subOptions[activeTab].length > 0 && (
             <div>
-              <h2 className="text-4xl font-bold text-center mb-6 font-['Alegreya']">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-center mb-4 md:mb-6 font-['Alegreya']">
                 {tabs.find((tab) => tab.id === activeTab).label}
               </h2>
-              <div className="flex overflow-x-auto space-x-4 p-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-transparent">
+              <div className="flex overflow-x-auto scrollbar-hide space-x-2 md:space-x-4 p-2 md:p-4">
                 {subOptions[activeTab].map((option) => (
                   <button
                     key={option.id}
-                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
+                    className={`flex-shrink-0 px-4 py-2 md:px-6 md:py-3 rounded-lg text-xs md:text-base font-['Alegreya'] transition-all duration-300 shadow-md ${
                       activeSubOption === option.id
                         ? "text-white bg-blue-500"
                         : "text-white hover:bg-blue-600 hover:text-cyan-300"
@@ -354,8 +337,8 @@ const Insights = () => {
               </div>
             </div>
           )}
-          <div className="mt-6">
-            <h3 className="text-xl font-bold mb-4 font-['sm']">
+          <div className="mt-4 md:mt-6">
+            <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
               {subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label || "Overall Stats"}
             </h3>
             {activeTab === "overall" ? (
@@ -365,11 +348,11 @@ const Insights = () => {
                 {insightsData[activeTab]?.[activeSubOption]?.length > 0 ? (
                   insightsData[activeTab][activeSubOption].map((entry, index) => (
                     <div key={index} className="flex justify-between items-center mb-2 p-2 border-b border-gray-600">
-                      <p>{entry.value}</p>
+                      <p className="text-sm md:text-base">{entry.value}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-300">No data available.</p>
+                  <p className="text-gray-300 text-center py-4">No data available.</p>
                 )}
               </div>
             )}
