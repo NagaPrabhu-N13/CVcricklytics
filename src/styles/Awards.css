@@ -1,0 +1,83 @@
+@import 'tailwindcss';
+
+.awards-bg-gradient {
+  background: linear-gradient(180deg, rgba(13,23,30,1) 0%, rgba(40,63,121,1) 100%);
+}
+
+.button-gradient {
+  background: linear-gradient(276deg, rgba(93,224,230,1) 0%, rgba(0,74,173,1) 100%);
+}
+
+.shadow-button-shadow {
+  box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-button-inset {
+  box-shadow: inset 0px 54px 4px 5px #00000040;
+}
+
+.interactive-button {
+  @apply font-sans font-bold text-black cursor-pointer transition-all duration-300;
+  background: goldenrod;
+}
+
+.interactive-button:hover, .interactive-button.hovered {
+  @apply scale-105 text-white;
+  background: linear-gradient(276deg, rgba(0,74,173,1) 0%, rgba(93,224,230,1) 100%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.interactive-button:active {
+  @apply scale-95;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .awards-bg-gradient {
+    min-height: auto;
+    padding-bottom: 2rem;
+  }
+
+  .interactive-button {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+  }
+
+  h2, h3 {
+    font-size: 1.5rem !important;
+  }
+
+  p {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .max-w-[1525px] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .interactive-button {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+
+  h2, h3 {
+    font-size: 1.25rem !important;
+  }
+
+  p {
+    font-size: 0.75rem !important;
+  }
+}

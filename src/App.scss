@@ -1,0 +1,295 @@
+/* Ensure the entire page has a dark background as a fallback */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#000814);
+  overflow-x: hidden;
+}
+
+/* Player Profile */
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0d171e 0%, #283f79 100%);
+  padding: 1rem;
+  border: 5px solid black;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Player Profile */
+
+$coin-diameter: 18rem;
+$coin-thickness: 1rem; // Reduced thickness for a cleaner edge
+$coin-color: #c0c0c0; // Metallic silver
+$coin-front: '../src/assets/kumar/silvercoinshade.png';
+$coin-back: '../src/assets/kumar/silvercoinshade.png';
+$edge-faces: 180;
+$edge-face-length: $coin-diameter * 3.14 / $edge-faces * 1.01;
+$turn-time: 4s;
+
+.outer {
+  background: linear-gradient(#000814);
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.lottie-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  object-fit: cover;
+  background: linear-gradient(#000814);
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  width: 90%;
+  max-width: 1200px;
+  padding: 1rem;
+}
+
+#greet {
+  text-align: center;
+  font-size: clamp(3rem, 8vw, 5rem); 
+  font-weight: bold;
+  background: linear-gradient(90deg, #ffd700, #ffea00); /* Golden gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  caret-color: transparent;
+  text-shadow: 
+    0 0 5px #ffd700,
+    0 0 10px #ffea00,
+    0 0 20px #ffd700,
+    0 0 30px #ffea00;
+  animation: flicker 3s infinite alternate;
+  margin-bottom: 2rem;
+}
+
+.coin {
+  position: relative;
+  width: $coin-diameter;
+  height: $coin-diameter;
+  transform-style: preserve-3d;
+  transition: all 0.3s;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.flip-mode {
+  animation: flip-motion $turn-time linear 1 forwards;
+}
+
+.flipped {
+  transform: perspective(1000px) rotateX(360deg);
+}
+
+
+@keyframes flip-motion {
+  0% {
+    transform: perspective(1000px) translateY(200px) rotateX(0deg) scale(0.5);
+  }
+  50% {
+    transform: perspective(1000px) translateY(-50px) rotateX(180deg) scale(0.7);
+  }
+  100% {
+    transform: perspective(1000px) translateY(20px) rotateX(360deg) scale(1);
+  }
+}
+
+@keyframes flip-coin {
+  0% {
+    transform: perspective(1000px) rotateX(0deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateX(180deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateX(360deg);
+  }
+  
+}
+@keyframes flicker {
+  0%, 54%, 100% {
+    opacity: 1;
+    text-shadow:
+      0 0 5px #ffd700,
+      0 0 10px #ffea00,
+      0 0 20px #ffd700,
+      0 0 30px #ffea00;
+  }
+  20%, 24%, 55% {
+    opacity: 0.8;
+    text-shadow: none;
+  }
+}
+
+
+.coin__front,
+.coin__back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: $coin-color;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  z-index: 2; // Ensure front/back faces are above the edge
+}
+
+.coin__front {
+  background-image: url($coin-front);
+  background-size: cover;
+  background-position: center;
+  transform: translateZ($coin-thickness / 2);
+}
+
+.coin__back {
+  background-image: url($coin-back);
+  background-size: cover;
+  background-position: center;
+  transform: translateZ(-$coin-thickness / 2) rotateY(180deg) scale(-1);
+}
+
+.coin__edge {
+  position:absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  z-index: -1; // Below front/back faces
+
+  div {
+    position: absolute;
+    height: $edge-face-length;
+    width: $coin-thickness;
+    background: $coin-color; // Match the coin color for a seamless edge
+
+    @for $i from 1 through $edge-faces {
+      &:nth-child(#{$i}) {
+        transform: translateY(#{$coin-diameter / 2 - $edge-face-length / 2})
+          translateX(#{$coin-diameter / 2 - $coin-thickness / 2})
+          rotateZ(#{360deg / $edge-faces * ($i - 1)})
+          translateX(#{$coin-diameter / 2})
+          rotateY(90deg);
+      }
+    }
+  }
+}
+
+.coin__shadow {
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  filter: blur(5px);
+}
+
+.coin__front h2, .coin__back h2 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  font-weight: 900;
+  color: #000000; /* Changed to black */
+  caret-color: transparent;
+  text-shadow: none; /* Removed gold shadows for clean black text */
+  letter-spacing: 1px;
+  text-rendering: optimizeLegibility;
+  -webkit-text-stroke: 0; /* Removed gold stroke */
+}
+
+
+.coin-text {
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 90%;
+}
+
+.scarlet-transparent {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+}
+
+/* Media Queries for Mobile Responsiveness */
+
+
+@media (max-width: 480px) {
+  $coin-diameter: 18rem;
+  $coin-thickness: 0.6rem;
+
+
+    #greet {
+      font-size: 4rem; // ✅ Larger and still responsive
+      font-family: 'Arial', sans-serif;
+      margin-bottom: 1rem;
+    
+  }
+
+  .coin {
+    width: $coin-diameter;
+    height: $coin-diameter;
+  }
+
+  .coin__shadow {
+    width: 50%;
+    height: 0.3rem;
+    bottom: -0.75rem;
+    
+  }
+
+  .lottie-background {
+    height: 100vh;
+  }
+
+  .coin__front h6,
+  .coin__back h6 {
+    font-size: 1rem;
+
+  width: 120%;
+  height: 30%;
+  
+  
+  }
+  .coin-text {
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 50%;
+  }
+}

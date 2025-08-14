@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+.selection-criteria-container {
+  @apply min-h-screen w-full flex justify-center items-start;
+  background: linear-gradient(180deg, rgba(13, 23, 30, 1) 0%, rgba(40, 63, 121, 1) 100%);
+  /* padding: 150px; */
+}
+
+.selection-criteria-content {
+  @apply w-full max-w-4xl;
+  background: linear-gradient(276deg, rgba(93, 224, 230, 1) 0%, rgba(0, 74, 173, 1) 100%);
+  padding: 30px;
+  border-radius: 8px;
+  margin-top: 5%;
+  box-shadow: 0 2px 4px rgba(5, 0, 0, 0.1);
+}
+
+.page-title {
+  @apply text-4xl font-bold text-center mb-8;
+  color: whitesmoke;
+}
+
+.criteria-dropdowns {
+  @apply space-y-4;
+}
+
+.dropdown-item {
+  @apply w-full;
+}
+
+.dropdown-button {
+  @apply w-full text-left py-3 px-4 bg-white/20 rounded-lg text-lg font-medium flex justify-between items-center;
+  color: black;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-button:hover {
+  @apply bg-white/30;
+}
+
+.dropdown-arrow {
+  @apply ml-2;
+}
+
+.dropdown-content {
+  @apply mt-2 p-4 bg-white/10 rounded-lg;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.section-text {
+  @apply text-lg leading-relaxed mb-3;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.criteria-list {
+  @apply pl-5 mb-4 list-disc;
+}
+
+.criteria-list li {
+  @apply text-lg text-gray-100 mb-2;
+}
+
