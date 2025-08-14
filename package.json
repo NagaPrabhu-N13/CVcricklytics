@@ -12,7 +12,6 @@
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.15.0",
     "@lottiefiles/react-lottie-player": "^3.6.0",
-    "@tailwindcss/vite": "^4.1.11",
     "chart.js": "^4.5.0",
     "firebase": "^12.1.0",
     "framer-motion": "^12.23.12",
@@ -30,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@tailwindcss/vite": "^4.1.12",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
