@@ -9,7 +9,7 @@ const generateUUID = () => {
     return v.toString(16);
   });
 };
-
+//hello
 const TournamentSplitter = {
   getOptimalGroups(teamCount) {
     if (teamCount === 4) return { groupCount: 1, size: 4 };
