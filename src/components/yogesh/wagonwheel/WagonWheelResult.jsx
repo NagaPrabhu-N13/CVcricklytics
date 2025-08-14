@@ -18,13 +18,18 @@ export default function WagonWheelResult({ data }) {
   const coord = regionCoordinates[shotDirection];
 
   return (
-    <div className="mt-5 flex flex-col items-center">
-      <h2 className="text-3xl font-bold mb-6 text-green-700">Wagon Wheel Result</h2>
+    <div className="mt-6 md:mt-12 flex flex-col items-center px-4">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-4 md:mb-6 text-green-700">Wagon Wheel Result</h2>
 
-      <div className="relative w-[400px] h-[400px]">
-        <svg className="w-full h-full" viewBox="0 0 400 400">
+      <div className="relative w-full max-w-[300px] sm:max-w-[350px] md:max-w-[400px] aspect-square">
+        <svg className="w-full h-full" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+          {/* Field background */}
           <circle cx="200" cy="200" r="190" fill="url(#fieldGradient)" stroke="#16a34a" strokeWidth="4" />
+          
+          {/* Pitch */}
           <rect x="190" y="130" width="20" height="140" fill="#e2e8f0" rx="4" />
+          
+          {/* Shot direction line */}
           {coord && (
             <line
               x1="200"
@@ -37,6 +42,8 @@ export default function WagonWheelResult({ data }) {
               markerEnd="url(#arrow)"
             />
           )}
+          
+          {/* Shot destination marker */}
           {coord && (
             <circle
               cx={coord.x}
@@ -47,19 +54,23 @@ export default function WagonWheelResult({ data }) {
               strokeWidth="2"
             />
           )}
+          
+          {/* Region labels */}
           {Object.entries(regionCoordinates).map(([label, pos]) => (
             <text
               key={label}
               x={pos.x}
               y={pos.y - 10}
-              fontSize="12"
+              fontSize="10"
               textAnchor="middle"
               fill="#1e3a8a"
               fontWeight={shotDirection === label ? "bold" : "normal"}
+              className="text-xs sm:text-sm"
             >
               {label}
             </text>
           ))}
+          
           <defs>
             <linearGradient id="fieldGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#bbf7d0" />
@@ -80,9 +91,15 @@ export default function WagonWheelResult({ data }) {
         </svg>
       </div>
 
-      <div className="mt-6 p-5 bg-white rounded-xl shadow-xl border w-full max-w-md text-left text-sm sm:text-base">
-        <p><strong className="text-gray-700">Shot Direction:</strong> {shotDirection}</p>
-        <p><strong className="text-gray-700">Shot Type:</strong> {shotType}</p>
+      <div className="mt-4 md:mt-6 p-4 md:p-5 bg-white rounded-lg md:rounded-xl shadow-md md:shadow-xl border w-full max-w-xs sm:max-w-sm md:max-w-md text-left text-sm sm:text-base">
+        <p className="mb-2"><strong className="text-gray-700">Shot Direction:</strong> <span className="text-green-800">{shotDirection}</span></p>
+        <p className="mb-2"><strong className="text-gray-700">Shot Type:</strong> <span className="text-green-800">{shotType}</span></p>
+        {catchType && (
+          <p className="mb-2"><strong className="text-gray-700">Catch Type:</strong> <span className="text-green-800">{catchType}</span></p>
+        )}
+        {fielder && (
+          <p><strong className="text-gray-700">Fielder:</strong> <span className="text-green-800">{fielder}</span></p>
+        )}
       </div>
     </div>
   );
