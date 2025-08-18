@@ -916,13 +916,7 @@ const Selection2 = () => {
               </p>
             )}
             <div className="flex justify-center w-full gap-4">
-              <button
-                type="button"
-                className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                onClick={handleBack}
-              >
-                Back
-              </button>
+             
               <button
                 type="button"
                 className={`rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white ${

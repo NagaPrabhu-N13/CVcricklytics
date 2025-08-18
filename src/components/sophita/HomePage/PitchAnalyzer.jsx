@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom'; // New import
 
 const pitchTypes = ["Dry", "Green", "Dusty", "Flat", "Bouncy", "Spinning"];
 const tossOptions = ["Bat First", "Bowl First"];
 
-export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete }) {
+export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournamentName, tournamentId }) {
   const [pitchType, setPitchType] = useState('');
   const [tossResult, setTossResult] = useState('');
   const [location, setLocation] = useState('');
@@ -12,6 +13,10 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete }) {
   const [result, setResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  console.log(tournamentName)
+  console.log(tournamentId)
+
+  const navigate = useNavigate(); // New hook
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -71,7 +76,7 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete }) {
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setPitchImage(e.target.files[0]);
+      setPitchImage(e.target.files);
     }
   };
 
@@ -316,6 +321,28 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete }) {
                     ))}
                   </div>
                 </div>
+
+                {/* Conditional Next Button - New addition */}
+                {/* Conditional Next Button */}
+                {tournamentName && tournamentId && (
+                  <div className="mt-6 flex justify-center">  {/* Changed to justify-center and increased margin-top for spacing */}
+                    <button
+                      onClick={() => {
+                        navigate("/match", {  // Replace "/match-page" with your actual match page route
+                          state: {
+                            tournamentId,
+                            tournamentName,
+                          }
+                        });
+                        setShowModal(false); // Optionally close the modal after navigation
+                      }}
+                      className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 text-base rounded-lg font-semibold hover:shadow-lg transition w-full sm:w-auto"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+
               </div>
             </motion.div>
           </div>

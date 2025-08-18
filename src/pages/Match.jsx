@@ -11,6 +11,9 @@ const Match = () => {
   const [activeTab, setActiveTab] = useState("my-matches");
   const [activeSubOption, setActiveSubOption] = useState("info");
   const [matches, setMatches] = useState([]);
+  const { tournamentName } = location.state || {};
+  const { tournamentId } = location.state || {};
+  console.log(tournamentId, tournamentName);
 
   const tabs = [
     { id: "my-matches", label: "My Matches (Live + Past)" },
@@ -161,14 +164,13 @@ const Match = () => {
   useEffect(() => {
     if (!auth.currentUser) return;
 
+    // Fetch all scoringpage documents (no userId filter in query for flexibility)
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const matchesData = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter(match => match.userId === auth.currentUser.uid);
+      const matchesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
       setMatches(matchesData);
     }, (error) => {
       console.error("Error fetching matches:", error);
@@ -178,20 +180,28 @@ const Match = () => {
   }, []);
 
   useEffect(() => {
-    if (location.state?.activeTab) {
+    if (tournamentId) {
+      // If tournamentId is received, auto-set to "following" tab
+      setActiveTab("following");
+    } else if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab);
-      setActiveSubOption("info");
     }
-  }, [location.state]);
+    setActiveSubOption("info");
+  }, [location.state, tournamentId]);  // Added tournamentId dependency
 
   const filteredMatches = matches.filter(match => {
     if (activeTab === "my-matches") {
-      return true;
+      return match.userId === auth.currentUser.uid;  // Only user's matches
     } else if (activeTab === "following") {
-      return match.tabCategory === "following";
-    } else {
-      return true;
+      if (tournamentId) {
+        return match.tournamentId === tournamentId;  // Filter by received tournamentId (assuming field name is 'tournamentId')
+      } else {
+        return match.tabCategory === "following";  // Fallback to existing logic
+      }
+    } else if (activeTab === "all") {
+      return true;  // All matches
     }
+    return false;  // Default: no matches
   });
 
   const getMatchData = (match, subOption) => {
@@ -342,29 +352,28 @@ const Match = () => {
       {/* Top Navigation Bar */}
       <div className="flex flex-col">
         <div className="flex items-start">
-                    <img
-                      src={logo}
-                      alt="Cricklytics Logo"
-                      className="h-7 w-7 md:h-10 object-contain block select-none"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "/images/Picture3 2.png";
-                      }}
-                    />
-                    <span className="p-2 text-xl sm:text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,1)]">
-                      Cricklytics
-                    </span>
-                  </div>
-                </div>
-                <div className="md:absolute flex items-center gap-4 p-3 sm:p-4 pt-0">
-                  <img
-                    src={backButton}
-                    alt="Back"
-                    className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer -scale-x-100"
-                    onClick={() => window.history.back()}
-                  />
-                </div>
-      
+          <img
+            src={logo}
+            alt="Cricklytics Logo"
+            className="h-7 w-7 md:h-10 object-contain block select-none"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/images/Picture3 2.png";
+            }}
+          />
+          <span className="p-2 text-xl sm:text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,1)]">
+            Cricklytics
+          </span>
+        </div>
+      </div>
+      <div className="md:absolute flex items-center gap-4 p-3 sm:p-4 pt-0">
+        <img
+          src={backButton}
+          alt="Back"
+          className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer -scale-x-100"
+          onClick={() => window.history.back()}
+        />
+      </div>
 
       {/* Horizontal Navigation Bar */}
       <div className="max-w-6xl mx-auto mt-4">
