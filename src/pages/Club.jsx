@@ -26,7 +26,7 @@ const ClubPage = () => {
               <motion.img
                 src={logo}
                 alt="Cricklytics Logo"
-                className="h-7 w-7 md:h-10 object-contain block select-none"
+                   className="w-20 h-20 sm:w-25 sm:h-25 object-cover block select-none"
                 whileHover={{ scale: 1.05 }}
               />
               <span className="text-2xl font-bold text-white pl-3">Cricklytics</span>

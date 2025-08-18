@@ -277,7 +277,7 @@ const Winner25 = () => {
       background: 'linear-gradient(180deg, rgba(13, 23, 30, 1) 0%, rgba(40, 63, 121, 1) 100%)',
     },
     cricklyticsLogo1: {
-      width: '16rem',
+      width: '25rem',
       height: 'auto',
     },
     jamInfo1: {

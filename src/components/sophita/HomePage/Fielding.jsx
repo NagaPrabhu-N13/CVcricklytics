@@ -92,7 +92,7 @@ const FieldingStatsPage = () => {
             >
               <FaChevronLeft className="text-xl" />
             </button>
-            <img src={Picture3} alt="Logo" className="h-8 w-8" />
+            <img src={Picture3} alt="Logo"     className="w-20 h-20 sm:w-25 sm:h-25 object-cover"  />
             <span className="text-xl font-bold">Cricklytics</span>
           </div>
         </div>

@@ -507,7 +507,7 @@ const [completedFixtures, setCompletedFixtures] = useState([]);
               <motion.img
                 src={logo}
                 alt="Cricklytics Logo"
-                className="h-7 w-7 md:h-10 object-contain block select-none"
+                    className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
                 whileHover={{ scale: 1.05 }}
               />
               <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>

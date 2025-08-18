@@ -46,7 +46,7 @@ const Golive = () => {
                      <img 
                        src={logo}
                        alt="Cricklytics Logo"
-                       className="h-7 w-7 md:h-10 object-contain block select-none"
+                           className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
                        onError={(e) => {
                          e.target.onerror = null;
                          e.target.src = "/images/Picture3 2.png";

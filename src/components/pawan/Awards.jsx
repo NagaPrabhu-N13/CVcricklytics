@@ -48,7 +48,7 @@ const Awards = () => {
               <img 
                 src={Picture312Image} 
                 alt="Logo" 
-                className="w-6 h-6 sm:w-8 sm:h-8 object-cover" 
+                className="w-20 h-20 sm:w-25 sm:h-25 object-cover" 
               />
               <span className="font-raleway font-bold text-white text-lg sm:text-2xl">Cricklytics</span>
             </div>

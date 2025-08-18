@@ -62,7 +62,7 @@ export default function TeamDetails() {
     }}>
       <div className="flex flex-col mt-0">
         <div className="flex items-start">
-          <img src={logo} alt="Cricklytics Logo" className="h-7 w-7 md:h-10 object-contain block select-none" />
+          <img src={logo} alt="Cricklytics Logo"     className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none" />
           <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">Cricklytics</span>
         </div>
       </div>

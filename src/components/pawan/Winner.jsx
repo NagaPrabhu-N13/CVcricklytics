@@ -198,7 +198,7 @@ const Winner = () => {
     background: 'linear-gradient(180deg, rgba(13, 23, 30, 1) 0%, rgba(40, 63, 121, 1) 100%)',
   },
   cricklyticsLogo1: {
-    width: '16rem',  // 64px
+    width: '25rem',  // 64px
     height: 'auto',
   },
   jamInfo1: {

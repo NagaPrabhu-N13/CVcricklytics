@@ -430,7 +430,7 @@ AI's response:`;
                     <img
                         src={logo}
                         alt="Cricklytics Logo"
-                        className="h-10 object-contain block"
+                           className="w-20 h-20 sm:w-25 sm:h-25 object-contain block" 
                         onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = "/images/Picture3 2.png";
