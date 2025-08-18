@@ -1,34 +1,51 @@
-
 @import "tailwindcss";
 
-/* Sky Fireworks (constrained to modal) */
+/* 🎆 Sky Fireworks (constrained to modal) */
 @keyframes firework-burst {
-    0% { 
-      transform: translateY(0) scale(0); 
-      opacity: 1; 
-      box-shadow: 
-        0 0 0 0px rgba(255, 98, 161, 0.8),
-        0 0 0 0px rgba(255, 98, 161, 0.5);
-    }
-    50% { 
-      transform: translateY(-50px) scale(0.5); 
-      opacity: 0.8; 
-    }
-    100% { 
-      transform: translateY(-100px) scale(1); 
-      opacity: 0; 
-      box-shadow: 
-        0 0 20px 10px rgba(255, 98, 161, 0),
-        0 0 40px 20px rgba(255, 98, 161, 0);
-    }
+  0% {
+    transform: translateY(0) scale(0);
+    opacity: 1;
+    box-shadow:
+      0 0 0 0px rgba(255, 98, 161, 0.8),
+      0 0 0 0px rgba(255, 98, 161, 0.5);
   }
-  
-  .animate-firework-burst-1 {
-    animation: firework-burst 1.2s ease-out forwards;
+  50% {
+    transform: translateY(-50px) scale(0.5);
+    opacity: 0.8;
   }
-  .animate-firework-burst-2 {
-    animation: firework-burst 1.4s ease-out 0.3s forwards;
+  100% {
+    transform: translateY(-100px) scale(1);
+    opacity: 0;
+    box-shadow:
+      0 0 20px 10px rgba(255, 98, 161, 0),
+      0 0 40px 20px rgba(255, 98, 161, 0);
   }
-  .animate-firework-burst-3 {
-    animation: firework-burst 1.3s ease-out 0.6s forwards;
+}
+
+.animate-firework-burst-1 {
+  animation: firework-burst 1.2s ease-out forwards;
+}
+.animate-firework-burst-2 {
+  animation: firework-burst 1.4s ease-out 0.3s forwards;
+}
+.animate-firework-burst-3 {
+  animation: firework-burst 1.3s ease-out 0.6s forwards;
+}
+
+/* 📅 Flatpickr default styling */
+.flatpickr-calendar {
+  @apply text-sm max-w-[300px];
+}
+.flatpickr-day {
+  @apply p-1 text-xs;
+}
+
+/* 📱 Mobile size adjustments */
+@media (max-width: 640px) {
+  .flatpickr-calendar {
+    @apply text-xs max-w-[220px];
   }
+  .flatpickr-day {
+    @apply p-1 text-[10px];
+  }
+}
