@@ -64,12 +64,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData 
           className="bg-[#121212] text-white w-full max-w-3xl p-6 rounded-2xl relative shadow-xl border border-gray-700"
         >
           {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          
 
           {/* Header */}
           <div className="flex items-center gap-2 mb-6">

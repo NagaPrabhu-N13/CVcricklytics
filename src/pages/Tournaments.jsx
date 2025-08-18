@@ -5,6 +5,7 @@ import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import PitchAnalyzer from '../components/sophita/HomePage/PitchAnalyzer';
 
 export default function TournamentList() {
   const [activeTab, setActiveTab] = useState('myTournament');
@@ -12,6 +13,9 @@ export default function TournamentList() {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+  const [showPitchAnalyzer, setShowPitchAnalyzer] = useState(false);
+  const [selectedForAnalyzer, setSelectedForAnalyzer] = useState(null); // To store the tournament data for PitchAnalyzer
+
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -306,41 +310,52 @@ export default function TournamentList() {
                   </button>
                   <button
                     onClick={() => {
-                      const stage = selectedTournament.currentStage || 'N/A';
-                      if (stage === 'RoundRobin') {
-                        navigate("/Selection2", {
-                          state: {
-                            information: "FromSidebar",
-                            User: "Different User",
-                            tournamentId: selectedTournament.tournamentId,
-                            noOfTeams: selectedTournament.noOfTeams,
-                            tournamentName: selectedTournament.name
-                          }
-                        });
-                      } else if (stage === 'Knockout') {
-                        navigate("/match-start-ko", {
-                          state: {
-                            tournamentId: selectedTournament.tournamentId,
-                            tournamentName: selectedTournament.name,
-                            User: "Different User",
-                          }
-                        });
-                      } else {
-                        // Placeholder for other stages
-                        console.log(`Unsupported stage: ${stage}`);
-                      }
-                      setIsModalOpen(false); // Close modal after navigation
+                      setSelectedForAnalyzer(selectedTournament); // Store the tournament data
+                      setShowPitchAnalyzer(true); // Show the PitchAnalyzer
+                      setIsModalOpen(false); // Close the details modal
                     }}
                     className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded transition font-semibold"
                   >
                     View
                   </button>
+
                 </>
               )}
             </div>
           </div>
         </div>
       )}
+      {/* Pitch Analyzer Overlay */}
+      {showPitchAnalyzer && selectedForAnalyzer && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 px-2">
+          <div
+            className="w-full max-w-4xl rounded-lg p-6 shadow-lg border-2 border-white relative"
+            style={{
+              background: 'rgba(66, 21, 21, 0.85)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPitchAnalyzer(false)}
+              className="absolute top-2 right-2 text-white text-2xl font-bold hover:text-gray-300"
+            >
+              &times;
+            </button>
+            
+            {/* Render the PitchAnalyzer component with props */}
+            <PitchAnalyzer
+              tournament={selectedForAnalyzer}
+              tournamentId= {selectedForAnalyzer.tournamentId}
+              noOfTeams= {selectedForAnalyzer.noOfTeams}
+              tournamentName= {selectedForAnalyzer.name}
+              // Pass the full tournament object (adjust props as needed)
+              // Add other props here, e.g., tournamentId={selectedForAnalyzer.id}, name={selectedForAnalyzer.name}
+            />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
