@@ -80,7 +80,7 @@ const IPLCards = ({ setActiveTab }) => {
       }
       const userId = user.uid;
 
-      const storagePath = match_highlights/${userId}/${Date.now()}_${file.name};
+      const storagePath = `match_highlights/${userId}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
@@ -105,7 +105,7 @@ const IPLCards = ({ setActiveTab }) => {
         ...prev,
       ]);
 
-      alert(${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!);
+      alert(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`);
     } catch (err) {
       console.error('Error uploading file:', err);
       alert('Failed to upload file.');
@@ -210,7 +210,7 @@ const WormGraph = ({ matchData }) => {
   const parseOvers = (overs) => {
     if (!overs) return 0;
     const [whole, decimal] = overs.split('.');
-    return parseFloat(${whole}.${decimal || 0});
+    return parseFloat(`${whole}.${decimal || 0}`);
   };
 
   const teamAData = [];
@@ -285,7 +285,7 @@ const WormGraph = ({ matchData }) => {
           contentStyle={{ backgroundColor: '#374151', color: '#fff' }}
           formatter={(value, name, props) => {
             if (name.includes('Wickets')) {
-              return [${props.payload.name} out, null];
+              return [`${props.payload.name} out`, null];
             }
             return [value, name];
           }}
@@ -304,7 +304,7 @@ const WormGraph = ({ matchData }) => {
         />
         <Scatter
           data={teamAWickets}
-          name={${firstInnings.teamName} Wickets}
+          name={`${firstInnings.teamName} Wickets`}
           fill="#FF0000"
           shape="cross"
           size={8}
@@ -320,7 +320,7 @@ const WormGraph = ({ matchData }) => {
         />
         <Scatter
           data={teamBWickets}
-          name={${secondInnings.teamName} Wickets}
+          name={`${secondInnings.teamName} Wickets`}
           fill="#FF0000"
           shape="cross"
           size={8}
@@ -422,13 +422,13 @@ const Scorecard = ({ matchData }) => {
     <div className="w-full">
       <div className="flex border-b border-gray-700 mb-4">
         <button
-          className={flex-1 py-2 text-white font-semibold ${activeTeam === 'teamA' ? 'bg-gray-800' : 'bg-gray-600'}}
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamA' ? 'bg-gray-800' : 'bg-gray-600'}`}
           onClick={() => setActiveTeam('teamA')}
         >
           {teamA.name}
         </button>
         <button
-          className={flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-800' : 'bg-gray-600'}}
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-800' : 'bg-gray-600'}`}
           onClick={() => setActiveTeam('teamB')}
         >
           {teamB.name}
@@ -475,14 +475,14 @@ const FixtureGenerator = () => {
           setLiveTeamA({
             name: latestMatch.teamA.name,
             flag: latestMatch.teamA.flagUrl || placeholderFlag,
-            score: ${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets},
-            overs: (${latestMatch.teamA.overs} overs),
+            score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
+            overs: `(${latestMatch.teamA.overs} overs)`,
           });
           setLiveTeamB({
             name: latestMatch.teamB.name,
             flag: latestMatch.teamB.flagUrl || placeholderFlag,
-            score: ${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets},
-            overs: (${latestMatch.teamB.overs} overs),
+            score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
+            overs: `(${latestMatch.teamB.overs} overs)`,
           });
 
           if (latestMatch.createdAt) {
@@ -506,13 +506,13 @@ const FixtureGenerator = () => {
             } else if (latestMatch.teamA.result === 'Win') {
               const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
               if (runDiff > 0) {
-                setWinningCaption(${latestMatch.teamA.name} won by ${runDiff} runs);
+                setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
                 setMatchResultWinner(latestMatch.teamA.name);
               }
             } else if (latestMatch.teamB.result === 'Win') {
               const wicketsRemaining = 10 - latestMatch.teamB.wickets;
               if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
-                setWinningCaption(${latestMatch.teamB.name} won by ${wicketsRemaining} wickets);
+                setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
                 setMatchResultWinner(latestMatch.teamB.name);
               }
             }
@@ -543,18 +543,18 @@ const FixtureGenerator = () => {
         setLiveTeamA({
           name: location.state.teamA.name,
           flag: location.state.teamA.flagUrl || placeholderFlag,
-          score: ${location.state.teamA.score || 0}/${location.state.teamA.wickets || 0},
+          score: `${location.state.teamA.score || 0}/${location.state.teamA.wickets || 0}`,
           overs: location.state.teamA.balls
-            ? (${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)
-            : (${location.state.teamA.overs || '0.0'} overs),
+            ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)`
+            : `(${location.state.teamA.overs || '0.0'} overs)`,
         });
         setLiveTeamB({
           name: location.state.teamB.name,
           flag: location.state.teamB.flagUrl || placeholderFlag,
-          score: ${location.state.teamB.score || 0}/${location.state.teamB.wickets || 0},
+          score: `${location.state.teamB.score || 0}/${location.state.teamB.wickets || 0}`,
           overs: location.state.teamB.balls
-            ? (${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)
-            : (${location.state.teamB.overs || '0.0'} overs),
+            ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)`
+            : `(${location.state.teamB.overs || '0.0'} overs)`,
         });
       } else if (location.state.teamA) {
         setLiveTeamA(prevState => ({
@@ -734,7 +734,7 @@ const FixtureGenerator = () => {
                           {liveTeamA.flag ? (
                             <img
                               src={liveTeamA.flag}
-                              alt={${liveTeamA.name} Flag}
+                              alt={`${liveTeamA.name} Flag`}
                               className="w-full h-full object-cover"
                               onError={(e) => (e.target.src = placeholderFlag)}
                             />
@@ -758,7 +758,7 @@ const FixtureGenerator = () => {
                           {liveTeamB.flag ? (
                             <img
                               src={liveTeamB.flag}
-                              alt={${liveTeamB.name} Flag}
+                              alt={`${liveTeamB.name} Flag`}
                               className="w-full h-full object-cover"
                               onError={(e) => (e.target.src = placeholderFlag)}
                             />
@@ -831,7 +831,7 @@ const FixtureGenerator = () => {
                     <div className="flex items-center justify-center mb-4">
                       <img
                         src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
-                        alt={${matchData.matchResult} Flag}
+                        alt={`${matchData.matchResult} Flag`}
                         className="w-12 h-12 mr-2 rounded-full object-cover"
                         onError={(e) => (e.target.src = placeholderFlag)}
                       />
@@ -873,7 +873,7 @@ const FixtureGenerator = () => {
             </motion.div>
           )}
 
-        {activeTab === 'Match Analytics' && (
+          {activeTab === 'Match Analytics' && (
             <div className="rounded-lg p-6 text-white">
               <div className="flex border-b border-gray-700 mb-6">
                 <button
