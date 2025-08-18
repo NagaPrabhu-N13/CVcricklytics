@@ -10,6 +10,8 @@ import others from '../assets/kumar/icons8-tennis-ball-96.png';
 import { db } from '../firebase'; // Adjust the import path as needed
 import { collection, query, where, getDocs, setDoc, updateDoc, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 function Tournamentseries() {
     const navigate = useNavigate();
@@ -147,8 +149,8 @@ function Tournamentseries() {
     const [tournamentName, setTournamentName] = useState('');
     const [selectedLocation, setSelectedLocation] = useState('');
     const [noOfTeams, setNoOfTeams] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
     const [physicalLocation, setPhysicalLocation] = useState('');
     const [selectedSchedule, setSelectedSchedule] = useState('');
     const [selectedTiming, setSelectedTiming] = useState('');
@@ -323,14 +325,15 @@ function Tournamentseries() {
                     <div className="w-full md:absolute md:left-[30%] flex flex-col md:flex-row gap-2 md:gap-0 md:w-[90%] h-fit">                    
                             <div className="flex items-center w-[30%]">
                                 <label className="text-xl text-white">Start Date</label>
-                                <input 
-                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem]"
-                                  type="date" 
-                                  value={startDate}
-                                  onChange={(e) => {
-                                    setStartDate(e.target.value);
+                                <DatePicker
+                                  selected={startDate}
+                                  onChange={(date) => {
+                                    setStartDate(date);
                                     setShowValidationError(false);
                                   }}
+                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem] bg-[#1A2B4C]"
+                                  placeholderText="Select start date"
+                                  calendarClassName="bg-[#1A2B4C] text-white"
                                 />
                                 {showValidationError && !startDate && (
                                   <p className="text-red-500 text-sm absolute bottom-[-20px] left-[120px]">This field is required</p>
@@ -338,14 +341,15 @@ function Tournamentseries() {
                             </div>
                             <div className="flex items-center w-[30%]">
                                 <label className="text-xl text-white">End Date</label>
-                                <input 
-                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem]" 
-                                  type="date" 
-                                  value={endDate}
-                                  onChange={(e) => {
-                                    setEndDate(e.target.value);
+                                <DatePicker
+                                  selected={endDate}
+                                  onChange={(date) => {
+                                    setEndDate(date);
                                     setShowValidationError(false);
                                   }}
+                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem] bg-[#1A2B4C]"
+                                  placeholderText="Select end date"
+                                  calendarClassName="bg-[#1A2B4C] text-white"
                                 />
                                 {showValidationError && !endDate && (
                                   <p className="text-red-500 text-sm absolute bottom-[-20px] left-[120px]">This field is required</p>
@@ -409,20 +413,26 @@ function Tournamentseries() {
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label htmlFor="timing" className="flex text-lg font-medium text-white md:mt-6">Choose your Timing*</label>
-                        <select 
-                          id="timing" 
-                          name="timing" 
-                          className="block w-[16rem] bg-white-900 px-4 py-2 border border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer"
+                        <select
+                          id="timing"
+                          name="timing"
+                          className="block 
+                                     w-[10rem] py-0   
+                                     md:w-[16rem] md:py-2 
+                                     bg-white-900 px-4 border border-white rounded-md 
+                                     text-gray-200 focus:ring-blue-500 cursor-pointer"
                           value={selectedTiming}
                           onChange={(e) => {
                             setSelectedTiming(e.target.value);
                             setShowValidationError(false);
                           }}
                         >
-                            <option value="" className='bg-blue-400 text-white'>Select a Timing</option>
-                            {timingOptions.map(time => (
-                              <option key={time} value={time} className='bg-blue-400 text-white'>{time}</option>
-                            ))}
+                          <option value="" className="bg-blue-400 text-white">Select a Timing</option>
+                          {timingOptions.map((time) => (
+                            <option key={time} value={time} className="bg-blue-400 text-white">
+                              {time}
+                            </option>
+                          ))}
                         </select>
                         {showValidationError && !selectedTiming && (
                           <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
@@ -590,3 +600,5 @@ function Tournamentseries() {
         </section>
     );
 }
+
+export default Tournamentseries;
