@@ -17,7 +17,7 @@ const Frame1321317519 = () => {
         src={Picture312Image}
         alt="Picture3 1 2"
         loading="lazy"
-        className="h-7 w-7 md:h-10 object-contain select-none cursor-pointer pl-1"
+        className="h-20 w-20 md:h-30 object-contain select-none cursor-pointer pl-1"
         onClick={() => navigate("/landingpage")}
       />
       

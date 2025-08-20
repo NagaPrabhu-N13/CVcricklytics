@@ -38,19 +38,19 @@ const CommunitySection = () => {
       {/* Top Navigation Bar */}
       <div className="flex flex-col mt-0">
               <div className="flex items-start md:pl-5">
-                <img
-                  src={logo}
-                  alt="Cricklytics Logo"
-                      className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/images/Picture3 2.png";
-                  }}
-                />
-                <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-                  Cricklytics
-                </span>
-              </div>
+  <img
+    src={logo}
+    alt="Cricklytics Logo"
+    className="w-20 h-20 sm:w-20 sm:h-25 object-cover select-none -mt-5" // Added mt-2 to push logo down slightly
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.src = "/images/Picture3 2.png";
+    }}
+  />
+  <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] self-start">
+    Cricklytics
+  </span>
+</div>
               </div>
               <div className="md:absolute flex items-center gap-4 md:pl-5">
                 <img

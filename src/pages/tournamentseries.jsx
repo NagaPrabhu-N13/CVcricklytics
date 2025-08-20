@@ -14,23 +14,25 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 function Tournamentseries() {
-  const navigate = useNavigate();
-  const [isRulesVisible, setIsRulesVisible] = useState(false);
-  const [showValidationError, setShowValidationError] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null); // State for the selected image file
-  
-  const toggleDivVisibility = (e) => {
-    e.preventDefault();
-    setIsRulesVisible(prevState => !prevState); 
-  };
-  
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedImage(file);
-      setShowValidationError(false);
-    }
-  };
+    const navigate = useNavigate();
+    const [isRulesVisible, setIsRulesVisible] = useState(false);
+    const [showValidationError, setShowValidationError] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null); // State for the selected image file
+    const [imageUploaded, setImageUploaded] = useState(false); // State to track if image is uploaded
+    
+    const toggleDivVisibility = (e) => {
+      e.preventDefault();
+      setIsRulesVisible(prevState => !prevState); 
+    };
+   
+    const handleImageChange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        setSelectedImage(file);
+        setImageUploaded(true); // Set image uploaded state to true
+        setShowValidationError(false);
+      }
+    };
 
   const handleNavigation = async (e) => {
     e.preventDefault();
@@ -247,48 +249,56 @@ function Tournamentseries() {
 
           <div className="absolute left-[-25%] top-[30%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
 
-          <div className="z-20 flex overflow-hidden justify-center w-full md:-mt-5 px-[1rem] pt-[1rem] pb-[1rem] md:px-[5rem] md:pt-[1rem] md:pb-[1rem] relative">
-              <form className="z-30 gap-5 md:gap-6 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[3rem] md:pr-[5rem] md:pt-[3rem] md:pb-[2rem]">
-                  <h1 className="text-3xl md:text-4xl text-white font-bold text-center">Add Tournament/Series</h1>
-                  
-                  {showValidationError && (
-                    <div className="w-full bg-red-500 text-white p-3 rounded-lg mb-4">
-                      Please fill all required fields before proceeding.
+            <div className="z-20 flex overflow-hidden justify-center w-full md:-mt-5 px-[1rem] pt-[1rem] pb-[1rem] md:px-[5rem] md:pt-[1rem] md:pb-[1rem] relative">
+                <form className="z-30 gap-5 md:gap-6 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[3rem] md:pr-[5rem] md:pt-[3rem] md:pb-[2rem]">
+                    <h1 className="text-3xl md:text-4xl text-white font-bold text-center">Add Tournament/Series</h1>
+                    
+                    {showValidationError && (
+                      <div className="w-full bg-red-500 text-white p-3 rounded-lg mb-4">
+                        Please fill all required fields before proceeding.
+                      </div>
+                    )}
+                    
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-8">
+                        <label className="text-xl text-white mt-5">Tournament/ Series Name*</label>
+                        <input 
+                          className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4" 
+                          type="text" 
+                          placeholder="" 
+                          value={tournamentName}
+                          onChange={(e) => {
+                            setTournamentName(e.target.value);
+                            setShowValidationError(false);
+                          }}
+                        />
+                        {showValidationError && !tournamentName.trim() && (
+                          <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
+                        )}
                     </div>
-                  )}
-                  
-                  <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-8">
-                      <label className="text-xl text-white mt-5">Tournament/ Series Name*</label>
-                      <input 
-                        className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4" 
-                        type="text" 
-                        placeholder="" 
-                        value={tournamentName}
-                        onChange={(e) => {
-                          setTournamentName(e.target.value);
-                          setShowValidationError(false);
-                        }}
-                      />
-                      {showValidationError && !tournamentName.trim() && (
-                        <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
-                      )}
-                  </div>
-                  <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                      <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
-                      <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
-                      <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
-                          <div className="flex items-center justify-center w-full">
-                              <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                      <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
-                                      <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
-                                  </div>
-                                  <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
-                              </label>
-                          </div>
-                      </div>
-                      </div>
-                  </div>
+                    <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                        <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
+                        <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
+                        <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
+                            <div className="flex items-center justify-center w-full">
+                                <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
+                                        <p className="mb-2 text-[10px] text-gray-500">
+                                          {imageUploaded ? 'Uploaded!' : 'Click to upload'}
+                                        </p>
+                                    </div>
+                                    <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
+                                </label>
+                            </div>
+                        </div>
+                        {/* Show "Uploaded" text beside the picture box */}
+                        {imageUploaded && (
+                          <span className="text-green-500 font-semibold text-sm ml-2">
+                            ✓ Uploaded
+                          </span>
+                        )}
+                        </div>
+                    </div>
 
                   <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                       <label className="text-xl text-white">Venue*</label>
@@ -605,4 +615,4 @@ function Tournamentseries() {
   );
 }
 
-export default Tournamentseries;
+export default Tournamentseries; 
