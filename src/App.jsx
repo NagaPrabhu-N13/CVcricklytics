@@ -77,6 +77,7 @@ import share from './components/kumar/share';
 import TournamentPage from './components/kumar/share';
 import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
+import TournamentSuccess from './pages/TournamentSuccess';
 import Greeting from './pages/greeting';
 import StartMatchPlayers from './pages/StartMatchPlayers';
 import StartMatchPlayersSB from './pages/StartMatchPlayersSB';
@@ -257,6 +258,7 @@ function App() {
            <Route path="/next" element={<Tournament_nextpg />} />
           <Route path="/TeamProfile" element={<TeamProfile />} />
           <Route path="/TournamentPage" element={<TournamentPage />} />
+          <Route path='/tournamentSuccess' element={<TournamentSuccess />} />
           <Route path="/welcome" element={<Greeting/>} />
           <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
           <Route path="/StartMatchPlayersSB" element={<StartMatchPlayersSB />} />

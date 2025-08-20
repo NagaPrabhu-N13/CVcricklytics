@@ -619,7 +619,7 @@ const FixtureGenerator = () => {
     switch (activeTab) {
       case 'Knockout Brackets':
         if (location.state?.origin) {
-          navigate('/TournamentPage', { state: { tournamentName } });
+          navigate('/tournament', { state: { tournamentName } });
         } else {
           navigate('/tournament', { state: { tournamentName } });
         }

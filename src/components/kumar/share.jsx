@@ -4,7 +4,7 @@ import nav from '../../assets/kumar/right-chevron.png';
 import frd1 from '../../assets/kumar/frd1.jpg';
 import frd2 from '../../assets/kumar/frd2.jpg';
 import { db } from "../../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore";  // Added doc and updateDoc
 
 const TournamentPage = () => {
   const navigate = useNavigate();
@@ -24,12 +24,13 @@ const TournamentPage = () => {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(null);
-  const [noOfTeams, setNoOfTeams] = useState(location.state?.noOfTeams || 0); // Initialize with state or 0
+  const [noOfTeams, setNoOfTeams] = useState(location.state?.noOfTeams || 0);
+  const [tournamentId, setTournamentId] = useState(null);  // New state to store the Firestore doc ID
 
   // Log tournamentName for debugging
   console.log('Received tournamentName:', tournamentName);
 
-  // Fetch noOfTeams from Firebase based on tournamentName
+  // Fetch noOfTeams and tournamentId from Firebase based on tournamentName
   useEffect(() => {
     const fetchTournamentData = async () => {
       if (tournamentName) {
@@ -39,9 +40,12 @@ const TournamentPage = () => {
           const querySnapshot = await getDocs(q);
 
           if (!querySnapshot.empty) {
-            const tournamentDoc = querySnapshot.docs[0].data();
-            setNoOfTeams(tournamentDoc.noOfTeams || 0); // Update noOfTeams from Firebase
-            console.log('Fetched noOfTeams from Firebase:', tournamentDoc.noOfTeams);
+            const tournamentDoc = querySnapshot.docs[0];
+            const data = tournamentDoc.data();
+            setNoOfTeams(data.noOfTeams || 0);
+            setTournamentId(tournamentDoc.id);  // Store the document ID for updates
+            console.log('Fetched noOfTeams from Firebase:', data.noOfTeams);
+            console.log('Fetched tournamentId:', tournamentDoc.id);
           } else {
             console.log('No matching tournament found in Firebase for:', tournamentName);
             setError('Tournament not found in database.');
@@ -80,6 +84,25 @@ const TournamentPage = () => {
       fetchTeams();
     }
   }, [showTeamCards]);
+
+  // New function to update selectedTeams in Firestore
+  const handleUpdateTeams = async () => {
+    if (!tournamentId) {
+      console.error('No tournament ID available for update.');
+      return;
+    }
+
+    try {
+      const tournamentRef = doc(db, 'tournament', tournamentId);
+      await updateDoc(tournamentRef, {
+        selectedTeams: selectedTeams,  // Store as an array in the tournament doc
+      });
+      console.log('Selected teams updated in Firestore:', selectedTeams);
+    } catch (err) {
+      console.error('Error updating selected teams:', err);
+      // Optionally, set an error state here to show in UI
+    }
+  };
 
   const handleAddTeamMode = () => {
     setShowTeamCards(true);
@@ -134,19 +157,39 @@ const TournamentPage = () => {
     setShowModal(true);
   };
 
-  const handleFormatSelect = (format) => {
-    setSelectedFormat(format);
-    setShowModal(false);
-    if (format === 'Round Robin') {
-      navigate('/selection2', { state: { teams: selectedTeams, noOfTeams, tournamentName } });
-    } else {
-      if (selectedTeams.length <= 1) {
-        navigate('/match-start', { state: { activeTab: 'Fixture Generator', selectedTeams, noOfTeams, tournamentName } });
-      } else {
-        navigate('/selection', { state: { teams: selectedTeams, noOfTeams, tournamentName } });
-      }
+ const handleFormatSelect = async (format) => {
+  setSelectedFormat(format);
+  setShowModal(false);
+
+  // Update currentStage in Firestore
+  if (tournamentId) {
+    try {
+      const tournamentRef = doc(db, 'tournament', tournamentId);
+      await updateDoc(tournamentRef, {
+        currentStage: format === 'Round Robin' ? 'RoundRobin' : 'Knockout'
+      });
+      console.log(`Tournament currentStage updated to ${format === 'Round Robin' ? 'RoundRobin' : 'Knockout'}`);
+    } catch (err) {
+      console.error('Error updating tournament currentStage:', err);
+      // Optionally, add UI feedback here, like setting an error state
     }
-  };
+  } else {
+    console.error('No tournament ID available for update.');
+  }
+
+  // Update selected teams and navigate as before
+  await handleUpdateTeams();
+  if (format === 'Round Robin') {
+    navigate('/tournamentSuccess');
+  } else {
+    if (selectedTeams.length <= 1) {
+      navigate('/match-start', { state: { activeTab: 'Fixture Generator', selectedTeams, noOfTeams, tournamentName } });
+    } else {
+      navigate('/tournamentSuccess');
+    }
+  }
+};
+
 
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
@@ -313,131 +356,131 @@ const TournamentPage = () => {
                     type="button"
                     className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                     onClick={handleStartMatch}
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-            {step === 'share' && (
-              <div className="w-full">
+          {step === 'share' && (
+            <div className="w-full">
+              <button
+                onClick={() => {
+                  setStep('menu');
+                  setShowTeamCards(false);
+                }}
+                className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
+              >
+                <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
+              </button>
+              <h2 className="text-xl md:text-2xl font-semibold mb-4">Share with Organisers</h2>
+              <p className="mb-2 text-sm md:text-base">Send this link to invite teams:</p>
+              <div className="bg-white/10 px-4 py-2 rounded mb-4 overflow-x-auto text-xs md:text-base">{sharedLink}</div>
+              <div className="flex flex-col md:flex-row gap-2 md:gap-4 mb-6">
                 <button
-                  onClick={() => {
-                    setStep('menu');
-                    setShowTeamCards(false);
-                  }}
-                  className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
+                  onClick={handleCopyLink}
+                  className="bg-white/10 px-4 py-2 rounded hover:bg-white/20 text-sm md:text-base"
                 >
-                  <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
+                  📋 Copy Link
                 </button>
-                <h2 className="text-xl md:text-2xl font-semibold mb-4">Share with Organisers</h2>
-                <p className="mb-2 text-sm md:text-base">Send this link to invite teams:</p>
-                <div className="bg-white/10 px-4 py-2 rounded mb-4 overflow-x-auto text-xs md:text-base">{sharedLink}</div>
-                <div className="flex flex-col md:flex-row gap-2 md:gap-4 mb-6">
-                  <button
-                    onClick={handleCopyLink}
-                    className="bg-white/10 px-4 py-2 rounded hover:bg-white/20 text-sm md:text-base"
-                  >
-                    📋 Copy Link
-                  </button>
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      'Join our tournament: ' + sharedLink
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-green-500 px-4 py-2 rounded bg-[linear-gradient(120deg,_#000000,_#001A80)] text-center text-sm md:text-base"
-                  >
-                    📤 Share via WhatsApp
-                  </a>
-                </div>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    'Join our tournament: ' + sharedLink
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-500 px-4 py-2 rounded bg-[linear-gradient(120deg,_#000000,_#001A80)] text-center text-sm md:text-base"
+                >
+                  📤 Share via WhatsApp
+                </a>
+              </div>
 
-                <h3 className="text-lg md:text-xl font-bold mt-4 md:mt-6 mb-2">Pending Teams (Lobby)</h3>
-                {pendingTeams.length === 0 && <p className="text-sm md:text-base">No teams waiting.</p>}
-                {pendingTeams.map((team) => (
-                  <div
-                    key={team.id}
-                    className="flex flex-col md:flex-row md:justify-between md:items-center bg-white/10 px-4 py-2 rounded my-2"
-                  >
-                    <span className="text-sm md:text-base mb-1 md:mb-0">{team.name}</span>
-                    <div className="space-x-2 space-y-1 md:space-y-0">
-                      <button
-                        onClick={() => handleAccept(team)}
-                        className="bg-blue-900 px-2 py-1 md:px-3 md:py-1 rounded hover:bg-blue-500 cursor-pointer text-xs md:text-sm"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleReject(team)}
-                        className="bg-red-500 px-2 py-1 md:px-3 md:py-1 rounded hover:bg-red-600 cursor-pointer text-xs md:text-sm"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {acceptedTeams.length > 0 && (
-                  <div className="mt-4 md:mt-6">
-                    <h3 className="text-lg md:text-xl font-bold mb-2">Accepted Teams</h3>
-                    <ul className="space-y-2">
-                      {acceptedTeams.map((team) => (
-                        <li
-                          key={team.id}
-                          className="bg-green-700 px-4 py-2 rounded text-white text-sm md:text-base"
-                        >
-                          {team.name}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="flex justify-center w-full gap-4 mt-20">
-                  <button
-                    type="button"
-                    className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                    onClick={handleCancel}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleStartMatch}
-                    className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer text-sm md:text-base"
+              <h3 className="text-lg md:text-xl font-bold mt-4 md:mt-6 mb-2">Pending Teams (Lobby)</h3>
+              {pendingTeams.length === 0 && <p className="text-sm md:text-base">No teams waiting.</p>}
+              {pendingTeams.map((team) => (
+                <div
+                  key={team.id}
+                  className="flex flex-col md:flex-row md:justify-between md:items-center bg-white/10 px-4 py-2 rounded my-2"
+                >
+                  <span className="text-sm md:text-base mb-1 md:mb-0">{team.name}</span>
+                  <div className="space-x-2 space-y-1 md:space-y-0">
+                    <button
+                      onClick={() => handleAccept(team)}
+                      className="bg-blue-900 px-2 py-1 md:px-3 md:py-1 rounded hover:bg-blue-500 cursor-pointer text-xs md:text-sm"
                     >
-                      Next
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleReject(team)}
+                      className="bg-red-500 px-2 py-1 md:px-3 md:py-1 rounded hover:bg-red-600 cursor-pointer text-xs md:text-sm"
+                    >
+                      Reject
                     </button>
                   </div>
                 </div>
-              )}
+              ))}
 
-              {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-[#1A2B4C] block items-center justify-center min-h-[15rem] w-[70%] lg:max-w-md lg:min-h-fit lg:max-h-fit lg:p-[5rem] rounded-xl p-6 ">
-                    <h2 className="text-xl md:text-2xl font-semibold mb-4 text-center">Select Tournament Format</h2>
-                    <div className="flex flex-col gap-4 mt-[8rem] lg:mt-5">
-                      <button
-                        onClick={() => handleFormatSelect('Round Robin')}
-                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-5  lg:py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
+              {acceptedTeams.length > 0 && (
+                <div className="mt-4 md:mt-6">
+                  <h3 className="text-lg md:text-xl font-bold mb-2">Accepted Teams</h3>
+                  <ul className="space-y-2">
+                    {acceptedTeams.map((team) => (
+                      <li
+                        key={team.id}
+                        className="bg-green-700 px-4 py-2 rounded text-white text-sm md:text-base"
                       >
-                        Round Robin
-                      </button>
-                      <button
-                        onClick={() => handleFormatSelect('Knockout')}
-                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 py-5 lg:py-2 rounded hover:bg-blue-700 cursor-pointer text-sm md:text-base"
-                      >
-                        Knockout
-                      </button>
-                    </div>
-                  </div>
+                        {team.name}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
-            </form>
-          </div>
-        </section>
-      );
+              <div className="flex justify-center w-full gap-4 mt-20">
+                <button
+                  type="button"
+                  className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                  onClick={handleCancel}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartMatch}
+                  className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer text-sm md:text-base"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-[#1A2B4C] block items-center justify-center min-h-[15rem] w-[70%] lg:max-w-md lg:min-h-fit lg:max-h-fit lg:p-[5rem] rounded-xl p-6 ">
+                <h2 className="text-xl md:text-2xl font-semibold mb-4 text-center">Select Tournament Format</h2>
+                <div className="flex flex-col gap-4 mt-[8rem] lg:mt-5">
+                  <button
+                    onClick={() => handleFormatSelect('Round Robin')}
+                    className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-5  lg:py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
+                  >
+                    Round Robin
+                  </button>
+                  <button
+                    onClick={() => handleFormatSelect('Knockout')}
+                    className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 py-5 lg:py-2 rounded hover:bg-blue-700 cursor-pointer text-sm md:text-base"
+                  >
+                    Knockout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+    </section>
+  );
 };
 
 export default TournamentPage;

@@ -284,12 +284,14 @@ export default function TournamentList() {
                     const stage = selectedTournament.currentStage || 'N/A';
                     // Navigate with tournament id as example
                     if (stage === 'RoundRobin') {
-                    navigate("/Selection2", { state: { information: "FromSidebar", noOfTeams: selectedTournament.teams, tournamentName: selectedTournament.name } })
+                    navigate("/selection2", { state: { information: "FromSidebar",tournamentId: selectedTournament.tournamentId,teams:selectedTournament.selectedTeams, noOfTeams: selectedTournament.teams, tournamentName: selectedTournament.name } })
                     }else if (stage == 'Knockout'){
-                      navigate("/match-start-ko", {
+                      navigate("/selection", {
                           state: {
                             information: "FromSidebar",
+                            teams:selectedTournament.selectedTeams,
                             tournamentId: selectedTournament.tournamentId,
+                            noOfTeams: selectedTournament.teams,
                             tournamentName: selectedTournament.name,
                           }
                         });
