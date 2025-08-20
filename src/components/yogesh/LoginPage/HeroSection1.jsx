@@ -32,6 +32,13 @@ const HeroSection1 = () => {
         >
           Sign In
         </motion.button>
+
+        {/* Copyright Notice below the Sign In button */}
+        <div className="text-white text-xs opacity-80 mt-10">
+          © 2025 Creativity Ventures. All rights reserved
+        </div>
+
+
       </motion.div>
       <motion.div 
         className="hidden md:block mt-16 md:mt-24"

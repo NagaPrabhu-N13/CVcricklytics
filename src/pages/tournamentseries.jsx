@@ -277,7 +277,7 @@ function Tournamentseries() {
                                 <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                         <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
-                                        <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                                        <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">uploaded beside the</span> picture box</p>
                                     </div>
                                     <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
                                 </label>

@@ -19,7 +19,7 @@ const UpcomingPage = () => {
           <img 
             src={logo}
             alt="Cricklytics Logo"
-            className="h-20 w-20 md:h-10 object-contain block select-none"
+            className="h-20 w-20 md:h-30 object-contain block select-none"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/images/Picture3 2.png";

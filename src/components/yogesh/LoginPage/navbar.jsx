@@ -35,7 +35,7 @@ const Navbar = () => {
     <div className="absolute top-0 left-0 w-full flex justify-between items-center px-4 sm:px-8 py-4 z-50">
       {/* Logo */}
       <h1 className="text-white text-xl sm:text-2xl font-bold flex items-center">
-        <img src={logo} alt="Cricklytics Logo" className="h-20 w-20 md:h-8 mr-2" />
+        <img src={logo} alt="Cricklytics Logo" className="h-20 w-20 md:h-25 mr-2" />
         Cricklytics   
       </h1>
 
@@ -106,6 +106,7 @@ const Navbar = () => {
           Sign Up
         </button>
       </div>
+      
     </div>
   );
 };

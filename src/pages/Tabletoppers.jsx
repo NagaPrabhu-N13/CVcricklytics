@@ -154,7 +154,7 @@ const Tabletoppers = () => {
     <img
       src={logo}
       alt="Cricklytics"
-          className="w-20 h-20 md:h-12 md:w-12"
+          className="w-20 h-20 md:h-20 md:w-20"
     />
     <span className="text-2xl font-bold text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
       Cricklytics
