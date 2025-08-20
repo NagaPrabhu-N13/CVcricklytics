@@ -3,7 +3,7 @@ import HeaderComponent from '../components/kumar/header';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase'; // Import Firebase auth
 import upload from '../assets/kumar/image-regular.svg';
-import locationIcon from '../assets/kumar/loc.png';
+import location from '../assets/kumar/loc.png';
 import ball1 from '../assets/kumar/cricket-ball.png';
 import ball2 from '../assets/kumar/ball-others.png';
 import others from '../assets/kumar/icons8-tennis-ball-96.png';
@@ -29,7 +29,7 @@ function Tournamentseries() {
       const file = e.target.files[0];
       if (file) {
         setSelectedImage(file);
-        setImageUploaded(true);
+        setImageUploaded(true); // Set image uploaded state to true
         setShowValidationError(false);
       }
     };
@@ -41,8 +41,8 @@ function Tournamentseries() {
         tournamentName.trim() !== '' && 
         selectedLocation.trim() !== '' && 
         noOfTeams.trim() !== '' && 
-        startDate !== null && 
-        endDate !== null && 
+        startDate !== '' && 
+        endDate !== '' && 
         physicalLocation.trim() !== '' && 
         selectedTiming !== '' && 
         selectedBall !== null && 
@@ -79,8 +79,8 @@ function Tournamentseries() {
         name: tournamentName,
         location: selectedLocation,
         noOfTeams: noOfTeams,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: startDate,
+        endDate: endDate,
         physicalLocation: physicalLocation,
         schedule: selectedSchedule,
         timing: selectedTiming,
@@ -203,7 +203,7 @@ function Tournamentseries() {
             id="rules" 
             className="fixed left-0 w-full h-full flex justify-center items-center inset-0 bg-opacity-40 backdrop-blur-md z-[9999]" 
           >
-            <div className="absolute z-[9999] bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="absolute z-[9999] bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg">
             <button 
               className="absolute top-4 right-4 text-2xl text-white cursor-pointer"
               onClick={toggleDivVisibility}
@@ -258,9 +258,9 @@ function Tournamentseries() {
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-8">
                         <label className="text-xl text-white mt-5">Tournament/ Series Name*</label>
                         <input 
-                          className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4 bg-transparent" 
+                          className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4" 
                           type="text" 
-                          placeholder="Enter name" 
+                          placeholder="" 
                           value={tournamentName}
                           onChange={(e) => {
                             setTournamentName(e.target.value);
@@ -271,7 +271,7 @@ function Tournamentseries() {
                           <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
                         )}
                     </div>
-                     <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                    <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
                         <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
                         <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
@@ -299,9 +299,9 @@ function Tournamentseries() {
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Venue*</label>
                         <input 
-                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] bg-transparent" 
+                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
                           type="text" 
-                          placeholder="Enter venue" 
+                          placeholder="" 
                           value={selectedLocation}
                           onChange={(e) => {
                             setSelectedLocation(e.target.value);
@@ -316,9 +316,9 @@ function Tournamentseries() {
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Number of Teams*</label>
                         <input 
-                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] bg-transparent" 
-                          type="number" 
-                          placeholder="Enter number" 
+                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
+                          type="text" 
+                          placeholder="" 
                           value={noOfTeams}
                           onChange={(e) => {
                             setNoOfTeams(e.target.value);
@@ -330,18 +330,18 @@ function Tournamentseries() {
                         )}
                     </div>
 
-                    <div className="relative flex flex-col md:flex-row justify-between w-full gap-2 md:gap-0">
+                    <div className="relative flex flex-col md:flex-row justify-between w-full  gap-2 md:gap-0">
                     <label className="text-lg md:text-xl text-white mt-5">Dates*</label>
-                    <div className="w-full md:absolute md:left-[30%] flex flex-col md:flex-row gap-4 md:gap-0 md:w-[90%] h-fit">                    
-                            <div className="flex items-center w-full md:w-auto">
-                                <label className="text-xl text-white mr-2">Start Date</label>
+                    <div className="w-full md:absolute md:left-[30%] flex flex-col md:flex-row gap-2 md:gap-0 md:w-[90%] h-fit">                    
+                            <div className="flex items-center w-[30%]">
+                                <label className="text-xl text-white">Start Date</label>
                                 <DatePicker
                                   selected={startDate}
                                   onChange={(date) => {
                                     setStartDate(date);
                                     setShowValidationError(false);
                                   }}
-                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl bg-transparent"
+                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem] bg-[#1A2B4C]"
                                   placeholderText="Select start date"
                                   calendarClassName="bg-[#1A2B4C] text-white"
                                 />
@@ -349,15 +349,15 @@ function Tournamentseries() {
                                   <p className="text-red-500 text-sm absolute bottom-[-20px] left-[120px]">This field is required</p>
                                 )}
                             </div>
-                            <div className="flex items-center w-full md:w-auto">
-                                <label className="text-xl text-white mr-2">End Date</label>
+                            <div className="flex items-center w-[30%]">
+                                <label className="text-xl text-white">End Date</label>
                                 <DatePicker
                                   selected={endDate}
                                   onChange={(date) => {
                                     setEndDate(date);
                                     setShowValidationError(false);
                                   }}
-                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl bg-transparent"
+                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem] bg-[#1A2B4C]"
                                   placeholderText="Select end date"
                                   calendarClassName="bg-[#1A2B4C] text-white"
                                 />
@@ -371,16 +371,16 @@ function Tournamentseries() {
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white md:mt-6">Location*</label>
                         <input
-                            className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2 bg-transparent bg-no-repeat pl-3 pr-10 py-2 placeholder-white"
+                            className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2 bg-no-repeat pl-10 pr-12 py-2 placeholder-white"
                             type="text"
-                            placeholder="Enter location"
+                            placeholder=""
                             value={physicalLocation}
                             onChange={(e) => {
                               setPhysicalLocation(e.target.value);
                               setShowValidationError(false);
                             }}
                             style={{
-                                backgroundImage: `url(${locationIcon})`,
+                                backgroundImage: `url(${location})`,
                                 backgroundPosition: 'right 1rem center',
                                 backgroundSize: '1.5rem 1.5rem'
                             }}
@@ -429,8 +429,8 @@ function Tournamentseries() {
                           className="block 
                                      w-[10rem] py-0   
                                      md:w-[16rem] md:py-2 
-                                     bg-transparent px-4 border-2 border-white rounded-md 
-                                     text-white focus:ring-blue-500 cursor-pointer"
+                                     bg-white-900 px-4 border border-white rounded-md 
+                                     text-gray-200 focus:ring-blue-500 cursor-pointer"
                           value={selectedTiming}
                           onChange={(e) => {
                             setSelectedTiming(e.target.value);
@@ -451,7 +451,7 @@ function Tournamentseries() {
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Rules and Description</label>
-                        <div className="w-[40%] relative flex items-center justify-between gap-5 mb-6">
+                        <div className="w-[40%] relative flex items-center justify-between gap-5  mb-6">
                        <button id="view-rules" className="rounded-xl w-24 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white mr-6 cursor-pointer" onClick={toggleDivVisibility}>
                        {isRulesVisible ? 'Hide Rules' : 'View Rules'}
                        </button>
@@ -461,24 +461,24 @@ function Tournamentseries() {
                     <div className='relative flex-col items-center w-full'>
                       <h1 className='text-xl text-white mb-[1rem]'>Ball Type*</h1>
                       <div className='relative flex items-center w-full h-fit gap-5'>
-                        <div
-                          className={`flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball1' ? 'bg-blue-100' : 'bg-transparent'} hover:text-white mt-4 cursor-pointer`}
+                        <a
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball1' ? 'bg-blue-100' : 'bg-transparent'} hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball1')}
                         >
-                          <img src={ball1} alt="Cricket ball" className='w-20 h-20' />
-                        </div>
-                        <div
-                          className={`flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'others' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
+                          <img src={ball1} alt="" className='w-20 h-20' />
+                        </a>
+                        <a
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'others' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('others')}
                         >
-                          <img src={others} alt="Tennis ball" className='w-20 h-20' />
-                        </div>
-                        <div
-                          className={`flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
+                          <img src={others} alt="" className='w-20 h-20' />
+                        </a>
+                        <a
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball2')}
                         >
-                          <img src={ball2} alt="Other ball" className='w-18 h-18' />
-                        </div>
+                          <img src={ball2} alt="" className='w-18 h-18' />
+                        </a>
                       </div>
                       {showValidationError && selectedBall === null && (
                         <p className="text-red-500 text-sm mt-1">Please select a ball type</p>
@@ -487,17 +487,17 @@ function Tournamentseries() {
 
                     <div id='pitch' className="w-full relative flex-col items-center justify-between gap-5">
                       <label className="text-xl text-white">Pitch Type*</label>
-                      <div className='w-full relative flex flex-wrap items-center justify-start mt-4'>
+                      <div className='w-full relative flex-col items-center justify-center mt-4'>
                         {pitchOptions.map((pitch) => (
-                          <button
+                          <input
                             key={pitch}
-                            type="button"
-                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold text-white
+                            type="text"
+                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent 
                               ${selectedPitch === pitch ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                            name='user'
+                            placeholder={pitch}
                             onClick={() => handlePitchClick(pitch)}
-                          >
-                            {pitch}
-                          </button>
+                          />
                         ))}
                         {showValidationError && selectedPitch === null && (
                           <p className="text-red-500 text-sm mt-1">Please select a pitch type</p>
@@ -509,15 +509,15 @@ function Tournamentseries() {
                       <label className="text-xl text-white">Tournament Category*</label>
                       <div className='md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
                         {categoryoption.map((Category) => (
-                          <button
+                          <input
                             key={Category}
-                            type="button"
-                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold text-white
+                            type="text"
+                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent 
                               ${selectedcategory === Category ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                            name='user'
+                            placeholder={Category}
                             onClick={() => handlecategoryclick(Category)}
-                          >
-                            {Category}
-                          </button>
+                          />
                         ))}
                         {showValidationError && selectedcategory === null && (
                           <p className="text-red-500 text-sm mt-1">Please select a category</p>
@@ -527,17 +527,17 @@ function Tournamentseries() {
 
                     <div id='matchtype' className="w-full relative flex-col items-center justify-between gap-5">
                       <label className="text-xl text-white">Match Type*</label>
-                      <div className='md:w-[40%] relative flex flex-wrap items-center justify-start mt-4'>
+                      <div className='md:w-[40%] relative flex-col items-center justify-center mt-4'>
                         {matchtypeoption.map((matchtype) => (
-                          <button
+                          <input
                             key={matchtype}
-                            type="button"
-                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold text-white
+                            type="text"
+                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent 
                               ${selectedmatchtype === matchtype ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                            name='user'
+                            placeholder={matchtype}
                             onClick={() => handlematchtypeclick(matchtype)}
-                          >
-                            {matchtype}
-                          </button>
+                          />
                         ))}
                         {showValidationError && selectedmatchtype === null && (
                           <p className="text-red-500 text-sm mt-1">Please select a match type</p>
@@ -547,17 +547,17 @@ function Tournamentseries() {
 
                     <div id='wp' className="w-full relative flex-col items-center justify-between gap-5">
                       <label className="text-xl text-white">Winning Prize*</label>
-                      <div className='md:w-[40%] relative flex flex-wrap items-center justify-start mt-4'>
+                      <div className='md:w-[40%]relative flex-col items-center justify-center mt-4'>
                         {wpoption.map((wp) => (
-                          <button
+                          <input
                             key={wp}
-                            type="button"
-                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold text-white
+                            type="text"
+                            className={`rounded-xl w-24 h-9 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent 
                               ${selectedwp === wp ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                            name='user'
+                            placeholder={wp}
                             onClick={() => handlewpclick(wp)}
-                          >
-                            {wp}
-                          </button>
+                          />
                         ))}
                         {showValidationError && selectedwp === null && (
                           <p className="text-red-500 text-sm mt-1">Please select a winning prize</p>
@@ -571,35 +571,35 @@ function Tournamentseries() {
                               className="accent-cyan-500 w-[1rem] h-[1rem]" 
                               type="checkbox" 
                               name="opt1" 
-                              id="homeAway" 
+                              id="weekdays" 
                               checked={homeAwayFormat}
                               onChange={(e) => setHomeAwayFormat(e.target.checked)}
                             />
-                            <label className="text-xl text-white ml-[1rem]" htmlFor="homeAway">Enable Home/Away Format</label>
+                            <label className="text-xl text-white ml-[1rem]" htmlFor="weekdays">Enable Home/Away Format</label>
                         </div>
                         <div>
                             <input 
                               className="accent-cyan-500 w-[1rem] h-[1rem]" 
                               type="checkbox" 
                               name="opt2" 
-                              id="lastBatter" 
+                              id="weekends" 
                               checked={lastBatterRule}
                               onChange={(e) => setLastBatterRule(e.target.checked)}
                             />
-                            <label className="text-xl text-white ml-[1rem]" htmlFor="lastBatter">Enable Last Batter Batting Rule</label>
+                            <label className="text-xl text-white ml-[1rem]" htmlFor="weekends">Enable Last Batter Batting Rule</label>
                         </div>
                     </div>
 
-                    <div className="flex justify-end w-full gap-4 mt-4">
+                    <div className="flex justify-end w-full gap-4">
                         <button 
-                          className="rounded-xl w-22 bg-gray-500 h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] px-4"
+                          className="rounded-xl w-22 bg-gray-500 h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6]"
                           onClick={handleCancel}
                         >
                           Cancel
                         </button>
                         <button 
                           type="button"
-                          className="rounded-xl w-22 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] px-4" 
+                          className="rounded-xl w-22 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6]" 
                           onClick={handleNavigation}
                         >
                           Next
@@ -611,4 +611,4 @@ function Tournamentseries() {
     );
 }
 
-export default Tournamentseries;
+export default Tournamentseries; 
