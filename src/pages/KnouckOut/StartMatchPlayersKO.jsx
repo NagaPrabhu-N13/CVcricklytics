@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Component } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth } from '../../firebase';
 import HeaderComponent from '../../components/kumar/startMatchHeader';
 import backButton from '../../assets/kumar/right-chevron.png';
@@ -44,10 +45,12 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const teamB = location.state?.teamB;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentId = location.state?.tournamentId;
+  const tournamentName = location.state?.tournamentName;
   const currentPhase = location.state?.currentPhase;
   const matchId = location.state?.matchId;
 
   // Log for debugging
+  console.log(tournamentName)
   console.log('Tournament ID in StartMatchPlayers:', tournamentId);
   console.log('Current Phase in StartMatchPlayers:', currentPhase);
   console.log('Match ID in StartMatchPlayers:', matchId);
@@ -103,6 +106,36 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
+
+   const [isAICompanionOpen, setIsAICompanionOpen] = useState(true);
+   const [predictionData, setPredictionData] = useState(null);
+
+    useEffect(() => {
+       const isOverCompleted = validBalls === 0 && overNumber > 0;
+       const shouldTriggerPrediction =
+         playerScore >= 10 || outCount > 0 || isOverCompleted;
+   
+       if (shouldTriggerPrediction) {
+         const winA = Math.max(0, 100 - (playerScore + outCount * 5));
+         const winB = 100 - winA;
+   
+         const generatedPrediction = {
+      battingTeam: isChasing ? teamB.name : teamA.name, // chasing = batting second
+     bowlingTeam: isChasing ? teamA.name : teamB.name,
+     battingScore: playerScore,
+     bowlingScore: targetScore,
+     winA,
+     winB,
+     overNumber,
+     nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
+     alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
+   };
+   
+   
+         setPredictionData(generatedPrediction);
+       }
+     }, [playerScore, outCount, overNumber]);
+   
 
   useEffect(() => {
     if (!teamA || !teamB || !selectedPlayersFromProps.left || !selectedPlayersFromProps.right) {
@@ -372,6 +405,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       });
 
       const matchData = {
+        tournamentName,
         tournamentId,
         currentPhase,
         matchId,
@@ -1839,7 +1873,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
               })}
             </div>
             
-            <div  className="mt-12">
+            {/* <div  className="mt-12">
                   <motion.button
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md flex items-center justify-center gap-2 mx-auto"
                     whileHover={{ scale: 1.02 }}
@@ -1862,7 +1896,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                       />
                     )}
                   </AnimatePresence>
-                </div>
+                </div> */}
                     
             <div>
                    {isAICompanionOpen && (

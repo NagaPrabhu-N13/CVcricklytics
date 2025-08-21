@@ -32,7 +32,7 @@ const TournamentBracket = ({ tournamentName,User }) => {
   const [tournamentStartDate, setTournamentStartDate] = useState(null);
 
 
-  // console.log(tournamentName);
+  console.log(tournamentName);
   console.log(User);
 
   // Add these states inside the TournamentBracket component
@@ -1323,6 +1323,7 @@ if (!tournamentId) {  // Only for new tournaments
           matchId: match.id,
           currentPhase,
           tournamentId,
+          tournamentName,
           teamA: {
             id: match.team1.id,
             name: match.team1.name,

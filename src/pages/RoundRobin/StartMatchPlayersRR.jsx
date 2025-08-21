@@ -368,7 +368,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         tournamentId,
         userId: auth.currentUser.uid,
         createdAt: Timestamp.fromDate(new Date()),
-        tournamentName: 'Round Robin',
+        tournamentName,
         umpire: 'naga',
         phase: phase || 'Unknown',
         Format: maxOvers,

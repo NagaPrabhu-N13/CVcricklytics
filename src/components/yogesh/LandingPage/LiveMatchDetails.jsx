@@ -1,22 +1,34 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import backButton from '../../../assets/kumar/right-chevron.png'
+import backButton from '../../../assets/kumar/right-chevron.png';
+import AIMatchCompanionModal from '../LandingPage/AIMatchCompanion'; // Adjust import path as needed
 
 const MatchDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const match = location.state;
 
+  const [isModalOpen, setIsModalOpen] = useState(true); // Local state: open by default
+  const [predictionData, setPredictionData] = useState(null); // Example: fetch or set data here
+
   useEffect(() => {
     if (!match) navigate("/");
-  }, [match]);
+    
+    // Optional: Fetch or set predictionData dynamically if needed
+    // For example:
+    // setPredictionData({ battingTeam: 'Team A', ... });
+  }, [match, navigate]);
+
+  const handleClose = () => {
+    setIsModalOpen(false);
+  };
 
   if (!match) return null;
 
   return (
     <div className="p-6 text-white bg-[rgba(42,29,78,0.3)] ">
 
- {/* Back Button */}
+      {/* Back Button */}
       <div className="md:absolute flex items-center gap-4">
         <img 
           src={backButton}
@@ -34,10 +46,10 @@ const MatchDetails = () => {
         {/* Header Info */}
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold">{match.location}</h3>
-       <span className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-full shadow-md uppercase tracking-wide">
-       <span className="w-2 h-2 bg-red-300 rounded-full mr-2"></span>
-        Live
-       </span>
+          <span className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-full shadow-md uppercase tracking-wide">
+            <span className="w-2 h-2 bg-red-300 rounded-full mr-2"></span>
+            Live
+          </span>
         </div>
         <p className="text-sm text-gray-300 mb-4">{match.date}</p>
 
@@ -133,6 +145,13 @@ const MatchDetails = () => {
           </div>
         )} */}
       </div>
+
+      {/* AI Match Companion Modal - Displayed by default */}
+      <AIMatchCompanionModal
+        isOpen={isModalOpen}
+        onClose={handleClose}
+        predictionData={predictionData}
+      />
     </div>
   );
 };

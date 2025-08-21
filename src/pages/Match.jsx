@@ -5,6 +5,7 @@ import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
+
 const Match = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -15,6 +16,7 @@ const Match = () => {
   const { tournamentId } = location.state || {};
   console.log(tournamentId, tournamentName);
 
+
   const tabs = [
     { id: "my-matches", label: "My Matches (Live + Past)" },
     { id: "following", label: "Following (Live + Past)" },
@@ -24,133 +26,6 @@ const Match = () => {
     { id: "past", label: "Past" }
   ];
 
-  const pastMatches = [
-    {
-      id: "1",
-      tournament: "Budapest Kupa",
-      location: "Gb Oval, Szodliget, Budapest",
-      date: "17-Jul-25",
-      status: "RESULT",
-      match: "LEAGUE MATCHES",
-      team1: { name: "Budapest Zalmi", score: "172/10", overs: "24.3 Ov" },
-      team2: { name: "Nacionaline kriketo taryba", score: "144/9", overs: "25.0 Ov" },
-      result: "Budapest Zalmi won by 28 runs"
-    },
-    {
-      id: "2",
-      tournament: "Budapest Kupa",
-      location: "Gb Oval, Szodliget, Budapest",
-      date: "16-Jul-25",
-      status: "RESULT",
-      match: "LEAGUE MATCHES",
-      team1: { name: "Budapest Zalmi", score: "211/10", overs: "24.0 Ov" },
-      team2: { name: "Nacionaline kriketo taryba", score: "138/5", overs: "23.0 Ov" },
-      result: "Budapest Zalmi won by 73 runs"
-    },
-    {
-      id: "3",
-      tournament: "Budapest Kupa",
-      location: "Gb Oval, Szodliget, Budapest",
-      date: "15-Jul-25",
-      status: "RESULT",
-      match: "LEAGUE MATCHES",
-      team1: { name: "Budapest Zalmi", score: "134/10", overs: "17.5 Ov" },
-      team2: { name: "Nacionaline kriketo taryba", score: "79/10", overs: "15.0 Ov" },
-      result: "Budapest Zalmi won by 55 runs"
-    },
-  ];
-
-  const liveMatches = [
-    {
-      id: "1",
-      tournament: "Budapest Kupa",
-      location: "GB-Ovid, Szudíjgyi, Budapest",
-      date: "17-Jul-53 | 23.Ov",
-      status: "LIVE",
-      battingTeam: "Team A",
-      bowlingTeam: "Team B",
-      score: "47/0",
-      overs: "4.3",
-      batting: [
-        {
-          name: "Khaibar Deldar",
-          runs: "32",
-          balls: "20",
-          fours: "1",
-          sixes: "3",
-          sr: "160",
-        }
-      ],
-      bowling: [
-        {
-          name: "DHARSAN S",
-          overs: "2.5",
-          maidens: "0",
-          runs: "29",
-          wickets: "0",
-          eco: "10"
-        }
-      ],
-      recentBalls: ["0", "0", "0", "4", "2", "1", "0", "6", "0"],
-      commentary: [
-        { over: "4.3", text: "Pandey S to Deldar, no run" },
-        { over: "4.2", text: "Pandey S to Deldar, SIX, pulled to deep midwicket" },
-      ]
-    },
-    {
-      id: "2",
-      tournament: "Nacionaline kirketo taryba",
-      location: "Budapest Zainé",
-      date: "Thu. 17 Jul. 1:20 PM",
-      status: "LIVE",
-      battingTeam: "Team C",
-      bowlingTeam: "Team D",
-      score: "42/1",
-      overs: "5.0",
-      batting: [
-        {
-          name: "Rona Moaz",
-          runs: "42",
-          balls: "30",
-          fours: "2",
-          sixes: "4",
-          sr: "163"
-        }
-      ],
-      bowling: [
-        {
-          name: "Virat Kholi",
-          overs: "2.0",
-          maidens: "0",
-          runs: "27",
-          wickets: "0",
-          eco: "10.5"
-        }
-      ],
-      recentBalls: ["0", "0", "0", "4", "2", "1", "0", "6", "0"],
-      commentary: [
-        { over: "2.3", text: "Pandey S to Deldar, no run" },
-        { over: "3.2", text: "Pandey S to Deldar, SIX, pulled to deep midwicket" },
-      ]
-    }
-  ];
-
-  const upcomingMatches = [
-    {
-      id: "1",
-      tournament: "Budapest Kupa",
-      location: "GB-Ovid, Szudíjgyi, Budapest",
-      date: "17-Jul.53 | 23.Ov",
-      status: "UPCOMING"
-    },
-    {
-      id: "2",
-      tournament: "Nacionaline kirketo taryba",
-      location: "Budapest Zainé",
-      date: "Thu. 17 Jul. 120 PM",
-      status: "UPCOMING"
-    }
-  ];
 
   const subOptions = [
     { id: "info", label: "Info" },
@@ -161,8 +36,10 @@ const Match = () => {
     { id: "mvp", label: "MVP" },
   ];
 
+
   useEffect(() => {
     if (!auth.currentUser) return;
+
 
     // Fetch all scoringpage documents (no userId filter in query for flexibility)
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
@@ -176,8 +53,10 @@ const Match = () => {
       console.error("Error fetching matches:", error);
     });
 
+
     return () => unsubscribe();
   }, []);
+
 
   useEffect(() => {
     if (tournamentId) {
@@ -189,20 +68,37 @@ const Match = () => {
     setActiveSubOption("info");
   }, [location.state, tournamentId]);  // Added tournamentId dependency
 
-  const filteredMatches = matches.filter(match => {
-    if (activeTab === "my-matches") {
-      return match.userId === auth.currentUser.uid;  // Only user's matches
-    } else if (activeTab === "following") {
-      if (tournamentId) {
-        return match.tournamentId === tournamentId;  // Filter by received tournamentId (assuming field name is 'tournamentId')
-      } else {
-        return match.tabCategory === "following";  // Fallback to existing logic
+
+  const getFilteredMatches = (tab) => {
+    const today = new Date().toISOString().split('T')[0];
+
+
+    return matches.filter(match => {
+      const matchDate = match.createdAt ? match.createdAt.toDate().toISOString().split('T')[0] : null;
+      const hasResult = !!match.matchResult;
+
+
+      if (tab === "my-matches") {
+        return match.userId === auth.currentUser.uid;  // Only user's matches
+      } else if (tab === "following") {
+        if (tournamentId) {
+          return match.tournamentId === tournamentId;  // Filter by received tournamentId (assuming field name is 'tournamentId')
+        } else {
+          return match.tabCategory === "following";  // Fallback to existing logic
+        }
+      } else if (tab === "all") {
+        return true;  // All matches
+      } else if (tab === "live") {
+        return !hasResult && matchDate === today;
+      } else if (tab === "upcoming") {
+        return !hasResult && matchDate > today;
+      } else if (tab === "past") {
+        return hasResult || (matchDate && matchDate < today);
       }
-    } else if (activeTab === "all") {
-      return true;  // All matches
-    }
-    return false;  // Default: no matches
-  });
+      return false;  // Default: no matches
+    });
+  };
+
 
   const getMatchData = (match, subOption) => {
     const {
@@ -217,6 +113,7 @@ const Match = () => {
       umpire = "Not Available",
       matchId,
     } = match;
+
 
     switch (subOption) {
       case "info":
@@ -311,6 +208,80 @@ const Match = () => {
     }
   };
 
+
+  // New function to transform match data into live layout format
+  const transformToLiveFormat = (match) => {
+    const matchData = getMatchData(match, "info");
+    const scorecard = getMatchData(match, "scorecard");
+
+
+    return {
+      id: match.id,
+      tournament: match.tournamentName || "Unknown Tournament",
+      location: matchData.venue,
+      date: matchData.date + " | Current Overs",
+      status: "LIVE",
+      battingTeam: match.teamA?.name || "Team A",
+      bowlingTeam: match.teamB?.name || "Team B",
+      score: `${match.teamA?.totalScore || 0}/${match.teamA?.wickets || 0}`,
+      overs: match.teamA?.overs || "0.0",
+      batting: match.firstInnings?.playerStats?.map(p => ({
+        name: p.name || "Unknown",
+        runs: p.runs || "0",
+        balls: p.balls || "0",
+        fours: p.fours || "0",
+        sixes: p.sixes || "0",
+        sr: p.sr || "0",
+      })) || [],
+      bowling: match.firstInnings?.bowlerStats?.map(b => ({
+        name: b.name || "Unknown",
+        overs: b.oversBowled || "0.0",
+        maidens: b.maidens || "0",
+        runs: b.runsConceded || "0",
+        wickets: b.wickets || "0",
+        eco: b.eco || "0",
+      })) || [],
+      recentBalls: [], // Placeholder; add logic if available in data
+      commentary: [], // Placeholder; add logic if available in data
+    };
+  };
+
+
+  // New function to transform match data into upcoming layout format
+  const transformToUpcomingFormat = (match) => {
+    const matchData = getMatchData(match, "info");
+
+
+    return {
+      id: match.id,
+      tournament: match.tournamentName || "Unknown Tournament",
+      location: matchData.venue,
+      date: matchData.date,
+      status: "UPCOMING",
+    };
+  };
+
+
+  // New function to transform match data into past layout format
+  const transformToPastFormat = (match) => {
+    const matchData = getMatchData(match, "info");
+    const summary = getMatchData(match, "summary");
+
+
+    return {
+      id: match.id,
+      tournament: match.tournamentName || "Unknown Tournament",
+      location: matchData.venue,
+      date: matchData.date,
+      status: "RESULT",
+      match: "LEAGUE MATCHES", // Static or derive if needed
+      team1: { name: match.teamA?.name || "Team 1", score: `${match.teamA?.totalScore || 0}/${match.teamA?.wickets || 0}`, overs: `${match.teamA?.overs || 0} Ov` },
+      team2: { name: match.teamB?.name || "Team 2", score: `${match.teamB?.totalScore || 0}/${match.teamB?.wickets || 0}`, overs: `${match.teamB?.overs || 0} Ov` },
+      result: summary.score,
+    };
+  };
+
+
   const getStatusBadgeStyle = (status) => {
     switch (status.toUpperCase()) {
       case "LIVE":
@@ -318,11 +289,13 @@ const Match = () => {
       case "UPCOMING":
         return "bg-gradient-to-r from-orange-500 to-yellow-500";
       case "PAST":
+      case "RESULT":
         return "bg-gradient-to-r from-blue-500 to-cyan-500";
       default:
         return "bg-gray-500";
     }
   };
+
 
   const getBackgroundStyle = (tab) => {
     switch(tab) {
@@ -338,6 +311,7 @@ const Match = () => {
         };
     }
   };
+
 
   return (
     <div 
@@ -355,7 +329,7 @@ const Match = () => {
           <img
             src={logo}
             alt="Cricklytics Logo"
-                className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
+            className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/images/Picture3 2.png";
@@ -374,6 +348,7 @@ const Match = () => {
           onClick={() => window.history.back()}
         />
       </div>
+
 
       {/* Horizontal Navigation Bar */}
       <div className="max-w-6xl mx-auto mt-4">
@@ -394,6 +369,7 @@ const Match = () => {
             ))}
           </div>
         </div>
+
 
         {/* Content Area */}
         <div className="p-4 md:p-8 rounded-xl border border-white/20 shadow-lg bg-white/5 backdrop-blur">
@@ -419,10 +395,10 @@ const Match = () => {
                 <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
                   {activeSubOption.charAt(0).toUpperCase() + activeSubOption.slice(1)}
                 </h3>
-                {filteredMatches.length === 0 ? (
+                {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 py-4">No data available.</p>
                 ) : (
-                  filteredMatches.map((match) => {
+                  getFilteredMatches(activeTab).map((match) => {
                     const matchData = getMatchData(match, activeSubOption);
                     return (
                       <div key={match.id} className="mb-4 p-3 md:p-4 bg-[rgba(0,0,0,0.3)] rounded-lg">
@@ -458,11 +434,11 @@ const Match = () => {
                         {activeSubOption === "squad" && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-2">
                             <div>
-                              <h4 className="font-bold">India</h4>
+                              <h4 className="font-bold">Team A</h4>
                               <p className="text-sm md:text-base">{matchData.squadIndia}</p>
                             </div>
                             <div>
-                              <h4 className="font-bold">Australia</h4>
+                              <h4 className="font-bold">Team B</h4>
                               <p className="text-sm md:text-base">{matchData.squadAustralia}</p>
                             </div>
                           </div>
@@ -485,14 +461,15 @@ const Match = () => {
             </div>
           )}
 
+
           {activeTab === "following" && (
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6">Following (Live + Past)</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {filteredMatches.length === 0 ? (
+                {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 col-span-3 py-4">No matches to show here.</p>
                 ) : (
-                  filteredMatches.map((match) => {
+                  getFilteredMatches(activeTab).map((match) => {
                     const matchData = getMatchData(match, "info");
                     return (
                       <div
@@ -514,14 +491,15 @@ const Match = () => {
             </div>
           )}
 
+
           {activeTab === "all" && (
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6">All Matches</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {filteredMatches.length === 0 ? (
+                {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 col-span-3 py-4">No matches to show here.</p>
                 ) : (
-                  filteredMatches.map((match) => {
+                  getFilteredMatches(activeTab).map((match) => {
                     const matchData = getMatchData(match, "info");
                     return (
                       <div
@@ -545,35 +523,39 @@ const Match = () => {
             </div>
           )}
 
+
           {activeTab === "live" && (
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6">Live Matches</h2>
 
+
               <div className="space-y-4 md:space-y-6">
-                {liveMatches.length === 0 ? (
+                {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 py-4">No live match is currently available.</p>
                 ) : (
-                  liveMatches.map((match) => {
+                  getFilteredMatches(activeTab).map((match) => {
+                    const transformedMatch = transformToLiveFormat(match);
                     return (
                       <div
-                        key={match.id}
+                        key={transformedMatch.id}
                         className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
-                        onClick={() => navigate("/match-details", { state: match })}
+                        onClick={() => navigate("/match-details", { state: transformedMatch })}
                       >
                         <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg md:text-xl font-semibold">{match.tournament}</h3>
+                          <h3 className="text-lg md:text-xl font-semibold">{transformedMatch.tournament}</h3>
                           <span
-                            className={`px-3 py-1 rounded-full text-xs md:text-sm ${getStatusBadgeStyle(match.status)}`}
+                            className={`px-3 py-1 rounded-full text-xs md:text-sm ${getStatusBadgeStyle(transformedMatch.status)}`}
                           >
-                            {match.status}
+                            {transformedMatch.status}
                           </span>
                         </div>
-                        <p className="text-xs md:text-sm text-gray-300 mb-1">{match.location}</p>
-                        <p className="text-xs md:text-sm text-gray-300 mb-2">{match.date}</p>
+                        <p className="text-xs md:text-sm text-gray-300 mb-1">{transformedMatch.location}</p>
+                        <p className="text-xs md:text-sm text-gray-300 mb-2">{transformedMatch.date}</p>
                         <div className="text-white text-base md:text-lg font-bold mb-1">
-                          {match.battingTeam} <span className="text-yellow-400">{match.score}</span> ({match.overs} Ov)
+                          {transformedMatch.battingTeam} <span className="text-yellow-400">{transformedMatch.score}</span> ({transformedMatch.overs} Ov)
                         </div>
-                        <p className="text-xs md:text-sm text-gray-300">Yet to Bat: {match.bowlingTeam}</p>
+                        <p className="text-xs md:text-sm text-gray-300">Yet to Bat: {transformedMatch.bowlingTeam}</p>
+                        {/* Add batting and bowling details if needed for live view */}
                       </div>
                     );
                   })
@@ -592,18 +574,26 @@ const Match = () => {
                 </button>
               </div>
 
+
               <div className="space-y-4 md:space-y-6">
-                {upcomingMatches.map((match) => (
-                  <div key={match.id} className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-lg md:text-xl font-bold">{match.tournament}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs md:text-sm ${getStatusBadgeStyle(match.status)}`}>
-                        {match.status}
-                      </span>
-                    </div>
-                    <p className="text-xs md:text-sm text-gray-300">{match.location} | {match.date}</p>
-                  </div>
-                ))}
+                {getFilteredMatches(activeTab).length === 0 ? (
+                  <p className="text-center text-gray-300 py-4">No upcoming matches available.</p>
+                ) : (
+                  getFilteredMatches(activeTab).map((match) => {
+                    const transformedMatch = transformToUpcomingFormat(match);
+                    return (
+                      <div key={transformedMatch.id} className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-lg md:text-xl font-bold">{transformedMatch.tournament}</h3>
+                          <span className={`px-2 py-1 rounded-full text-xs md:text-sm ${getStatusBadgeStyle(transformedMatch.status)}`}>
+                            {transformedMatch.status}
+                          </span>
+                        </div>
+                        <p className="text-xs md:text-sm text-gray-300">{transformedMatch.location} | {transformedMatch.date}</p>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -612,43 +602,55 @@ const Match = () => {
             <div className="px-4 md:px-8 py-4 md:py-6">
               <h2 className="text-2xl md:text-4xl font-bold text-center mb-6 md:mb-10 text-white">Past Matches</h2>
 
+
               <div className="space-y-4 md:space-y-6">
-                {pastMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-gradient-to-r from-[#4b0082] to-[#6a0dad] rounded-xl md:rounded-2xl px-4 py-4 md:px-8 md:py-6 shadow-lg"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-xl md:text-2xl font-bold">{match.tournament}</h3>
-                      <span className="bg-gray-700 text-white px-2 py-1 rounded-full text-xs md:text-sm font-semibold">
-                        {match.status}
-                      </span>
-                    </div>
+                {getFilteredMatches(activeTab).length === 0 ? (
+                  <p className="text-center text-gray-300 py-4">No past matches available.</p>
+                ) : (
+                  getFilteredMatches(activeTab).map((match) => {
+                    const transformedMatch = transformToPastFormat(match);
+                    return (
+                      <div
+                        key={transformedMatch.id}
+                        className="bg-gradient-to-r from-[#4b0082] to-[#6a0dad] rounded-xl md:rounded-2xl px-4 py-4 md:px-8 md:py-6 shadow-lg"
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-xl md:text-2xl font-bold">{transformedMatch.tournament}</h3>
+                          <span className="bg-gray-700 text-white px-2 py-1 rounded-full text-xs md:text-sm font-semibold">
+                            {transformedMatch.status}
+                          </span>
+                        </div>
 
-                    <p className="text-xs md:text-sm text-gray-300 mb-1">{match.location} | {match.date}</p>
-                    <p className="text-xs uppercase text-cyan-300 font-semibold mb-2">{match.match}</p>
 
-                    <div className="space-y-1 text-white text-sm md:text-base">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{match.team1.name}</span>
-                        <span className="text-right">
-                          <span className="font-bold">{match.team1.score}</span>{" "}
-                          <span className="text-xs text-gray-300">({match.team1.overs})</span>
-                        </span>
+                        <p className="text-xs md:text-sm text-gray-300 mb-1">{transformedMatch.location} | {transformedMatch.date}</p>
+                        <p className="text-xs uppercase text-cyan-300 font-semibold mb-2">{transformedMatch.match}</p>
+
+
+                        <div className="space-y-1 text-white text-sm md:text-base">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{transformedMatch.team1.name}</span>
+                            <span className="text-right">
+                              <span className="font-bold">{transformedMatch.team1.score}</span>{" "}
+                              <span className="text-xs text-gray-300">({transformedMatch.team1.overs})</span>
+                            </span>
+                          </div>
+
+
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{transformedMatch.team2.name}</span>
+                            <span className="text-right">
+                              <span className="font-bold">{transformedMatch.team2.score}</span>{" "}
+                              <span className="text-xs text-gray-300">({transformedMatch.team2.overs})</span>
+                            </span>
+                          </div>
+                        </div>
+
+
+                        <p className="text-xs md:text-sm text-white mt-2 md:mt-4">{transformedMatch.result}</p>
                       </div>
-
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{match.team2.name}</span>
-                        <span className="text-right">
-                          <span className="font-bold">{match.team2.score}</span>{" "}
-                          <span className="text-xs text-gray-300">({match.team2.overs})</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs md:text-sm text-white mt-2 md:mt-4">{match.result}</p>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -657,5 +659,6 @@ const Match = () => {
     </div>
   );
 };
+
 
 export default Match;

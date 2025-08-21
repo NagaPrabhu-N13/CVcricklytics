@@ -711,6 +711,7 @@ const FixtureGenerator = () => {
           initialTeamA={selectedTeamA}
           initialTeamB={selectedTeamB}
           tournamentId={location.state?.tournamentId || ''}
+          tournamentName={tournamentName}
           schedule={location.state?.schedule || []}
           semiFinals={location.state?.semiFinals || []}
           finals={location.state?.finals || []}

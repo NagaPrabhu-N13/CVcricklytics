@@ -7,7 +7,7 @@ import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
 import PitchAnalyzer from '../../components/sophita/HomePage/PitchAnalyzer';
 
-const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, tournamentId }) => {
+const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, tournamentId,tournamentName }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState({ left: [], right: [] });
@@ -22,6 +22,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, to
   const filteredRightPlayers = playersTeamBData.filter(player =>
     player.name.toLowerCase().includes(rightSearch.toLowerCase())
   );
+  console.log(tournamentName)
 
   const togglePlayerSelection = (side, player) => {
     setSelectedPlayers(prev => {
@@ -53,7 +54,8 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, to
         origin: origin,
         matchId: matchId,
         currentPhase: currentPhase,
-        tournamentId: tournamentId
+        tournamentId: tournamentId,
+        tournamentName: tournamentName
       }
     });
   };
@@ -257,6 +259,8 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
 
   // Access `origin` from `state`
   const origin = state?.origin;
+  const tournamentName = state?.tournamentName;
+  console.log(tournamentName)
   console.log('Origin in Startmatch:', origin); // Should now log '/TournamentBracket'
 
   // Fetch teams from Firebase
@@ -392,6 +396,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
         matchId={state?.matchId}
         currentPhase={state?.currentPhase}
         tournamentId={state?.tournamentId}
+        tournamentName={state?.tournamentName} // Pass tournamentName to PlayerSelector
       />
     );
   }
