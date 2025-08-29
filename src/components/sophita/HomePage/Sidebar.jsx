@@ -16,6 +16,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaPlus } from "react-icons/fa";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
+
 const hexToRgb = (hex) => {
   hex = hex.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);
@@ -1411,7 +1412,8 @@ const AccountSettingsContent = ({
   handleColorChange,
   isMobileView,
   accountSettingsBg,
-  userProfile
+  userProfile,
+  navigate // Add this prop
 }) => {
   const [activeSection, setActiveSection] = useState("accountType");
   
@@ -1495,7 +1497,10 @@ const AccountSettingsContent = ({
         <SettingsAndActivityContent selectedColor={selectedColor} isMobileView={isMobileView} />
       )}
 
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+     <div 
+        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => navigate("/subscription")}
+      >
         <FaCreditCard style={getIconStyle()} />
         <span>Subscriptions</span>
       </div>
@@ -1881,6 +1886,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
                     handleColorChange={handleColorChange}
                     isMobileView={isMobileView}
                     userProfile={userProfile}
+                    navigate={navigate} // Add this line
                   />
                 </div>
               </div>
@@ -1929,6 +1935,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
             handleColorChange={handleColorChange}
             isMobileView={isMobileView}
             userProfile={userProfile}
+            navigate={navigate} // Add this line
           />
         </div>
       )}

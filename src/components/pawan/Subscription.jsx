@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { useNavigate } from "react-router-dom";
 import '../../index.css';
+import nav from '../../assets/kumar/right-chevron.png'; // Added one more level
+import logo from '../../assets/sophita/HomePage/Picture3_2.png'; // Added one more level
 
 const plans = [
   {
@@ -153,6 +156,11 @@ const Subscription = () => {
   const [loading, setLoading] = useState(false);
   const auth = getAuth();
   const db = getFirestore();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate(-1); // Go back to previous page
+  };
 
   // Fetch user's subscription status
   useEffect(() => {
@@ -279,6 +287,26 @@ const Subscription = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100">
       <div className="max-w-7xl mx-auto">
+        {/* Header with Logo and Back Button */}
+        <div className="flex flex-col items-start mb-8 ml-4 sm:ml-6">
+          <div className="flex items-center">
+            <motion.img
+              src={logo}
+              alt="Cricklytics Logo"
+              className="w-12 h-12 sm:w-16 sm:h-16 object-cover select-none"
+              whileHover={{ scale: 1.05 }}
+            />
+            <h1 className="text-xl sm:text-2xl font-bold text-white pl-3">Cricklytics</h1>
+          </div>
+          <img
+            src={nav}
+            alt="Back"
+            loading="lazy"
+            className="w-8 h-8 sm:w-10 sm:h-10 -scale-x-100 cursor-pointer mt-2 ml-2"
+            onClick={handleBack}
+          />
+        </div>
+        
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -50 }}
