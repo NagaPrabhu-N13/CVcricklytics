@@ -8,7 +8,6 @@ import { useClub } from './ClubContext';
 const TeamSquadModal = ({ team, tournament, onClose }) => {
   const { clubName } = useClub();
   const [players, setPlayers] = useState([]);
-  const [tournamentName, setTournamentName] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,9 +27,8 @@ const TeamSquadModal = ({ team, tournament, onClose }) => {
   }, []);
 
   useEffect(() => {
-    if (!currentUserId || !team?.tournamentId || !clubName) {
+    if (!currentUserId || !clubName) {
       setPlayers([]);
-      setTournamentName('');
       setLoading(false);
       return;
     }
@@ -38,32 +36,11 @@ const TeamSquadModal = ({ team, tournament, onClose }) => {
     setLoading(true);
     setError(null);
 
-    const fetchTournamentAndPlayers = async () => {
+    const fetchPlayers = async () => {
       try {
-        // Use tournament prop if provided, fallback to query
-        let fetchedTournamentName = tournament?.name || '';
-        if (!fetchedTournamentName) {
-          const tournamentQuery = query(
-            collection(db, 'tournaments'),
-            where('__name__', '==', team.tournamentId),
-            where('clubName', '==', clubName)
-          );
-          const tournamentSnapshot = await getDocs(tournamentQuery);
-          if (!tournamentSnapshot.empty) {
-            fetchedTournamentName = tournamentSnapshot.docs[0].data().name;
-          } else {
-            setError('Tournament not found.');
-            setPlayers([]);
-            setLoading(false);
-            return;
-          }
-        }
-        setTournamentName(fetchedTournamentName);
-
-        // Fetch players with clubName included
+        // Fetch players from PlayerDetails with matching teamName and clubName
         const playersQuery = query(
-          collection(db, 'clubPlayers'),
-          where('tournamentName', '==', fetchedTournamentName),
+          collection(db, 'PlayerDetails'),
           where('teamName', '==', team.teamName),
           where('clubName', '==', clubName)
         );
@@ -93,8 +70,8 @@ const TeamSquadModal = ({ team, tournament, onClose }) => {
       }
     };
 
-    fetchTournamentAndPlayers();
-  }, [currentUserId, team, tournament, clubName]);
+    fetchPlayers();
+  }, [currentUserId, team, clubName]);
 
   if (!team) {
     return null;
@@ -127,10 +104,6 @@ const TeamSquadModal = ({ team, tournament, onClose }) => {
             </button>
           </div>
 
-          {tournamentName && (
-            <p className="text-gray-400 text-sm mb-4">Tournament: {tournamentName}</p>
-          )}
-
           {loading ? (
             <div className="text-center text-gray-400 py-8">Loading squad...</div>
           ) : error ? (
@@ -145,7 +118,7 @@ const TeamSquadModal = ({ team, tournament, onClose }) => {
                   className="flex items-center space-x-4 bg-gray-700 p-3 rounded-md"
                 >
                   <img
-                    src={player.image || 'https://via.placeholder.com/60?text=Player'}
+                    src={player.image || 'https://ui-avatars.com/api/?name=Player&size=60'}
                     alt={player.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-purple-500"
                   />

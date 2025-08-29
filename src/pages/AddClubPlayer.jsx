@@ -17,8 +17,15 @@ const uploadFile = async (file, filePath) => {
 
 const generateUniquePlayerId = async () => {
   const playersCollectionRef = collection(db, 'clubPlayers');
-  const snapshot = await getDocs(playersCollectionRef);
-  const existingIds = snapshot.docs.map(doc => doc.data().playerId).filter(id => id);
+  const playerDetailsCollectionRef = collection(db, 'PlayerDetails');
+  const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+    getDocs(playersCollectionRef),
+    getDocs(playerDetailsCollectionRef),
+  ]);
+  const existingIds = [
+    ...clubPlayersSnapshot.docs.map(doc => doc.data().playerId).filter(id => id),
+    ...playerDetailsSnapshot.docs.map(doc => doc.data().playerId).filter(id => id),
+  ];
 
   let newId;
   do {
@@ -28,13 +35,32 @@ const generateUniquePlayerId = async () => {
   return newId;
 };
 
-const AddPlayerModal = ({ onClose }) => {
+const checkTeamNameUnique = async (teamName, excludeTeamId = null) => {
+  try {
+    const teamsCollectionRef = collection(db, 'clubTeams');
+    const teamSnapshot = await getDocs(teamsCollectionRef);
+    let existingTeam = null;
+
+    teamSnapshot.forEach(doc => {
+      if (doc.data().teamName.toLowerCase() === teamName.toLowerCase() && doc.id !== excludeTeamId) {
+        existingTeam = { id: doc.id, ...doc.data() };
+      }
+    });
+
+    return existingTeam;
+  } catch (err) {
+    console.error("Error checking team name:", err);
+    throw new Error("Failed to check team name existence.");
+  }
+};
+
+const AddClubPlayerModal = ({ onClose, team, onPlayerAdded }) => {
   const { clubName } = useClub(); // Get clubName from context
-  const [clubPlayerFormData, setClubPlayerFormData] = useState({
+  const [formData, setFormData] = useState({
     playerId: '',
     name: '',
     image: '',
-    teamName: '',
+    teamName: team?.teamName || '',
     role: 'player',
     age: '',
     battingStyle: '',
@@ -50,7 +76,8 @@ const AddPlayerModal = ({ onClose }) => {
     bestBowling: '',
     bio: '',
     recentMatches: '',
-    tournamentName: '',
+    user: 'no',
+    audioUrl: '',
     careerStatsBattingMatches: '',
     careerStatsBattingInnings: '',
     careerStatsBattingNotOuts: '',
@@ -71,18 +98,20 @@ const AddPlayerModal = ({ onClose }) => {
     careerStatsFieldingCatches: '',
     careerStatsFieldingStumpings: '',
     careerStatsFieldingRunOuts: '',
-    user: 'no',
-    audioUrl: '', // Added audioUrl to form data
   });
-  const [clubPlayerImageFile, setClubPlayerImageFile] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [tournaments, setTournaments] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [playerIds, setPlayerIds] = useState([]);
+  const [filteredPlayerIds, setFilteredPlayerIds] = useState([]);
+  const [playerIdSearch, setPlayerIdSearch] = useState('');
+  const [isNewPlayer, setIsNewPlayer] = useState(false);
+  const [originalUserId, setOriginalUserId] = useState(null);
+  const [playerSource, setPlayerSource] = useState(null); // To track if from 'clubPlayers' or 'PlayerDetails'
 
-  // Handle authentication state
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -93,64 +122,256 @@ const AddPlayerModal = ({ onClose }) => {
       }
       setAuthLoading(false);
     });
-
     return () => unsubscribeAuth();
   }, []);
 
-  // Generate playerId when the modal mounts
+  const fetchPlayerIds = async () => {
+    try {
+      const clubPlayersRef = collection(db, 'clubPlayers');
+      const playerDetailsRef = collection(db, 'PlayerDetails');
+      const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+        getDocs(clubPlayersRef),
+        getDocs(playerDetailsRef),
+      ]);
+
+      const clubPlayerIds = clubPlayersSnapshot.docs.map(doc => ({
+        playerId: doc.data().playerId,
+        source: 'clubPlayers',
+        ...doc.data(),
+      }));
+      const playerDetailsIds = playerDetailsSnapshot.docs.map(doc => ({
+        playerId: doc.data().playerId,
+        source: 'PlayerDetails',
+        ...doc.data(),
+      }));
+
+      const allPlayerIds = [...clubPlayerIds, ...playerDetailsIds]
+        .filter((player, index, self) => 
+          index === self.findIndex(p => p.playerId === player.playerId)
+        )
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 5);
+
+      setPlayerIds(allPlayerIds);
+      setFilteredPlayerIds(allPlayerIds);
+    } catch (err) {
+      console.error("Error fetching player IDs:", err);
+      setError("Failed to load player IDs.");
+    }
+  };
+
   useEffect(() => {
-    const setPlayerId = async () => {
-      const newId = await generateUniquePlayerId();
-      setClubPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
-    };
-    setPlayerId();
+    fetchPlayerIds();
   }, []);
 
-  // Fetch tournaments for the logged-in user
   useEffect(() => {
-    if (!currentUserId) {
-      setTournaments([]);
-      return;
-    }
+    if (playerIdSearch.trim() === '') {
+      setFilteredPlayerIds(playerIds);
+    } else {
+      const fetchFilteredPlayerIds = async () => {
+        try {
+          const clubPlayersRef = collection(db, 'clubPlayers');
+          const playerDetailsRef = collection(db, 'PlayerDetails');
+          const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+            getDocs(clubPlayersRef),
+            getDocs(playerDetailsRef),
+          ]);
 
-    const fetchTournaments = async () => {
+          const clubPlayerIds = clubPlayersSnapshot.docs
+            .map(doc => ({ playerId: doc.data().playerId, source: 'clubPlayers', ...doc.data() }))
+            .filter(player => player.playerId.toString().includes(playerIdSearch));
+          const playerDetailsIds = playerDetailsSnapshot.docs
+            .map(doc => ({ playerId: doc.data().playerId, source: 'PlayerDetails', ...doc.data() }))
+            .filter(player => player.playerId.toString().includes(playerIdSearch));
+
+          const allFilteredPlayerIds = [...clubPlayerIds, ...playerDetailsIds]
+            .filter((player, index, self) => 
+              index === self.findIndex(p => p.playerId === player.playerId)
+            );
+
+          setFilteredPlayerIds(allFilteredPlayerIds);
+        } catch (err) {
+          console.error("Error filtering player IDs:", err);
+          setError("Failed to filter player IDs.");
+        }
+      };
+
+      fetchFilteredPlayerIds();
+    }
+  }, [playerIdSearch, playerIds]);
+
+  useEffect(() => {
+    if (team?.teamName && !formData.playerId) {
+      setFormData(prev => ({ ...prev, teamName: team.teamName }));
+    }
+  }, [team]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageFileChange = (e) => {
+    if (e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    } else {
+      setImageFile(null);
+    }
+  };
+
+  const handlePlayerIdChange = async (e) => {
+    const selectedPlayerId = e.target.value;
+    setFormData(prev => ({ ...prev, playerId: selectedPlayerId }));
+    setIsNewPlayer(false);
+
+    if (selectedPlayerId) {
       try {
-        const q = query(
-          collection(db, "tournaments"),
-          where("userId", "==", currentUserId)
+        let playerData = null;
+        let originalUserId = null;
+        let source = null;
+        
+        const clubPlayerQuery = query(
+          collection(db, 'clubPlayers'),
+          where('playerId', '==', parseInt(selectedPlayerId))
         );
-        const querySnapshot = await getDocs(q);
-        const tournamentList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name
-        }));
-        setTournaments(tournamentList);
-        if (tournamentList.length === 0) {
-          setError("No tournaments found for your account. Please create a tournament first.");
+        const clubPlayerSnapshot = await getDocs(clubPlayerQuery);
+        if (!clubPlayerSnapshot.empty) {
+          playerData = clubPlayerSnapshot.docs[0].data();
+          originalUserId = playerData.userId;
+          source = 'clubPlayers';
+        } else {
+          const playerDetailsQuery = query(
+            collection(db, 'PlayerDetails'),
+            where('playerId', '==', parseInt(selectedPlayerId))
+          );
+          const playerDetailsSnapshot = await getDocs(playerDetailsQuery);
+          if (!playerDetailsSnapshot.empty) {
+            playerData = playerDetailsSnapshot.docs[0].data();
+            originalUserId = playerData.userId;
+            source = 'PlayerDetails';
+          }
+        }
+        if (playerData) {
+          setOriginalUserId(originalUserId);
+          setPlayerSource(source);
+          setFormData({
+            ...formData,
+            playerId: playerData.playerId.toString(),
+            name: playerData.name || '',
+            image: playerData.image || '',
+            teamName: team?.teamName || playerData.teamName || '',
+            role: playerData.role || 'player',
+            age: playerData.age?.toString() || '',
+            battingStyle: playerData.battingStyle || '',
+            bowlingStyle: playerData.bowlingStyle || '',
+            matches: playerData.matches?.toString() || '',
+            runs: playerData.runs?.toString() || '',
+            highestScore: playerData.highestScore?.toString() || '',
+            average: playerData.average?.toString() || '',
+            strikeRate: playerData.strikeRate?.toString() || '',
+            centuries: playerData.centuries?.toString() || '',
+            fifties: playerData.fifties?.toString() || '',
+            wickets: playerData.wickets?.toString() || '',
+            bestBowling: playerData.bestBowling || '',
+            bio: playerData.bio || '',
+            recentMatches: Array.isArray(playerData.recentMatches)
+              ? playerData.recentMatches.map(match => `${match.opponent}, ${match.runs}, ${match.wickets}, ${match.result}`).join('\n')
+              : '',
+            user: playerData.user || 'no',
+            audioUrl: playerData.audioUrl || '',
+            careerStatsBattingMatches: playerData.careerStats?.batting?.matches?.toString() || '',
+            careerStatsBattingInnings: playerData.careerStats?.batting?.innings?.toString() || '',
+            careerStatsBattingNotOuts: playerData.careerStats?.batting?.notOuts?.toString() || '',
+            careerStatsBattingRuns: playerData.careerStats?.batting?.runs?.toString() || '',
+            careerStatsBattingHighest: playerData.careerStats?.batting?.highest?.toString() || '',
+            careerStatsBattingAverage: playerData.careerStats?.batting?.average?.toString() || '',
+            careerStatsBattingStrikeRate: playerData.careerStats?.batting?.strikeRate?.toString() || '',
+            careerStatsBattingCenturies: playerData.careerStats?.batting?.centuries?.toString() || '',
+            careerStatsBattingFifties: playerData.careerStats?.batting?.fifties?.toString() || '',
+            careerStatsBattingFours: playerData.careerStats?.batting?.fours?.toString() || '',
+            careerStatsBattingSixes: playerData.careerStats?.batting?.sixes?.toString() || '',
+            careerStatsBowlingInnings: playerData.careerStats?.bowling?.innings?.toString() || '',
+            careerStatsBowlingWickets: playerData.careerStats?.bowling?.wickets?.toString() || '',
+            careerStatsBowlingBest: playerData.careerStats?.bowling?.best || '',
+            careerStatsBowlingAverage: playerData.careerStats?.bowling?.average?.toString() || '',
+            careerStatsBowlingEconomy: playerData.careerStats?.bowling?.economy?.toString() || '',
+            careerStatsBowlingStrikeRate: playerData.careerStats?.bowling?.strikeRate?.toString() || '',
+            careerStatsFieldingCatches: playerData.careerStats?.fielding?.catches?.toString() || '',
+            careerStatsFieldingStumpings: playerData.careerStats?.fielding?.stumpings?.toString() || '',
+            careerStatsFieldingRunOuts: playerData.careerStats?.fielding?.runOuts?.toString() || '',
+          });
+        } else {
+          setError("Player data not found.");
         }
       } catch (err) {
-        console.error("Error fetching tournaments:", err);
-        setError("Failed to load tournaments: " + err.message);
+        console.error("Error fetching player data:", err);
+        setError("Failed to fetch player data.");
       }
-    };
-
-    fetchTournaments();
-  }, [currentUserId]);
-
-  const handleClubPlayerChange = (e) => {
-    const { name, value } = e.target;
-    setClubPlayerFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleClubPlayerImageFileChange = (e) => {
-    if (e.target.files[0]) {
-      setClubPlayerImageFile(e.target.files[0]);
     } else {
-      setClubPlayerImageFile(null);
+      setFormData(prev => ({ ...prev, teamName: team?.teamName || '' }));
+      setPlayerSource(null);
     }
   };
 
-  const handleClubPlayerSubmit = async (e) => {
+  const handleNewPlayerId = async () => {
+    const newId = await generateUniquePlayerId();
+    const newPlayer = {
+      playerId: newId,
+      source: 'new',
+      name: 'New Player',
+    };
+    setFormData({
+      playerId: newId.toString(),
+      name: '',
+      image: '',
+      teamName: team?.teamName || '',
+      role: 'player',
+      age: '',
+      battingStyle: '',
+      bowlingStyle: '',
+      matches: '0',
+      runs: '0',
+      highestScore: '0',
+      average: '0',
+      strikeRate: '0',
+      centuries: '0',
+      fifties: '0',
+      wickets: '0',
+      bestBowling: '',
+      bio: '',
+      recentMatches: '',
+      user: 'no',
+      audioUrl: '',
+      careerStatsBattingMatches: '0',
+      careerStatsBattingInnings: '0',
+      careerStatsBattingNotOuts: '0',
+      careerStatsBattingRuns: '0',
+      careerStatsBattingHighest: '0',
+      careerStatsBattingAverage: '0',
+      careerStatsBattingStrikeRate: '0',
+      careerStatsBattingCenturies: '0',
+      careerStatsBattingFifties: '0',
+      careerStatsBattingFours: '0',
+      careerStatsBattingSixes: '0',
+      careerStatsBowlingInnings: '0',
+      careerStatsBowlingWickets: '0',
+      careerStatsBowlingBest: '0',
+      careerStatsBowlingAverage: '0',
+      careerStatsBowlingEconomy: '0',
+      careerStatsBowlingStrikeRate: '0',
+      careerStatsFieldingCatches: '0',
+      careerStatsFieldingStumpings: '0',
+      careerStatsFieldingRunOuts: '0',
+    });
+    setImageFile(null);
+    setIsNewPlayer(true);
+    setPlayerIds(prev => [newPlayer, ...prev]);
+    setFilteredPlayerIds(prev => [newPlayer, ...prev]);
+    setOriginalUserId(currentUserId);
+    setPlayerSource('new');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -162,36 +383,30 @@ const AddPlayerModal = ({ onClose }) => {
       return;
     }
 
-    const playerName = clubPlayerFormData.name.trim();
+    const playerName = formData.name.trim();
     if (!playerName) {
       setError("Player name cannot be empty.");
       setLoading(false);
       return;
     }
 
-    if (!clubPlayerFormData.tournamentName) {
-      setError("Please select a tournament.");
-      setLoading(false);
-      return;
-    }
-
-    if (!clubPlayerFormData.teamName) {
+    if (!formData.teamName) {
       setError("Team name is required.");
       setLoading(false);
       return;
     }
 
-    let uploadedImageUrl = clubPlayerFormData.image;
+    let uploadedImageUrl = formData.image;
     try {
-      if (clubPlayerImageFile) {
-        const filePath = `club_player_photos/${playerName.toLowerCase().replace(/\s+/g, '_')}_${clubPlayerImageFile.name}`;
-        uploadedImageUrl = await uploadFile(clubPlayerImageFile, filePath);
+      if (imageFile) {
+        const filePath = `player_photos/${playerName.toLowerCase().replace(/\s+/g, '_')}_${imageFile.name}`;
+        uploadedImageUrl = await uploadFile(imageFile, filePath);
         if (!uploadedImageUrl) {
-          throw new Error("Failed to upload club player image.");
+          throw new Error("Failed to upload player image.");
         }
       }
 
-      const recentMatchesParsed = clubPlayerFormData.recentMatches
+      const recentMatchesParsed = formData.recentMatches
         .split('\n')
         .filter(line => line.trim() !== '')
         .map(line => {
@@ -209,153 +424,164 @@ const AddPlayerModal = ({ onClose }) => {
         })
         .filter(item => item !== null);
 
-      const clubPlayerData = {
-        playerId: parseInt(clubPlayerFormData.playerId),
+      const userIdToUse = originalUserId || currentUserId;
+      const playerData = {
+        playerId: parseInt(formData.playerId),
         name: playerName,
-        image: uploadedImageUrl,
-        teamName: clubPlayerFormData.teamName,
-        role: clubPlayerFormData.role,
-        age: parseInt(clubPlayerFormData.age) || 0,
-        battingStyle: clubPlayerFormData.battingStyle,
-        bowlingStyle: clubPlayerFormData.bowlingStyle,
-        matches: parseInt(clubPlayerFormData.matches) || 0,
-        runs: parseInt(clubPlayerFormData.runs) || 0,
-        highestScore: parseInt(clubPlayerFormData.highestScore) || 0,
-        average: parseFloat(clubPlayerFormData.average) || 0,
-        strikeRate: parseFloat(clubPlayerFormData.strikeRate) || 0,
-        centuries: parseInt(clubPlayerFormData.centuries) || 0,
-        fifties: parseInt(clubPlayerFormData.fifties) || 0,
-        wickets: parseInt(clubPlayerFormData.wickets) || 0,
-        bestBowling: clubPlayerFormData.bestBowling || '',
-        bio: clubPlayerFormData.bio || '',
+        image: uploadedImageUrl || '',
+        teamName: formData.teamName,
+        clubName: clubName || '', // Store clubName
+        role: formData.role,
+        age: parseInt(formData.age) || 0,
+        battingStyle: formData.battingStyle || '',
+        bowlingStyle: formData.bowlingStyle || '',
+        matches: parseInt(formData.matches) || 0,
+        runs: parseInt(formData.runs) || 0,
+        highestScore: parseInt(formData.highestScore) || 0,
+        average: parseFloat(formData.average) || 0,
+        strikeRate: parseFloat(formData.strikeRate) || 0,
+        centuries: parseInt(formData.centuries) || 0,
+        fifties: parseInt(formData.fifties) || 0,
+        wickets: parseInt(formData.wickets) || 0,
+        bestBowling: formData.bestBowling || '0',
+        bio: formData.bio || '',
         recentMatches: recentMatchesParsed,
-        tournamentName: clubPlayerFormData.tournamentName,
-        userId: currentUserId,
-        user: clubPlayerFormData.user,
-        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
-        audioUrl: clubPlayerFormData.audioUrl || '', // Include audioUrl
+        userId: userIdToUse,
+        user: formData.user,
+        audioUrl: formData.audioUrl || '',
         careerStats: {
           batting: {
-            matches: parseInt(clubPlayerFormData.careerStatsBattingMatches) || 0,
-            innings: parseInt(clubPlayerFormData.careerStatsBattingInnings) || 0,
-            notOuts: parseInt(clubPlayerFormData.careerStatsBattingNotOuts) || 0,
-            runs: parseInt(clubPlayerFormData.careerStatsBattingRuns) || 0,
-            highest: parseInt(clubPlayerFormData.careerStatsBattingHighest) || 0,
-            average: parseFloat(clubPlayerFormData.careerStatsBattingAverage) || 0,
-            strikeRate: parseFloat(clubPlayerFormData.careerStatsBattingStrikeRate) || 0,
-            centuries: parseInt(clubPlayerFormData.careerStatsBattingCenturies) || 0,
-            fifties: parseInt(clubPlayerFormData.careerStatsBattingFifties) || 0,
-            fours: parseInt(clubPlayerFormData.careerStatsBattingFours) || 0,
-            sixes: parseInt(clubPlayerFormData.careerStatsBattingSixes) || 0,
+            matches: parseInt(formData.careerStatsBattingMatches) || 0,
+            innings: parseInt(formData.careerStatsBattingInnings) || 0,
+            notOuts: parseInt(formData.careerStatsBattingNotOuts) || 0,
+            runs: parseInt(formData.careerStatsBattingRuns) || 0,
+            highest: parseInt(formData.careerStatsBattingHighest) || 0,
+            average: parseFloat(formData.careerStatsBattingAverage) || 0,
+            strikeRate: parseFloat(formData.careerStatsBattingStrikeRate) || 0,
+            centuries: parseInt(formData.careerStatsBattingCenturies) || 0,
+            fifties: parseInt(formData.careerStatsBattingFifties) || 0,
+            fours: parseInt(formData.careerStatsBattingFours) || 0,
+            sixes: parseInt(formData.careerStatsBattingSixes) || 0,
           },
           bowling: {
-            innings: parseInt(clubPlayerFormData.careerStatsBowlingInnings) || 0,
-            wickets: parseInt(clubPlayerFormData.careerStatsBowlingWickets) || 0,
-            best: clubPlayerFormData.careerStatsBowlingBest || '',
-            average: parseFloat(clubPlayerFormData.careerStatsBowlingAverage) || 0,
-            economy: parseFloat(clubPlayerFormData.careerStatsBowlingEconomy) || 0,
-            strikeRate: parseFloat(clubPlayerFormData.careerStatsBowlingStrikeRate) || 0,
+            innings: parseInt(formData.careerStatsBowlingInnings) || 0,
+            wickets: parseInt(formData.careerStatsBowlingWickets) || 0,
+            best: formData.careerStatsBowlingBest || '0',
+            average: parseFloat(formData.careerStatsBowlingAverage) || 0,
+            economy: parseFloat(formData.careerStatsBowlingEconomy) || 0,
+            strikeRate: parseFloat(formData.careerStatsBowlingStrikeRate) || 0,
           },
           fielding: {
-            catches: parseInt(clubPlayerFormData.careerStatsFieldingCatches) || 0,
-            stumpings: parseInt(clubPlayerFormData.careerStatsFieldingStumpings) || 0,
-            runOuts: parseInt(clubPlayerFormData.careerStatsFieldingRunOuts) || 0,
+            catches: parseInt(formData.careerStatsFieldingCatches) || 0,
+            stumpings: parseInt(formData.careerStatsFieldingStumpings) || 0,
+            runOuts: parseInt(formData.careerStatsFieldingRunOuts) || 0,
           }
         }
       };
 
-      const clubPlayerId = clubPlayerFormData.playerId;
-      // Save player to clubPlayers collection
-      await setDoc(doc(db, "clubPlayers", clubPlayerId), clubPlayerData);
+      const playerId = formData.playerId.toString(); // Ensure string for doc ID
 
-      // Add player to clubTeams collection
+      // Save/update to clubPlayers
+      await setDoc(doc(db, "clubPlayers", playerId), playerData);
+
+      // Also save/update to PlayerDetails with teamName and clubName
+      await setDoc(doc(db, "PlayerDetails", playerId), {
+        ...playerData, // Include all data
+        teamName: formData.teamName,
+        clubName: clubName || '',
+        updatedAt: new Date() // Update timestamp
+      });
+
       const teamQuery = query(
         collection(db, 'clubTeams'),
-        where('teamName', '==', clubPlayerFormData.teamName),
-        where('tournamentName', '==', clubPlayerFormData.tournamentName),
-        where('createdBy', '==', currentUserId)
+        where('teamName', '==', formData.teamName)
       );
       const teamSnapshot = await getDocs(teamQuery);
 
       if (!teamSnapshot.empty) {
-        // Team exists, append player to players array
         const teamDoc = teamSnapshot.docs[0];
         await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
-          players: arrayUnion(clubPlayerData)
+          players: arrayUnion(playerData)
         });
       } else {
-        // Team doesn't exist, create new team with player
         await setDoc(doc(collection(db, 'clubTeams')), {
-          teamName: clubPlayerFormData.teamName,
-          tournamentName: clubPlayerFormData.tournamentName,
+          teamName: formData.teamName,
           createdBy: currentUserId,
           createdAt: new Date(),
-          players: [clubPlayerData],
-          captain: '', // Default empty, can be set via AddTeamModal
+          players: [playerData],
+          captain: '',
           matches: 0,
           wins: 0,
           losses: 0,
           points: 0,
-          lastMatch: '',
-          clubName: clubName || '' // Store clubName from context
+          lastMatch: ''
         });
       }
 
       setSuccess(true);
 
       const newId = await generateUniquePlayerId();
-      setClubPlayerFormData({
+      const newPlayer = {
+        playerId: newId,
+        source: 'new',
+        name: 'New Player',
+      };
+      setFormData({
         playerId: newId.toString(),
         name: '',
         image: '',
-        teamName: '',
+        teamName: team?.teamName || '',
         role: 'player',
         age: '',
         battingStyle: '',
         bowlingStyle: '',
-        matches: '',
-        runs: '',
-        highestScore: '',
-        average: '',
-        strikeRate: '',
-        centuries: '',
-        fifties: '',
-        wickets: '',
-        bestBowling: '',
+        matches: '0',
+        runs: '0',
+        highestScore: '0',
+        average: '0',
+        strikeRate: '0',
+        centuries: '0',
+        fifties: '0',
+        wickets: '0',
+        bestBowling: '0',
         bio: '',
         recentMatches: '',
-        tournamentName: '',
-        careerStatsBattingMatches: '',
-        careerStatsBattingInnings: '',
-        careerStatsBattingNotOuts: '',
-        careerStatsBattingRuns: '',
-        careerStatsBattingHighest: '',
-        careerStatsBattingAverage: '',
-        careerStatsBattingStrikeRate: '',
-        careerStatsBattingCenturies: '',
-        careerStatsBattingFifties: '',
-        careerStatsBattingFours: '',
-        careerStatsBattingSixes: '',
-        careerStatsBowlingInnings: '',
-        careerStatsBowlingWickets: '',
-        careerStatsBowlingBest: '',
-        careerStatsBowlingAverage: '',
-        careerStatsBowlingEconomy: '',
-        careerStatsBowlingStrikeRate: '',
-        careerStatsFieldingCatches: '',
-        careerStatsFieldingStumpings: '',
-        careerStatsFieldingRunOuts: '',
         user: 'no',
-        audioUrl: '', // Reset audioUrl
+        audioUrl: '',
+        careerStatsBattingMatches: '0',
+        careerStatsBattingInnings: '0',
+        careerStatsBattingNotOuts: '0',
+        careerStatsBattingRuns: '0',
+        careerStatsBattingHighest: '0',
+        careerStatsBattingAverage: '0',
+        careerStatsBattingStrikeRate: '0',
+        careerStatsBattingCenturies: '0',
+        careerStatsBattingFifties: '0',
+        careerStatsBattingFours: '0',
+        careerStatsBattingSixes: '0',
+        careerStatsBowlingInnings: '0',
+        careerStatsBowlingWickets: '0',
+        careerStatsBowlingBest: '0',
+        careerStatsBowlingAverage: '0',
+        careerStatsBowlingEconomy: '0',
+        careerStatsBowlingStrikeRate: '0',
+        careerStatsFieldingCatches: '0',
+        careerStatsFieldingStumpings: '0',
+        careerStatsFieldingRunOuts: '0',
       });
-      setClubPlayerImageFile(null);
+      setImageFile(null);
+      setIsNewPlayer(true);
+      setPlayerIds(prev => [newPlayer, ...prev]);
+      setFilteredPlayerIds(prev => [newPlayer, ...prev]);
+      setOriginalUserId(currentUserId);
+      if (onPlayerAdded) {
+        onPlayerAdded();
+      }
 
       setTimeout(() => onClose(), 1500);
     } catch (err) {
-      console.error("Error adding club player:", err);
-      setError("Failed to add club player: " + err.message);
-      setLoading(false);
-    } finally {
+      console.error("Error adding player:", err);
+      setError("Failed to add player: " + err.message);
       setLoading(false);
     }
   };
@@ -391,20 +617,44 @@ const AddPlayerModal = ({ onClose }) => {
           exit={{ scale: 0.9, y: 50 }}
           className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-gray-700 overflow-y-auto max-h-[90vh]"
         >
-          <h2 className="text-2xl font-bold text-white mb-4">Add New Club Player</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">Add New Player</h2>
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           {success && <p className="text-green-500 text-sm mb-4">Player added successfully!</p>}
 
-          <form onSubmit={handleClubPlayerSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-gray-300">Player ID</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    name="playerId"
+                    value={formData.playerId}
+                    onChange={handlePlayerIdChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Player ID</option>
+                    {filteredPlayerIds.map(player => (
+                      <option key={`${player.playerId}-${player.source}`} value={player.playerId}>
+                        {player.playerId} ({player.source})
+                      </option>
+                    ))}
+                  </select>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleNewPlayerId}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    New
+                  </motion.button>
+                </div>
                 <input
                   type="text"
-                  name="playerId"
-                  value={clubPlayerFormData.playerId}
-                  readOnly
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 opacity-75"
+                  placeholder="Search Player ID..."
+                  value={playerIdSearch}
+                  onChange={(e) => setPlayerIdSearch(e.target.value)}
+                  className="w-full p-2 mt-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
                 <div className="mt-2 flex items-center gap-4">
                   <label className="text-gray-300">User</label>
@@ -414,8 +664,8 @@ const AddPlayerModal = ({ onClose }) => {
                         type="radio"
                         name="user"
                         value="yes"
-                        checked={clubPlayerFormData.user === 'yes'}
-                        onChange={handleClubPlayerChange}
+                        checked={formData.user === 'yes'}
+                        onChange={handleChange}
                         className="mr-2 text-blue-500 focus:ring-blue-500"
                       />
                       <span className="text-gray-300">Yes</span>
@@ -425,8 +675,8 @@ const AddPlayerModal = ({ onClose }) => {
                         type="radio"
                         name="user"
                         value="no"
-                        checked={clubPlayerFormData.user === 'no'}
-                        onChange={handleClubPlayerChange}
+                        checked={formData.user === 'no'}
+                        onChange={handleChange}
                         className="mr-2 text-blue-500 focus:ring-blue-500"
                       />
                       <span className="text-gray-300">No</span>
@@ -439,47 +689,29 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="text"
                   name="name"
-                  value={clubPlayerFormData.name}
-                  onChange={handleClubPlayerChange}
+                  value={formData.name}
+                  onChange={handleChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block mb-1 text-gray-300">Club Name (from context)</label>
-                <input
-                  type="text"
-                  value={clubName || 'No club selected'}
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white opacity-50"
-                  disabled
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-gray-300">Tournament</label>
-                <select
-                  name="tournamentName"
-                  value={clubPlayerFormData.tournamentName}
-                  onChange={handleClubPlayerChange}
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select a tournament</option>
-                  {tournaments.map(tournament => (
-                    <option key={tournament.id} value={tournament.name}>
-                      {tournament.name}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className="block mb-1 text-gray-300">Team Name</label>
                 <input
                   type="text"
                   name="teamName"
-                  value={clubPlayerFormData.teamName}
-                  onChange={handleClubPlayerChange}
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
+                  value={formData.teamName}
+                  readOnly
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white opacity-70 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-gray-300">Club Name</label>
+                <input
+                  type="text"
+                  value={clubName || 'No Club Selected'}
+                  readOnly
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white opacity-70 cursor-not-allowed"
                 />
               </div>
               <div>
@@ -487,18 +719,18 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleClubPlayerImageFileChange}
+                  onChange={handleImageFileChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
-                {clubPlayerImageFile && <p className="text-sm mt-1 text-gray-400">Selected: {clubPlayerImageFile.name}</p>}
+                {imageFile && <p className="text-sm mt-1 text-gray-400">Selected: {imageFile.name}</p>}
               </div>
               <div>
                 <label className="block mb-1 text-gray-300">Or Paste Player Image URL (Optional fallback)</label>
                 <input
                   type="text"
                   name="image"
-                  value={clubPlayerFormData.image}
-                  onChange={handleClubPlayerChange}
+                  value={formData.image}
+                  onChange={handleChange}
                   placeholder="https://example.com/player.png"
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -508,8 +740,8 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="text"
                   name="role"
-                  value={clubPlayerFormData.role}
-                  onChange={handleClubPlayerChange}
+                  value={formData.role}
+                  onChange={handleChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -519,8 +751,8 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="age"
-                  value={clubPlayerFormData.age}
-                  onChange={handleClubPlayerChange}
+                  value={formData.age}
+                  onChange={handleChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -530,8 +762,8 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="text"
                   name="battingStyle"
-                  value={clubPlayerFormData.battingStyle}
-                  onChange={handleClubPlayerChange}
+                  value={formData.battingStyle}
+                  onChange={handleChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -541,19 +773,18 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="text"
                   name="bowlingStyle"
-                  value={clubPlayerFormData.bowlingStyle}
-                  onChange={handleClubPlayerChange}
+                  value={formData.bowlingStyle}
+                  onChange={handleChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-
             <div>
               <label className="block mb-1 text-gray-300">Recent Matches (one per line, format: "Opponent, Runs, Wickets, Result")</label>
               <textarea
                 name="recentMatches"
-                value={clubPlayerFormData.recentMatches}
-                onChange={handleClubPlayerChange}
+                value={formData.recentMatches}
+                onChange={handleChange}
                 rows="4"
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder={`Jaipur Strikers, 98, 1, Won by 28 runs\nLUT Biggieagles XI, 64, 0, Lost by 5 wickets`}
@@ -563,14 +794,13 @@ const AddPlayerModal = ({ onClose }) => {
               <label className="block mb-1 text-gray-300">Bio</label>
               <textarea
                 name="bio"
-                value={clubPlayerFormData.bio}
-                onChange={handleClubPlayerChange}
+                value={formData.bio}
+                onChange={handleChange}
                 rows="3"
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
-
             <h3 className="text-lg font-bold text-white mt-6 border-t border-gray-700 pt-4">Career Stats - Batting</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -578,8 +808,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingMatches"
-                  value={clubPlayerFormData.careerStatsBattingMatches}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingMatches}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -588,8 +819,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingInnings"
-                  value={clubPlayerFormData.careerStatsBattingInnings}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingInnings}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -598,8 +830,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingNotOuts"
-                  value={clubPlayerFormData.careerStatsBattingNotOuts}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingNotOuts}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -608,8 +841,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingRuns"
-                  value={clubPlayerFormData.careerStatsBattingRuns}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingRuns}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -618,8 +852,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingHighest"
-                  value={clubPlayerFormData.careerStatsBattingHighest}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingHighest}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -629,8 +864,9 @@ const AddPlayerModal = ({ onClose }) => {
                   type="number"
                   step="0.01"
                   name="careerStatsBattingAverage"
-                  value={clubPlayerFormData.careerStatsBattingAverage}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingAverage}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -640,8 +876,9 @@ const AddPlayerModal = ({ onClose }) => {
                   type="number"
                   step="0.01"
                   name="careerStatsBattingStrikeRate"
-                  value={clubPlayerFormData.careerStatsBattingStrikeRate}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingStrikeRate}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -650,8 +887,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingCenturies"
-                  value={clubPlayerFormData.careerStatsBattingCenturies}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingCenturies}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -660,8 +898,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingFifties"
-                  value={clubPlayerFormData.careerStatsBattingFifties}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingFifties}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -670,8 +909,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingFours"
-                  value={clubPlayerFormData.careerStatsBattingFours}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingFours}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -680,13 +920,13 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBattingSixes"
-                  value={clubPlayerFormData.careerStatsBattingSixes}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBattingSixes}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-
             <h3 className="text-lg font-bold text-white mt-6 border-t border-gray-700 pt-4">Career Stats - Bowling</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -694,8 +934,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBowlingInnings"
-                  value={clubPlayerFormData.careerStatsBowlingInnings}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingInnings}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -704,8 +945,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsBowlingWickets"
-                  value={clubPlayerFormData.careerStatsBowlingWickets}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingWickets}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -714,8 +956,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="text"
                   name="careerStatsBowlingBest"
-                  value={clubPlayerFormData.careerStatsBowlingBest}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingBest}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -725,8 +968,9 @@ const AddPlayerModal = ({ onClose }) => {
                   type="number"
                   step="0.01"
                   name="careerStatsBowlingAverage"
-                  value={clubPlayerFormData.careerStatsBowlingAverage}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingAverage}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -736,8 +980,9 @@ const AddPlayerModal = ({ onClose }) => {
                   type="number"
                   step="0.01"
                   name="careerStatsBowlingEconomy"
-                  value={clubPlayerFormData.careerStatsBowlingEconomy}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingEconomy}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -747,13 +992,13 @@ const AddPlayerModal = ({ onClose }) => {
                   type="number"
                   step="0.01"
                   name="careerStatsBowlingStrikeRate"
-                  value={clubPlayerFormData.careerStatsBowlingStrikeRate}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsBowlingStrikeRate}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-
             <h3 className="text-lg font-bold text-white mt-6 border-t border-gray-700 pt-4">Career Stats - Fielding</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -761,8 +1006,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsFieldingCatches"
-                  value={clubPlayerFormData.careerStatsFieldingCatches}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsFieldingCatches}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -771,8 +1017,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsFieldingStumpings"
-                  value={clubPlayerFormData.careerStatsFieldingStumpings}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsFieldingStumpings}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -781,8 +1028,9 @@ const AddPlayerModal = ({ onClose }) => {
                 <input
                   type="number"
                   name="careerStatsFieldingRunOuts"
-                  value={clubPlayerFormData.careerStatsFieldingRunOuts}
-                  onChange={handleClubPlayerChange}
+                  value={formData.careerStatsFieldingRunOuts}
+                  onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -803,9 +1051,9 @@ const AddPlayerModal = ({ onClose }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                disabled={loading || !currentUserId || tournaments.length === 0}
+                disabled={loading || !currentUserId}
               >
-                {loading ? 'Adding Player...' : 'Add Club Player'}
+                {loading ? 'Adding Player...' : 'Add Player'}
               </motion.button>
             </div>
           </form>
@@ -815,4 +1063,4 @@ const AddPlayerModal = ({ onClose }) => {
   );
 };
 
-export default AddPlayerModal;
+export default AddClubPlayerModal;

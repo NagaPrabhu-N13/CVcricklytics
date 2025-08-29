@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom'; // New import
 
@@ -10,6 +10,7 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
   const [tossResult, setTossResult] = useState('');
   const [location, setLocation] = useState('');
   const [pitchImage, setPitchImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [result, setResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -17,6 +18,14 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
   console.log(tournamentId)
 
   const navigate = useNavigate(); // New hook
+
+  useEffect(() => {
+    if (pitchImage) {
+      const url = URL.createObjectURL(pitchImage[0]);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url); // Clean up to prevent memory leaks
+    }
+  }, [pitchImage]);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -180,12 +189,12 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                     </span>
                   )}
                 </div>
-                {pitchImage && (
-                  <div className="mt-1">
+                {previewUrl && (
+                  <div className="mt-1 flex justify-center">
                     <img 
-                      src={URL.createObjectURL(pitchImage)} 
+                      src={previewUrl} 
                       alt="Pitch preview" 
-                      className="max-h-32 rounded border border-gray-200 mx-auto"
+                      className="w-32 h-32 object-cover rounded border border-gray-200"
                     />
                   </div>
                 )}

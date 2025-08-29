@@ -11,7 +11,8 @@ const TournamentPage = () => {
   const location = useLocation();
   const { tournamentName, selectedBall } = location.state || {};
   const [step, setStep] = useState('menu');
-  const [teams, setTeams] = useState([]);
+  const [clubs, setClubs] = useState([]);
+  const [clubsTeams, setClubsTeams] = useState({}); // Map: clubName -> array of teams
   const [sharedLink, setSharedLink] = useState('');
   const [showTeamCards, setShowTeamCards] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState([]);
@@ -20,7 +21,7 @@ const TournamentPage = () => {
     { id: 2, name: 'Team Bravo' },
   ]);
   const [acceptedTeams, setAcceptedTeams] = useState([]);
-  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [loadingClubs, setLoadingClubs] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(null);
@@ -60,28 +61,40 @@ const TournamentPage = () => {
     fetchTournamentData();
   }, [tournamentName]);
 
-  // Fetch teams when showTeamCards is true
+  // Fetch clubs and their teams when showTeamCards is true
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchClubsAndTeams = async () => {
       try {
-        setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'teams');
-        const data = await getDocs(teamsCollectionRef);
-        const fetchedTeams = data.docs.map((doc) => ({
-          ...doc.data(),
+        setLoadingClubs(true);
+        const clubsSnapshot = await getDocs(collection(db, 'clubs'));
+        const fetchedClubs = clubsSnapshot.docs.map((doc) => ({
           id: doc.id,
+          ...doc.data(),
         }));
-        setTeams(fetchedTeams);
+        setClubs(fetchedClubs);
+
+        const teamsMap = {};
+        await Promise.all(
+          fetchedClubs.map(async (club) => {
+            const teamsQuery = query(collection(db, 'clubTeams'), where('clubName', '==', club.name));
+            const teamsSnapshot = await getDocs(teamsQuery);
+            teamsMap[club.name] = teamsSnapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+          })
+        );
+        setClubsTeams(teamsMap);
       } catch (err) {
-        console.error("Error fetching teams: ", err);
-        setError("Failed to load teams. Please try again.");
+        console.error("Error fetching clubs and teams: ", err);
+        setError("Failed to load clubs and teams. Please try again.");
       } finally {
-        setLoadingTeams(false);
+        setLoadingClubs(false);
       }
     };
 
     if (showTeamCards) {
-      fetchTeams();
+      fetchClubsAndTeams();
     }
   }, [showTeamCards]);
 
@@ -108,7 +121,7 @@ const TournamentPage = () => {
     setShowTeamCards(true);
   };
 
-  const handleCardClick = (teamName) => {
+  const handleTeamSelect = (teamName) => {
     if (!selectedTeams.includes(teamName)) {
       if (selectedTeams.length < noOfTeams) {
         setSelectedTeams([...selectedTeams, teamName]);
@@ -149,7 +162,8 @@ const TournamentPage = () => {
 
   const handleCancel = () => {
     setSelectedTeams([]);
-    setTeams([]);
+    setClubs([]);
+    setClubsTeams({});
     setShowTeamCards(false);
   };
 
@@ -157,39 +171,38 @@ const TournamentPage = () => {
     setShowModal(true);
   };
 
- const handleFormatSelect = async (format) => {
-  setSelectedFormat(format);
-  setShowModal(false);
+  const handleFormatSelect = async (format) => {
+    setSelectedFormat(format);
+    setShowModal(false);
 
-  // Update currentStage in Firestore
-  if (tournamentId) {
-    try {
-      const tournamentRef = doc(db, 'tournament', tournamentId);
-      await updateDoc(tournamentRef, {
-        currentStage: format === 'Round Robin' ? 'RoundRobin' : 'Knockout'
-      });
-      console.log(`Tournament currentStage updated to ${format === 'Round Robin' ? 'RoundRobin' : 'Knockout'}`);
-    } catch (err) {
-      console.error('Error updating tournament currentStage:', err);
-      // Optionally, add UI feedback here, like setting an error state
-    }
-  } else {
-    console.error('No tournament ID available for update.');
-  }
-
-  // Update selected teams and navigate as before
-  await handleUpdateTeams();
-  if (format === 'Round Robin') {
-    navigate('/tournamentSuccess');
-  } else {
-    if (selectedTeams.length <= 1) {
-      navigate('/match-start', { state: { activeTab: 'Fixture Generator', selectedTeams, noOfTeams, tournamentName } });
+    // Update currentStage in Firestore
+    if (tournamentId) {
+      try {
+        const tournamentRef = doc(db, 'tournament', tournamentId);
+        await updateDoc(tournamentRef, {
+          currentStage: format === 'Round Robin' ? 'RoundRobin' : 'Knockout'
+        });
+        console.log(`Tournament currentStage updated to ${format === 'Round Robin' ? 'RoundRobin' : 'Knockout'}`);
+      } catch (err) {
+        console.error('Error updating tournament currentStage:', err);
+        // Optionally, add UI feedback here, like setting an error state
+      }
     } else {
-      navigate('/tournamentSuccess');
+      console.error('No tournament ID available for update.');
     }
-  }
-};
 
+    // Update selected teams and navigate as before
+    await handleUpdateTeams();
+    if (format === 'Round Robin') {
+      navigate('/tournamentSuccess');
+    } else {
+      if (selectedTeams.length <= 1) {
+        navigate('/match-start', { state: { activeTab: 'Fixture Generator', selectedTeams, noOfTeams, tournamentName } });
+      } else {
+        navigate('/tournamentSuccess');
+      }
+    }
+  };
 
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
@@ -304,23 +317,36 @@ const TournamentPage = () => {
 
               {showTeamCards && (
                 <>
-                  {loadingTeams && <p>Loading teams...</p>}
+                  {loadingClubs && <p>Loading clubs...</p>}
                   {error && <p className="text-red-500">{error}</p>}
-                  {!loadingTeams && !error && (
-                    <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 h-fit my-4 md:mt-10 gap-3 md:gap-5">
-                      {teams.map((team) => (
+                  {!loadingClubs && !error && (
+                    <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 mt-4">
+                      {clubs.map((club) => (
                         <div
-                          key={team.id}
-                          className={`flex bg-blue-900 items-center gap-3 md:gap-5 h-16 md:h-20 hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2 ${
-                            selectedTeams.includes(team.name) ? 'bg-blue-700' : ''
-                          }`}
-                          onClick={() => handleCardClick(team.name)}
+                          key={club.id}
+                          className="flex flex-col items-center bg-blue-900 gap-3 md:gap-5 h-fit hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2"
                         >
-                          <img src={team.flagUrl} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={team.name} />
+                          <img src={club.logo || frd1} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={club.name} />
                           <div className="w-full h-fit">
-                            <h1 className="text-sm md:text-lg font-bold">{team.name}</h1>
-                            <h3 className="text-xs md:text-sm">{team.description}</h3>
+                            <h1 className="text-sm md:text-lg font-bold text-center">{club.name}</h1>
                           </div>
+                          <select
+                            className="w-full p-2 rounded bg-gray-700 text-white text-sm md:text-base"
+                            onChange={(e) => {
+                              const selectedTeamName = e.target.value;
+                              if (selectedTeamName) {
+                                handleTeamSelect(selectedTeamName);
+                                e.target.value = ''; // Reset dropdown after selection
+                              }
+                            }}
+                          >
+                            <option value="">Select Team</option>
+                            {(clubsTeams[club.name] || []).map((team) => (
+                              <option key={team.id} value={team.teamName}>
+                                {team.teamName}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       ))}
                     </div>

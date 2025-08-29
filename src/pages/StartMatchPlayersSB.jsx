@@ -14,6 +14,7 @@ import { db, auth } from '../firebase';
 import MainWheel from "../components/yogesh/wagonwheel/mainwheel";
 import { getDoc, setDoc, doc, Timestamp, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 import AIMatchCompanionModal from '../components/yogesh/LandingPage/AIMatchCompanion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -114,6 +115,36 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
   const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
   const extraBalls = ['Wide', 'No-ball', 'Leg By', 'OUT', 'lbw'];
+
+  const [isAICompanionOpen, setIsAICompanionOpen] = useState(true);
+  const [predictionData, setPredictionData] = useState(null);
+
+      useEffect(() => {
+         const isOverCompleted = validBalls === 0 && overNumber > 0;
+         const shouldTriggerPrediction =
+           playerScore >= 10 || outCount > 0 || isOverCompleted;
+     
+         if (shouldTriggerPrediction) {
+           const winA = Math.max(0, 100 - (playerScore + outCount * 5));
+           const winB = 100 - winA;
+     
+           const generatedPrediction = {
+        battingTeam: isChasing ? teamB.name : teamA.name, // chasing = batting second
+       bowlingTeam: isChasing ? teamA.name : teamB.name,
+       battingScore: playerScore,
+       bowlingScore: targetScore,
+       winA,
+       winB,
+       overNumber,
+       nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
+       alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
+     };
+     
+     
+           setPredictionData(generatedPrediction);
+         }
+       }, [playerScore, outCount, overNumber]);
+     
 
   // Generate team flag or fallback (first letter of team name)
   const getTeamFlag = (team) => {
@@ -2003,7 +2034,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   </button>
                 );
               })}
-              <div  className="mt-12">
+              {/* <div  className="mt-12">
                                 <motion.button
                                   className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md flex items-center justify-center gap-2 mx-auto"
                                   whileHover={{ scale: 1.02 }}
@@ -2026,9 +2057,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                                     />
                                   )}
                                 </AnimatePresence>
-                              </div>
+                              </div> */}
                                   
-                          <div>
+                          <div >
                                  {isAICompanionOpen && (
                                   <AIMatchCompanionModal
                                     isOpen={isAICompanionOpen}

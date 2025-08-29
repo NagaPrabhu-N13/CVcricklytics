@@ -38,14 +38,6 @@ const Teams = () => {
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [teamsError, setTeamsError] = useState(null);
 
-  const [tournaments, setTournaments] = useState([]);
-  const [selectedTournamentId, setSelectedTournamentId] = useState(() =>
-    sessionStorage.getItem('selectedTournamentId') || null
-  );
-  const [selectedTournament, setSelectedTournament] = useState(null);
-  const [loadingTournaments, setLoadingTournaments] = useState(true);
-  const [tournamentsError, setTournamentsError] = useState(null);
-
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [playersError, setPlayersError] = useState(null);
@@ -95,14 +87,6 @@ const Teams = () => {
     }
   };
 
-  const handleTournamentChange = (event) => {
-    const tournamentId = event.target.value;
-    setSelectedTournamentId(tournamentId);
-    sessionStorage.setItem('selectedTournamentId', tournamentId);
-    const selected = tournaments.find((t) => t.id === tournamentId);
-    setSelectedTournament(selected || null);
-  };
-
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -110,11 +94,9 @@ const Teams = () => {
       } else {
         setCurrentUserId(null);
         setTeams([]);
-        setTournaments([]);
         setPlayers([]);
         setMatches([]);
         setTeamsError('Please log in to view teams.');
-        setTournamentsError('Please log in to view trophies.');
         setPlayersError('Please log in to view players.');
         setMatchesError('Please log in to view matches.');
       }
@@ -165,66 +147,6 @@ const Teams = () => {
 
   useEffect(() => {
     if (!clubName) {
-      setTournaments([]);
-      setLoadingTournaments(false);
-      return;
-    }
-
-    setLoadingTournaments(true);
-    setTournamentsError(null);
-
-    const q = query(collection(db, 'tournaments'), where('clubName', '==', clubName));
-
-    const unsubscribeSnapshot = onSnapshot(
-      q,
-      (querySnapshot) => {
-        let fetchedTournaments = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name,
-          userId: doc.data().userId,
-          location: doc.data().location,
-        }));
-
-        if (!isClubCreator && currentUserId) {
-          fetchedTournaments = fetchedTournaments.filter(
-            (tournament) => tournament.userId !== currentUserId
-          );
-        }
-
-        setTournaments(fetchedTournaments);
-
-        const storedTournamentId = sessionStorage.getItem('selectedTournamentId');
-        const isValidTournament = fetchedTournaments.some((t) => t.id === storedTournamentId);
-
-        if (storedTournamentId && isValidTournament) {
-          setSelectedTournamentId(storedTournamentId);
-          const selected = fetchedTournaments.find((t) => t.id === storedTournamentId);
-          setSelectedTournament(selected || null);
-        } else if (fetchedTournaments.length > 0) {
-          setSelectedTournamentId(fetchedTournaments[0].id);
-          setSelectedTournament(fetchedTournaments[0]);
-          sessionStorage.setItem('selectedTournamentId', fetchedTournaments[0].id);
-        } else {
-          setSelectedTournamentId(null);
-          setSelectedTournament(null);
-          sessionStorage.removeItem('selectedTournamentId');
-          setTournamentsError('No trophies available.');
-        }
-
-        setLoadingTournaments(false);
-      },
-      (err) => {
-        console.error('Error fetching trophies for dropdown:', err);
-        setTournamentsError('Failed to load trophies: ' + err.message);
-        setLoadingTournaments(false);
-      }
-    );
-
-    return () => unsubscribeSnapshot();
-  }, [clubName, isClubCreator, currentUserId]);
-
-  useEffect(() => {
-    if (!clubName || !selectedTournamentId) {
       setLoadingTeams(false);
       setTeams([]);
       return;
@@ -235,7 +157,6 @@ const Teams = () => {
 
     const q = query(
       collection(db, 'clubTeams'),
-      where('tournamentId', '==', selectedTournamentId),
       where('clubName', '==', clubName)
     );
 
@@ -257,10 +178,10 @@ const Teams = () => {
     );
 
     return () => unsubscribe();
-  }, [clubName, selectedTournamentId]);
+  }, [clubName]);
 
   useEffect(() => {
-    if (!clubName || !selectedTournament?.name) {
+    if (!clubName) {
       setLoadingPlayers(false);
       setPlayers([]);
       return;
@@ -270,8 +191,7 @@ const Teams = () => {
     setPlayersError(null);
 
     const q = query(
-      collection(db, 'clubPlayers'),
-      where('tournamentName', '==', selectedTournament.name),
+      collection(db, 'PlayerDetails'),
       where('clubName', '==', clubName)
     );
 
@@ -293,10 +213,10 @@ const Teams = () => {
     );
 
     return () => unsubscribe();
-  }, [clubName, selectedTournament]);
+  }, [clubName]);
 
   useEffect(() => {
-    if (!currentUserId || !selectedTournament?.name || !clubName) {
+    if (!currentUserId || !clubName) {
       setLoadingMatches(false);
       setMatches([]);
       return;
@@ -307,7 +227,6 @@ const Teams = () => {
 
     const q = query(
       collection(db, 'tournamentMatches'),
-      where('tournamentName', '==', selectedTournament.name),
       where('clubName', '==', clubName)
     );
 
@@ -329,7 +248,7 @@ const Teams = () => {
     );
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournament, clubName]);
+  }, [currentUserId, clubName]);
 
   const getMatchStats = () => {
     const teamTotals = [];
@@ -395,7 +314,7 @@ const Teams = () => {
 
   const { highestTotals, lowestTotals, victories } = getMatchStats();
 
-  if (authLoading || loadingTournaments || loadingPlayers || loadingMatches || clubCreatorLoading) {
+  if (authLoading || loadingPlayers || loadingMatches || clubCreatorLoading) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
         Loading...
@@ -439,31 +358,6 @@ const Teams = () => {
           <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-purple-400">Teams</h1>
-              <p className="text-gray-400 mt-2">
-                {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.location}` : 'Select a trophy'}
-              </p>
-              <select
-                value={selectedTournamentId || ''}
-                onChange={handleTournamentChange}
-                className="mt-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-md p-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={tournaments.length === 0}
-              >
-                {tournaments.length === 0 ? (
-                  <option value="">No trophies available</option>
-                ) : (
-                  <>
-                    <option value="" disabled>
-                      Select a Trophy
-                    </option>
-                    {tournaments.map((tournament) => (
-                      <option key={tournament.id} value={tournament.id}>
-                        {tournament.name}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              {tournamentsError && <p className="text-red-500 text-sm mt-2">{tournamentsError}</p>}
             </div>
             {userRole === 'admin' && isClubCreator && (
               <div className="flex gap-4">
@@ -493,12 +387,13 @@ const Teams = () => {
             <div className="text-center text-red-500 text-xl py-8">{teamsError}</div>
           ) : teams.length === 0 ? (
             <div className="text-center text-gray-400 text-xl py-8">
-              No teams found for this trophy. {userRole === 'admin' && isClubCreator && 'Add some teams!'}
+              No teams found for this club. {userRole === 'admin' && isClubCreator && 'Add some teams!'}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teams.map((team) => {
                 const teamPlayers = players.filter((player) => player.teamName === team.teamName);
+                const displayedPlayers = teamPlayers.slice(0, 3);
                 return (
                   <div
                     key={team.id}
@@ -561,8 +456,8 @@ const Teams = () => {
                           )}
                         </div>
                         <div className="space-y-2">
-                          {teamPlayers.length > 0 ? (
-                            teamPlayers.slice(0, 3).map((player, index) => (
+                          {displayedPlayers.length > 0 ? (
+                            displayedPlayers.map((player, index) => (
                               <div key={index} className="flex justify-between items-center text-sm">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-gray-300">{player.name}</span>
@@ -579,6 +474,9 @@ const Teams = () => {
                             ))
                           ) : (
                             <p className="text-gray-500 text-sm">No players listed for this team.</p>
+                          )}
+                          {teamPlayers.length > 3 && (
+                            <p className="text-gray-500 text-sm">+{teamPlayers.length - 3} more</p>
                           )}
                         </div>
                       </div>
@@ -773,7 +671,7 @@ const Teams = () => {
             {showTeamSquadModal && selectedTeam && (
               <TeamSquadModal
                 team={selectedTeam}
-                tournament={selectedTournament}
+                clubName={clubName}
                 onClose={() => {
                   setShowTeamSquadModal(false);
                   setSelectedTeam(null);

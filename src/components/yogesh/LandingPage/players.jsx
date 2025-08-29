@@ -21,12 +21,6 @@ const PlayersList = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // State for tournaments dropdown
-  const [tournaments, setTournaments] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState('');
-  const [loadingTournaments, setLoadingTournaments] = useState(true);
-  const [tournamentsError, setTournamentsError] = useState(null);
-
   // State for teams dropdown
   const [teams, setTeams] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
@@ -56,10 +50,8 @@ const PlayersList = () => {
         setCurrentUserId(user.uid);
       } else {
         setCurrentUserId(null);
-        setTournaments([]);
         setTeams([]);
         setPlayers([]);
-        setTournamentsError('Please log in to view tournaments.');
         setTeamsError('Please log in to view teams.');
         setError('Please log in to view players.');
       }
@@ -69,44 +61,9 @@ const PlayersList = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Effect to fetch tournaments from Firestore
-  useEffect(() => {
-    if (!clubName) {
-      setLoadingTournaments(false);
-      setTournaments([]);
-      return;
-    }
-
-    setLoadingTournaments(true);
-    setTournamentsError(null);
-
-    const q = query(
-      collection(db, 'tournaments'),
-      where('clubName', '==', clubName)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedTournaments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name
-      }));
-      setTournaments(fetchedTournaments);
-      if (fetchedTournaments.length > 0 && !selectedTournament) {
-        setSelectedTournament(fetchedTournaments[0].name);
-      }
-      setLoadingTournaments(false);
-    }, (error) => {
-      console.error("Error fetching tournaments: ", error);
-      setTournamentsError("Failed to load tournaments: " + error.message);
-      setLoadingTournaments(false);
-    });
-
-    return () => unsubscribe();
-  }, [clubName]);
-
   // Effect to fetch teams from Firestore
   useEffect(() => {
-    if (!clubName || !selectedTournament) {
+    if (!clubName) {
       setLoadingTeams(false);
       setTeams([]);
       setTeamFilter('');
@@ -118,8 +75,7 @@ const PlayersList = () => {
 
     const q = query(
       collection(db, 'clubTeams'),
-      where('clubName', '==', clubName),
-      where('tournamentName', '==', selectedTournament)
+      where('clubName', '==', clubName)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -139,11 +95,11 @@ const PlayersList = () => {
     });
 
     return () => unsubscribe();
-  }, [clubName, selectedTournament]);
+  }, [clubName]);
 
   // Effect to fetch players from Firestore
   useEffect(() => {
-    if (!clubName || !selectedTournament || !teamFilter) {
+    if (!clubName || !teamFilter) {
       setLoadingPlayers(false);
       setPlayers([]);
       return;
@@ -155,7 +111,6 @@ const PlayersList = () => {
     const q = query(
       collection(db, 'clubPlayers'),
       where('clubName', '==', clubName),
-      where('tournamentName', '==', selectedTournament),
       where('teamName', '==', teamFilter)
     );
 
@@ -175,7 +130,7 @@ const PlayersList = () => {
     });
 
     return () => unsubscribe();
-  }, [clubName, selectedTournament, teamFilter]);
+  }, [clubName, teamFilter]);
 
   // Effect to manage audio playback when playingPlayerId changes
   useEffect(() => {
@@ -286,20 +241,10 @@ const PlayersList = () => {
                 className="border rounded-lg p-2 w-full bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <select
-                value={selectedTournament}
-                onChange={(e) => setSelectedTournament(e.target.value)}
-                className="border rounded-lg p-2 w-full bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a Tournament</option>
-                {tournaments.map(tournament => (
-                  <option key={tournament.id} value={tournament.name}>{tournament.name}</option>
-                ))}
-              </select>
-              <select
                 value={teamFilter}
                 onChange={(e) => setTeamFilter(e.target.value)}
                 className="border rounded-lg p-2 w-full bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!selectedTournament}
+                disabled={!teams.length}
               >
                 <option value="">Select a Team</option>
                 {teams.map(team => (
@@ -320,16 +265,12 @@ const PlayersList = () => {
           </div>
 
           {/* Loading/Error/No players message */}
-          {loadingTournaments || loadingTeams || loadingPlayers ? (
+          {loadingTeams || loadingPlayers ? (
             <div className="text-center text-gray-400 text-xl py-8">Loading...</div>
-          ) : tournamentsError || teamsError || error ? (
-            <div className="text-center text-red-500 text-xl py-8">{tournamentsError || teamsError || error}</div>
-          ) : tournaments.length === 0 ? (
-            <p className="text-white text-center col-span-full">No tournaments found. Please create a tournament first.</p>
-          ) : !selectedTournament ? (
-            <p className="text-white text-center col-span-full">Please select a tournament to view teams.</p>
+          ) : teamsError || error ? (
+            <div className="text-center text-red-500 text-xl py-8">{teamsError || error}</div>
           ) : teams.length === 0 ? (
-            <p className="text-white text-center col-span-full">No teams found for this tournament. Please create a team.</p>
+            <p className="text-white text-center col-span-full">No teams found. Please create a team first.</p>
           ) : !teamFilter ? (
             <p className="text-white text-center col-span-full">Please select a team to view players.</p>
           ) : filteredPlayers.length === 0 ? (
@@ -381,7 +322,6 @@ const PlayersList = () => {
           onClose={() => setIsAddPlayerModalOpen(false)}
           onPlayerAdded={handlePlayerAdded}
           clubName={clubName}
-          tournamentName={selectedTournament}
         />
       )} */}
     </div>
