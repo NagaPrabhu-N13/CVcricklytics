@@ -27,17 +27,10 @@ const BatManufacturersPage = () => {
   });
   const [editingId, setEditingId] = useState(null);
 
-  // Fetch manufacturer data from Firestore
+  // Fetch all manufacturer data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) {
-      setIsLoading(false);
-      return;
-    }
-
     const unsubscribe = onSnapshot(collection(db, 'BatManufacturers'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setManufacturers(data);
       setIsLoading(false);
     }, (error) => {
@@ -89,6 +82,13 @@ const BatManufacturersPage = () => {
     }
     if (formData.bats.length === 0) {
       alert("Please add at least one bat!");
+      return;
+    }
+
+    // Check add limit for current user
+    const userManufacturersCount = manufacturers.filter(m => m.userId === auth.currentUser.uid).length;
+    if (!editingId && userManufacturersCount >= 4) {
+      alert("You have reached the maximum limit of 4 manufacturers.");
       return;
     }
 
@@ -145,6 +145,12 @@ const BatManufacturersPage = () => {
 
   // Handle deleting manufacturer data
   const handleDeleteData = async (id) => {
+    const manufacturer = manufacturers.find(m => m.id === id);
+    if (!manufacturer || manufacturer.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own manufacturers.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this manufacturer?")) return;
 
     try {
@@ -157,6 +163,11 @@ const BatManufacturersPage = () => {
 
   // Handle editing manufacturer data
   const handleEditData = (manufacturer) => {
+    if (manufacturer.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own manufacturers.");
+      return;
+    }
+
     setFormData({
       name: manufacturer.name,
       logo: manufacturer.logo,
@@ -203,8 +214,8 @@ const BatManufacturersPage = () => {
     const matchesSearch = manufacturer.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          manufacturer.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'all' || 
-                      (activeTab === 'featured' && manufacturer.featured) || 
-                      (activeTab === 'top-rated' && manufacturer.rating >= 4.5);
+                       (activeTab === 'featured' && manufacturer.featured) || 
+                       (activeTab === 'top-rated' && manufacturer.rating >= 4.5);
     
     return matchesSearch && matchesTab;
   });
@@ -309,20 +320,24 @@ const BatManufacturersPage = () => {
                 className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl overflow-hidden hover:border-blue-400 transition-all duration-300 hover:shadow-lg relative"
               >
                 <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                  <Edit
-                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditData(manufacturer);
-                    }}
-                  />
-                  <Trash2
-                    className="text-red-500 cursor-pointer hover:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteData(manufacturer.id);
-                    }}
-                  />
+                  {manufacturer.userId === auth.currentUser.uid && (
+                    <>
+                      <Edit
+                        className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditData(manufacturer);
+                        }}
+                      />
+                      <Trash2
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteData(manufacturer.id);
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="relative">
                   <div className="absolute top-2 right-2 z-10">

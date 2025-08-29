@@ -2,7 +2,10 @@ import React from 'react';
 import HeaderComponent from '../kumar/header';
 import { useNavigate, useLocation } from 'react-router-dom';
 import scanner from '../../assets/kumar/icons8-qr-code-52.png';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { auth, db } from '../../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 function Tournament_nextpg() {
   const navigate = useNavigate();
@@ -11,8 +14,75 @@ function Tournament_nextpg() {
   const [isRulesVisible, setIsRulesVisible] = useState(false);
   const [ispriceVisible, setIspriceVisible] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
+  const [user, setUser] = useState(null);
+  const [debounceTimeout, setDebounceTimeout] = useState(null);
   
-console.log(tournamentName);
+  console.log(tournamentName);
+
+  const [formData, setFormData] = useState({
+    isUmpire: false,
+    isLiveStreamer: false,
+    isScorer: false,
+    isCommentator: false,
+    selectedhmd: null,
+    selectedmpd: null,
+    sameBudget: false,
+    perDay: '',
+    currency: 'INR',
+    perMatch: '',
+    selectedof: null,
+    contact: '',
+    entryFeesCheck: false,
+    activeTournament: '',
+    rounds: '',
+    terms: false,
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      async function fetchData() {
+        const docRef = doc(db, `users/${user.uid}/forms/tournament_nextpg`);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFormData(docSnap.data());
+        }
+      }
+      fetchData();
+    }
+  }, [user]);
+
+  const saveFormData = async () => {
+    if (!user) return;
+    const docRef = doc(db, `users/${user.uid}/forms/tournament_nextpg`);
+    await setDoc(docRef, formData);
+  };
+
+  useEffect(() => {
+    if (user) {
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+      const timeout = setTimeout(() => {
+        saveFormData();
+      }, 1000);
+      setDebounceTimeout(timeout);
+    }
+  }, [formData, user]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+    };
+  }, [debounceTimeout]);
 
   const toggleDivVisibility = (e) => {
     e.preventDefault();
@@ -33,9 +103,9 @@ console.log(tournamentName);
     
     // Check if all required fields are filled
     const isFormValid = (
-      selectedhmd !== null &&
-      selectedmpd !== null &&
-      selectedof !== null
+      formData.selectedhmd !== null &&
+      formData.selectedmpd !== null &&
+      formData.selectedof !== null
     );
 
     if (!isFormValid) {
@@ -48,14 +118,7 @@ console.log(tournamentName);
   const handleCancel = (e) => {
     e.preventDefault();
     // Check if any fields have values
-    const hasData = (
-      selectedhmd !== null ||
-      selectedmpd !== null ||
-      selectedbpr !== null ||
-      selectedpm !== null ||
-      selectedof !== null ||
-      value.trim() !== ''
-    );
+    const hasData = Object.values(formData).some(v => v !== null && v !== false && v !== '');
 
     if (hasData) {
       if (window.confirm('Are you sure you want to cancel? All entered data will be lost.')) {
@@ -66,8 +129,6 @@ console.log(tournamentName);
     }
   };
 
-  const [value, setValue] = useState('');
-  const [selectedBall, setSelectedBall] = useState(null); // State for selected ball type
   const home = () => {
     navigate('/');
   };
@@ -80,35 +141,21 @@ console.log(tournamentName);
   const [selectedhmd, setSelectedhmd] = useState(null);
   const hmdoptions = ['1', '2', '3','4','5+'];
   const handlehmdClick = (hmd) => {
-    setSelectedhmd(hmd);
+    setFormData(prev => ({ ...prev, selectedhmd: hmd }));
     setShowValidationError(false);
   };
 
   const [selectedmpd, setSelectedmpd] = useState(null);
   const mpdoptions = ['1', '2', '3','4','5+'];
   const handlempdClick = (mpd) => {
-    setSelectedmpd(mpd);
-    setShowValidationError(false);
-  };
-
-  const [selectedbpr, setSelectedbpr] = useState(null);
-  const bproptions = ['500-1000', '1100-1500','1600-2000','2000+','Not Dedcided'];
-  const handlebprClick = (bpr) => {
-    setSelectedbpr(bpr); 
-    setShowValidationError(false);
-  };
-
-  const [selectedpm, setSelectedpm] = useState(null);
-  const pmoptions = ['100-5000', '600-1000','1100-1500','Not decided'];
-  const handlepmClick = (pm) => {
-    setSelectedpm(pm); 
+    setFormData(prev => ({ ...prev, selectedmpd: mpd }));
     setShowValidationError(false);
   };
 
   const [selectedof, setSelectedof] = useState(null);
   const ofoptions = ['Cricklytics','Whatsapp','Call'];
   const handleofClick = (of) => {
-    setSelectedof(of); 
+    setFormData(prev => ({ ...prev, selectedof: of }));
     setShowValidationError(false);
   };
 
@@ -332,22 +379,22 @@ console.log(tournamentName);
             <label className="text-lg md:text-xl text-white">What You need?</label>
             <div className="flex flex-wrap gap-2 md:gap-0 md:-mt-3">
               <div className="flex items-center">
-                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="umpire" id="weekdays" />
+                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="umpire" id="weekdays" checked={formData.isUmpire} onChange={() => setFormData(prev => ({ ...prev, isUmpire: !prev.isUmpire }))} />
                 <label className="text-sm md:text-xl text-white ml-2 md:ml-[1rem]" htmlFor="weekdays">Umpire</label>
               </div>
 
               <div className="flex items-center ml-2 md:ml-[1rem]">
-                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="live" id="weekends" />
+                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="live" id="weekends" checked={formData.isLiveStreamer} onChange={() => setFormData(prev => ({ ...prev, isLiveStreamer: !prev.isLiveStreamer }))} />
                 <label className="text-sm md:text-xl text-white ml-2 md:ml-[1rem]" htmlFor="weekends">Live streamer</label>
               </div>
 
               <div className="flex items-center ml-2 md:ml-[1rem]">
-                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="score" id="weekends" />
+                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="score" id="weekends" checked={formData.isScorer} onChange={() => setFormData(prev => ({ ...prev, isScorer: !prev.isScorer }))} />
                 <label className="text-sm md:text-xl text-white ml-2 md:ml-[1rem]" htmlFor="weekends">Scorer</label>
               </div>
 
               <div className="flex items-center ml-2 md:ml-[1rem]">
-                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="commen" id="weekends" />
+                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="commen" id="weekends" checked={formData.isCommentator} onChange={() => setFormData(prev => ({ ...prev, isCommentator: !prev.isCommentator }))} />
                 <label className="text-sm md:text-xl text-white ml-2 md:ml-[1rem]" htmlFor="weekends">Comentator</label>
               </div>
             </div>
@@ -361,14 +408,14 @@ console.log(tournamentName);
                   key={hdm}
                   type="text"
                   className={`rounded-full w-8 h-8 md:w-10 md:h-10 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent text-sm md:text-base
-                    ${selectedhmd === hdm ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                    ${formData.selectedhmd === hdm ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
                   name='user'
                   placeholder={hdm}
                   onClick={() => handlehmdClick(hdm)}
                 />
               ))}
             </div>
-            {showValidationError && selectedhmd === null && (
+            {showValidationError && formData.selectedhmd === null && (
               <p className="text-red-500 text-sm mt-1">Please select match type</p>
             )}
           </div>
@@ -381,14 +428,14 @@ console.log(tournamentName);
                   key={mpd}
                   type="text"
                   className={`rounded-full w-8 h-8 md:w-10 md:h-10 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent text-sm md:text-base
-                    ${selectedmpd === mpd ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                    ${formData.selectedmpd === mpd ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
                   name='user'
                   placeholder={mpd}
                   onClick={() => handlempdClick(mpd)}
                 />
               ))}
             </div>
-            {showValidationError && selectedmpd === null && (
+            {showValidationError && formData.selectedmpd === null && (
               <p className="text-red-500 text-sm mt-1">Please select number of days</p>
             )}
           </div>
@@ -397,7 +444,7 @@ console.log(tournamentName);
             <div className='flex flex-col md:flex-row justify-between items-start md:items-center'>
               <h2 className="text-xl md:text-2xl font-bold text-white mt-3 md:mt-[1rem]">Budget Range</h2> 
               <div className='w-full md:w-[80%] lg:w-[80%] h-10 flex items-center justify-start mt-2 md:pt-2'>
-                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="range" id="budgetrange" />
+                <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="range" id="budgetrange" checked={formData.sameBudget} onChange={() => setFormData(prev => ({ ...prev, sameBudget: !prev.sameBudget }))} />
                 <label htmlFor="" className='ml-2 md:ml-[1rem] text-sm md:text-xl text-white'>Same Budget For All</label>
               </div>
             </div>
@@ -409,6 +456,8 @@ console.log(tournamentName);
                 type="number"
                 min="1"
                 // placeholder="Enter the Amount"
+                value={formData.perDay}
+                onChange={(e) => setFormData(prev => ({ ...prev, perDay: e.target.value }))}
               />
               </div>
             </div>
@@ -420,6 +469,8 @@ console.log(tournamentName);
                     id="location"
                     name="location"
                     className="block w-16 md:w-20 mt-.5 h-6 md:h-7 ml-6 md:ml-0 bg-white-900 border text-xs md:text-sm border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer "
+                    value={formData.currency}
+                    onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
                   >
                     <option value="" className='bg-blue-400 text-white'>INR</option>
                     <option value="t2" className='bg-blue-400 text-white'>DOLLAR</option>
@@ -433,6 +484,8 @@ console.log(tournamentName);
                   type="number"
                   min="1"
                   // placeholder="Enter the Amount"
+                  value={formData.perMatch}
+                  onChange={(e) => setFormData(prev => ({ ...prev, perMatch: e.target.value }))}
                 />
                 </div>
               </div>
@@ -446,18 +499,18 @@ console.log(tournamentName);
                     key={of}
                     type="text"
                     className={`rounded-xl w-20 md:w-24 h-8 md:h-10 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent text-xs md:text-base
-                      ${selectedof === of ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
+                      ${formData.selectedof === of ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
                     name='user'
                     placeholder={of}
                     onClick={() => handleofClick(of)}
                   />
                 ))}
               </div>
-              {showValidationError && selectedof === null && (
+              {showValidationError && formData.selectedof === null && (
                 <p className="text-red-500 text-sm mt-1">Please select official handling method</p>
               )}
               
-              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[1rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number"/>
+              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[1rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number" value={formData.contact} onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))} />
             </div>
           </div>
 
@@ -469,7 +522,8 @@ console.log(tournamentName);
                 <input
                   type="checkbox"
                   className="form-checkbox h-6 w-6 text-blue-500"
-                  // You can add an onChange handler if needed
+                  checked={formData.entryFeesCheck}
+                  onChange={() => setFormData(prev => ({ ...prev, entryFeesCheck: !prev.entryFeesCheck }))}
                 />
               </label>
 
@@ -500,6 +554,8 @@ console.log(tournamentName);
               id="location"
               name="location"
               className="block w-full md:w-64 bg-white-900 px-3 md:px-4 py-2 border border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer text-sm md:text-base"
+              value={formData.activeTournament}
+              onChange={(e) => setFormData(prev => ({ ...prev, activeTournament: e.target.value }))}
             >
               <option value="">Select a Tournament</option>
               <option value="t1" className='bg-blue-400 text-white'>Tournament1</option>
@@ -514,6 +570,8 @@ console.log(tournamentName);
               className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
               type="text"
               // placeholder="Participation Team"
+              value={formData.rounds}
+              onChange={(e) => setFormData(prev => ({ ...prev, rounds: e.target.value }))}
             />
           </div>
 
@@ -544,7 +602,7 @@ console.log(tournamentName);
           </div>
 
           <div className="flex items-center mb-4 md:mb-6">
-            <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="terms" id="conditions" />
+            <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="terms" id="conditions" checked={formData.terms} onChange={() => setFormData(prev => ({ ...prev, terms: !prev.terms }))} />
             <label className="text-sm md:text-lg text-white ml-2 md:ml-[1rem]">
               Accept all the Terms and condition{' '}
               <a className="text-sm md:text-lg text-yellow-200" href="#">

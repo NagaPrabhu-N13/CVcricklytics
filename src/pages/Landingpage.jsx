@@ -931,19 +931,19 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                   className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'forYou' ? 'text-[#800080]' : ''}`}
                   onClick={() => setActiveTab('forYou')}
                 >
-                  For You
+                  Following
                 </span>
                 <span 
                   className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'following' ? 'text-[#800080]' : ''}`}
                   onClick={() => setActiveTab('following')}
                 >
-                  Following
+                  People You May Know
                 </span>
                 <span 
                   className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'reels' ? 'text-[#800080]' : ''}`}
                   onClick={() => setActiveTab('reels')}
                 >
-                  Reels
+                  For You
                 </span>
               </div>
             </div>
@@ -959,10 +959,10 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               highlightsData.length > 0 ? highlightsData.map((item) => (
                 <div
                   key={item.id}
-                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-lg md:rounded-xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-3xl md:rounded-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
                 >
                   {/* Video container with fixed aspect ratio and local overflow control */}
-                  <div className="relative w-full aspect-video overflow-hidden">
+                  <div className="relative w-full aspect-video overflow-hidden rounded-3xl md:rounded-3xl">
                     <iframe
                       src={item.videoUrl}
                       title={`Highlight ${item.title}`}
@@ -974,7 +974,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                   </div>
 
                   {/* Title and actions below the video */}
-                  <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000]">
+                  <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl">
                     <h3 className="text-white text-base md:text-lg font-bold m-0">
                       {item.title}
                     </h3>

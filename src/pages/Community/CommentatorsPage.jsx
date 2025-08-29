@@ -34,12 +34,8 @@ const CommentatorsPage = () => {
   const languageOptions = ['English', 'Hindi', 'Urdu', 'Kannada', 'Tamil', 'Telugu', 'Spanish', 'French'];
 
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Commentators'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCommentatorsData(data);
     }, (error) => {
       console.error("Error fetching commentators:", error);
@@ -151,6 +147,12 @@ const CommentatorsPage = () => {
   };
 
   const handleDeleteData = async (id) => {
+    const commentator = commentatorsData.find(c => c.id === id);
+    if (!commentator || commentator.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own commentators.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this commentator?")) return;
 
     try {
@@ -162,6 +164,11 @@ const CommentatorsPage = () => {
   };
 
   const handleEditData = (commentator) => {
+    if (commentator.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own commentators.");
+      return;
+    }
+
     setFormData({
       name: commentator.name,
       location: commentator.location,
@@ -289,16 +296,18 @@ const CommentatorsPage = () => {
               <div className="md:w-2/3">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-2xl font-bold">{selectedCommentator.name}</h2>
-                  <div className="flex gap-2">
-                    <FiEdit
-                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                      onClick={() => handleEditData(selectedCommentator)}
-                    />
-                    <FiTrash2
-                      className="text-red-500 cursor-pointer hover:text-red-600"
-                      onClick={() => handleDeleteData(selectedCommentator.id)}
-                    />
-                  </div>
+                  {selectedCommentator.userId === auth.currentUser.uid && (
+                    <div className="flex gap-2">
+                      <FiEdit
+                        className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                        onClick={() => handleEditData(selectedCommentator)}
+                      />
+                      <FiTrash2
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                        onClick={() => handleDeleteData(selectedCommentator.id)}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div className="flex items-center text-blue-300">
@@ -369,17 +378,19 @@ const CommentatorsPage = () => {
                     </span>
                   </div>
                 )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteData(commentator.id);
-                  }}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
-                  aria-label="Delete Commentator"
-                  title="Delete Commentator"
-                >
-                  <FiTrash2 size={20} />
-                </button>
+                {commentator.userId === auth.currentUser.uid && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteData(commentator.id);
+                    }}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
+                    aria-label="Delete Commentator"
+                    title="Delete Commentator"
+                  >
+                    <FiTrash2 size={20} />
+                  </button>
+                )}
               </div>
             )) : (
               <p className="text-center text-gray-400 col-span-3">No commentators found. Add a commentator to get started!</p>

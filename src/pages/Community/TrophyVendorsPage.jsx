@@ -33,14 +33,10 @@ const TrophyVendorsPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch vendor data from Firestore
+  // Fetch all vendor data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Vendors'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVendors(data);
     }, (error) => {
       console.error("Error fetching vendors:", error);
@@ -169,6 +165,12 @@ const TrophyVendorsPage = () => {
 
   // Handle deleting vendor data
   const handleDeleteData = async (id) => {
+    const vendor = vendors.find(v => v.id === id);
+    if (!vendor || vendor.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own vendors.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this vendor?")) return;
 
     try {
@@ -184,6 +186,11 @@ const TrophyVendorsPage = () => {
 
   // Handle editing vendor data
   const handleEditData = (vendor) => {
+    if (vendor.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own vendors.");
+      return;
+    }
+
     setFormData({
       name: vendor.name,
       rating: vendor.rating.toString(),
@@ -344,16 +351,18 @@ const TrophyVendorsPage = () => {
               >
                 <FiArrowLeft className="mr-2" /> Back to all vendors
               </button>
-              <div className="flex gap-2">
-                <Edit
-                  className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                  onClick={() => handleEditData(selectedVendor)}
-                />
-                <Trash2
-                  className="text-red-500 cursor-pointer hover:text-red-600"
-                  onClick={() => handleDeleteData(selectedVendor.id)}
-                />
-              </div>
+              {selectedVendor.userId === auth.currentUser.uid && (
+                <div className="flex gap-2">
+                  <Edit
+                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                    onClick={() => handleEditData(selectedVendor)}
+                  />
+                  <Trash2
+                    className="text-red-500 cursor-pointer hover:text-red-600"
+                    onClick={() => handleDeleteData(selectedVendor.id)}
+                  />
+                </div>
+              )}
             </div>
             
             <div className="flex flex-col md:flex-row gap-6">
@@ -448,22 +457,24 @@ const TrophyVendorsPage = () => {
                 className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg group relative"
                 onClick={() => setSelectedVendor(vendor)}
               >
-                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                  <Edit
-                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditData(vendor);
-                    }}
-                  />
-                  <Trash2
-                    className="text-red-500 cursor-pointer hover:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteData(vendor.id);
-                    }}
-                  />
-                </div>
+                {vendor.userId === auth.currentUser.uid && (
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    <Edit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditData(vendor);
+                      }}
+                    />
+                    <Trash2
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteData(vendor.id);
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="flex items-start gap-4">
                   <img 
                     src={vendor.image || 'https://via.placeholder.com/150'} 

@@ -29,14 +29,10 @@ const GroundsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch ground data from Firestore
+  // Fetch all ground data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Grounds'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setGroundsData(data);
     }, (error) => {
       console.error("Error fetching grounds:", error);
@@ -145,6 +141,12 @@ const GroundsPage = () => {
 
   // Handle deleting ground data
   const handleDeleteData = async (id) => {
+    const ground = groundsData.find(g => g.id === id);
+    if (!ground || ground.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own grounds.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this ground?")) return;
 
     try {
@@ -160,6 +162,11 @@ const GroundsPage = () => {
 
   // Handle editing ground data
   const handleEditData = (ground) => {
+    if (ground.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own grounds.");
+      return;
+    }
+
     setFormData({
       name: ground.name,
       location: ground.location,
@@ -287,16 +294,18 @@ const GroundsPage = () => {
               >
                 <ArrowLeft className="mr-2" /> Back to all grounds
               </button>
-              <div className="flex gap-2">
-                <Edit
-                  className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                  onClick={() => handleEditData(selectedGround)}
-                />
-                <Trash2
-                  className="text-red-500 cursor-pointer hover:text-red-600"
-                  onClick={() => handleDeleteData(selectedGround.id)}
-                />
-              </div>
+              {selectedGround.userId === auth.currentUser.uid && (
+                <div className="flex gap-2">
+                  <Edit
+                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                    onClick={() => handleEditData(selectedGround)}
+                  />
+                  <Trash2
+                    className="text-red-500 cursor-pointer hover:text-red-600"
+                    onClick={() => handleDeleteData(selectedGround.id)}
+                  />
+                </div>
+              )}
             </div>
             
             <div className="flex flex-col md:flex-row gap-6">
@@ -348,77 +357,79 @@ const GroundsPage = () => {
                     View Schedule
                   </button>
                 </div>
-          </div>
-        </div>
-      </div>
-    ) : (
-      // Ground List View
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredGrounds.map(ground => (
-          <div 
-            key={ground.id} 
-            className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg group relative"
-            onClick={() => setSelectedGround(ground)}
-          >
-            <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-              <Edit
-                className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditData(ground);
-                }}
-              />
-              <Trash2
-                className="text-red-500 cursor-pointer hover:text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteData(ground.id);
-                }}
-              />
+              </div>
             </div>
-            <div className="flex items-start gap-4">
-              <img 
-                src={ground.image || 'https://via.placeholder.com/150'} 
-                alt={ground.name} 
-                className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 group-hover:border-blue-300 transition-colors"
-                onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
-              />
-              <div>
-                <h3 className="font-bold">{ground.name}</h3>
-                <div className="flex items-center text-blue-300 text-sm">
-                  <MapPin className="mr-1" />
-                  <span>{ground.location}</span>
+          </div>
+        ) : (
+          // Ground List View
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredGrounds.map(ground => (
+              <div 
+                key={ground.id} 
+                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg group relative"
+                onClick={() => setSelectedGround(ground)}
+              >
+                {ground.userId === auth.currentUser.uid && (
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    <Edit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditData(ground);
+                      }}
+                    />
+                    <Trash2
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteData(ground.id);
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="flex items-start gap-4">
+                  <img 
+                    src={ground.image || 'https://via.placeholder.com/150'} 
+                    alt={ground.name} 
+                    className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 group-hover:border-blue-300 transition-colors"
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
+                  />
+                  <div>
+                    <h3 className="font-bold">{ground.name}</h3>
+                    <div className="flex items-center text-blue-300 text-sm">
+                      <MapPin className="mr-1" />
+                      <span>{ground.location}</span>
+                    </div>
+                    <div className="flex items-center text-yellow-400 text-sm mt-1">
+                      <Users className="mr-1" />
+                      <span>{ground.players} players capacity</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {ground.facilities.slice(0, 2).map((facility, index) => (
+                        <span key={index} className="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded capitalize">
+                          {facility.split('-').join(' ')}
+                        </span>
+                      ))}
+                      {ground.facilities.length > 2 && (
+                        <span className="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">
+                          +{ground.facilities.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center text-yellow-400 text-sm mt-1">
-                  <Users className="mr-1" />
-                  <span>{ground.players} players capacity</span>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {ground.facilities.slice(0, 2).map((facility, index) => (
-                    <span key={index} className="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded capitalize">
-                      {facility.split('-').join(' ')}
-                    </span>
-                  ))}
-                  {ground.facilities.length > 2 && (
-                    <span className="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded">
-                      +{ground.facilities.length - 2}
+                <div className="mt-3 flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">{ground.matches} matches</span>
+                  {ground.featured && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-900 text-yellow-300">
+                      Featured
                     </span>
                   )}
                 </div>
               </div>
-            </div>
-            <div className="mt-3 flex justify-between items-center">
-              <span className="text-gray-400 text-sm">{ground.matches} matches</span>
-              {ground.featured && (
-                <span className="text-xs px-2 py-1 rounded-full bg-yellow-900 text-yellow-300">
-                  Featured
-                </span>
-              )}
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
-    )}
+        )}
 
         {/* Ground Input Modal */}
         {isModalOpen && (

@@ -26,7 +26,7 @@ const StreamersPage = () => {
     avatar: '',
     viewers: '',
     followers: '',
-    match: '',
+    match: '',
     rating: '',
     tags: [],
   });
@@ -36,14 +36,10 @@ const StreamersPage = () => {
   // Available tag options
   const tagOptions = ['Commentary', 'HD Stream', 'Analysis', 'Q&A', 'Multi-cam', 'Replays', 'Interviews', 'BTS'];
 
-  // Fetch streamer data from Firestore
+  // Fetch all streamer data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Streamers'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStreamersData(data);
     }, (error) => {
       console.error("Error fetching streamers:", error);
@@ -72,6 +68,13 @@ const StreamersPage = () => {
     }
     if (formData.avatar && !formData.avatar.match(/\.(jpg|jpeg|png|gif)$/i)) {
       alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    // Check add limit for current user
+    const userStreamersCount = streamersData.filter(s => s.userId === auth.currentUser.uid).length;
+    if (!editingId && userStreamersCount >= 4) {
+      alert("You have reached the maximum limit of 4 streamers.");
       return;
     }
 
@@ -120,6 +123,12 @@ const StreamersPage = () => {
 
   // Handle deleting streamer data
   const handleDeleteData = async (id) => {
+    const streamer = streamersData.find(s => s.id === id);
+    if (!streamer || streamer.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own streamers.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this streamer?")) return;
 
     try {
@@ -132,6 +141,11 @@ const StreamersPage = () => {
 
   // Handle editing streamer data
   const handleEditData = (streamer) => {
+    if (streamer.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own streamers.");
+      return;
+    }
+
     setFormData({
       name: streamer.name,
       platform: streamer.platform,
@@ -210,20 +224,24 @@ const StreamersPage = () => {
                       <h2 className="font-semibold truncate">{streamer.name}</h2>
                       <div className="flex items-center gap-2">
                         <PlatformIcon platform={streamer.platform} />
-                        <FiEdit
-                          className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditData(streamer);
-                          }}
-                        />
-                        <FiTrash2
-                          className="text-red-500 cursor-pointer hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteData(streamer.id);
-                          }}
-                        />
+                        {streamer.userId === auth.currentUser.uid && (
+                          <>
+                            <FiEdit
+                              className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditData(streamer);
+                              }}
+                            />
+                            <FiTrash2
+                              className="text-red-500 cursor-pointer hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteData(streamer.id);
+                              }}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-1">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaRegStar, FaUserTie, FaVideo, FaChartLine, FaCalendarAlt, FaComments, FaPhoneAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaStar, FaRegStar, FaUserTie, FaVideo, FaChartLine, FaCalendarAlt, FaComments, FaPhoneAlt, FaArrowLeft, FaPhone, FaEnvelope } from 'react-icons/fa';
 import { Edit, Trash2 } from 'lucide-react';
 import backButton from '../../assets/kumar/right-chevron.png';
 import { db, auth, storage } from "../../firebase"; // Adjust path as needed
@@ -14,6 +14,7 @@ const PersonalCoachingPage = () => {
   const [coaches, setCoaches] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     specialty: '',
@@ -24,6 +25,8 @@ const PersonalCoachingPage = () => {
     bio: '',
     category: '',
     sessionTypes: [],
+    phone: '',
+    email: '',
     imageSource: 'url',
     imageFile: null
   });
@@ -31,17 +34,10 @@ const PersonalCoachingPage = () => {
 
   const categories = ['batting', 'bowling', 'fielding', 'fitness', 'mental'];
 
-  // Fetch coach data from Firestore
+  // Fetch all coach data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) {
-      setIsLoading(false);
-      return;
-    }
-
     const unsubscribe = onSnapshot(collection(db, 'PersonalCoaches'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCoaches(data);
       setIsLoading(false);
     }, (error) => {
@@ -51,6 +47,7 @@ const PersonalCoachingPage = () => {
 
     return () => unsubscribe();
   }, []);
+
   // Handle saving or updating coach data
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.specialty.trim() || !formData.experience.trim() || 
@@ -87,6 +84,13 @@ const PersonalCoachingPage = () => {
       return;
     }
 
+    // Check add limit for current user
+    const userCoachesCount = coaches.filter(coach => coach.userId === auth.currentUser.uid).length;
+    if (!editingId && userCoachesCount >= 4) {
+      alert("You have reached the maximum limit of 4 coaches.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       let imageUrl = formData.image;
@@ -111,6 +115,8 @@ const PersonalCoachingPage = () => {
           description: session.description,
           price: parseInt(session.price)
         })),
+        phone: formData.phone,
+        email: formData.email,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -131,6 +137,8 @@ const PersonalCoachingPage = () => {
         bio: '',
         category: '',
         sessionTypes: [],
+        phone: '',
+        email: '',
         imageSource: 'url',
         imageFile: null
       });
@@ -146,6 +154,12 @@ const PersonalCoachingPage = () => {
 
   // Handle deleting coach data
   const handleDeleteData = async (id) => {
+    const coach = coaches.find(c => c.id === id);
+    if (coach.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own coaches.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this coach?")) return;
 
     try {
@@ -158,6 +172,11 @@ const PersonalCoachingPage = () => {
 
   // Handle editing coach data
   const handleEditData = (coach) => {
+    if (coach.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own coaches.");
+      return;
+    }
+
     setFormData({
       name: coach.name,
       specialty: coach.specialty,
@@ -168,6 +187,8 @@ const PersonalCoachingPage = () => {
       bio: coach.bio,
       category: coach.category,
       sessionTypes: coach.sessionTypes || [],
+      phone: coach.phone || '',
+      email: coach.email || '',
       imageSource: coach.image ? 'url' : 'none',
       imageFile: null
     });
@@ -240,6 +261,8 @@ const PersonalCoachingPage = () => {
                   bio: '',
                   category: '',
                   sessionTypes: [],
+                  phone: '',
+                  email: '',
                   imageSource: 'url',
                   imageFile: null
                 });
@@ -286,20 +309,24 @@ const PersonalCoachingPage = () => {
                   className="bg-[#0b1a3b] border border-blue-600/30 rounded-xl shadow-md overflow-hidden hover:shadow-lg hover:border-blue-400 transition-all duration-300 cursor-pointer relative"
                 >
                   <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                    <Edit
-                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditData(coach);
-                      }}
-                    />
-                    <Trash2
-                      className="text-red-500 cursor-pointer hover:text-red-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteData(coach.id);
-                      }}
-                    />
+                    {coach.userId === auth.currentUser.uid && (
+                      <>
+                        <Edit
+                          className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditData(coach);
+                          }}
+                        />
+                        <Trash2
+                          className="text-red-500 cursor-pointer hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteData(coach.id);
+                          }}
+                        />
+                      </>
+                    )}
                   </div>
                   <div className="relative">
                     <img 
@@ -499,6 +526,24 @@ const PersonalCoachingPage = () => {
                 + Add Session Type
               </button>
             </div>
+            <label className="block mb-1 text-white font-semibold">Phone</label>
+            <input
+              type="tel"
+              placeholder="Enter phone number"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Email</label>
+            <input
+              type="email"
+              placeholder="Enter email address"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
             <div className="flex justify-between">
               <button
                 onClick={() => {
@@ -514,6 +559,8 @@ const PersonalCoachingPage = () => {
                     bio: '',
                     category: '',
                     sessionTypes: [],
+                    phone: '',
+                    email: '',
                     imageSource: 'url',
                     imageFile: null
                   });
@@ -547,7 +594,10 @@ const PersonalCoachingPage = () => {
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
               />
               <button 
-                onClick={() => setSelectedCoach(null)}
+                onClick={() => {
+                  setSelectedCoach(null);
+                  setShowContact(false);
+                }}
                 className="absolute top-4 right-4 bg-[#0b1a3b] rounded-full p-2 shadow-md hover:bg-[#0b1a3b]/80 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -615,10 +665,19 @@ const PersonalCoachingPage = () => {
                 <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center">
                   <FaCalendarAlt className="mr-2" /> Book Session
                 </button>
-                <button className="flex-1 bg-[#0b1a3b] hover:bg-[#0b1a3b]/80 text-white border border-blue-600/30 py-3 rounded-lg font-bold flex items-center justify-center">
+                <button 
+                  onClick={() => setShowContact(!showContact)}
+                  className="flex-1 bg-[#0b1a3b] hover:bg-[#0b1a3b]/80 text-white border border-blue-600/30 py-3 rounded-lg font-bold flex items-center justify-center"
+                >
                   <FaPhoneAlt className="mr-2" /> Contact Coach
                 </button>
               </div>
+              {showContact && (
+                <div className="mt-4 p-4 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-lg">
+                  <p className="flex items-center mb-2 text-white"><FaPhone className="mr-2 text-blue-400" /> {selectedCoach.phone}</p>
+                  <p className="flex items-center text-white"><FaEnvelope className="mr-2 text-blue-400" /> {selectedCoach.email}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

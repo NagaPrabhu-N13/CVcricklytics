@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiHeart, FiStar, FiExternalLink, FiArrowLeft } from 'react-icons/fi';
 import { Edit, Trash2 } from 'lucide-react';
@@ -42,14 +42,10 @@ const TShirtVendorsPage = () => {
     { id: 5, name: 'New Zealand', logo: NZ },
   ];
 
-  // Fetch vendor data from Firestore
+  // Fetch all vendor data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'TShirtVendors'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVendors(data);
     }, (error) => {
       console.error("Error fetching vendors:", error);
@@ -156,6 +152,12 @@ const TShirtVendorsPage = () => {
 
   // Handle deleting vendor data
   const handleDeleteData = async (id) => {
+    const vendor = vendors.find(v => v.id === id);
+    if (!vendor || vendor.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own vendors.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this vendor?")) return;
 
     try {
@@ -168,6 +170,11 @@ const TShirtVendorsPage = () => {
 
   // Handle editing vendor data
   const handleEditData = (vendor) => {
+    if (vendor.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own vendors.");
+      return;
+    }
+
     setFormData({
       name: vendor.name,
       rating: vendor.rating.toString(),
@@ -304,22 +311,24 @@ const TShirtVendorsPage = () => {
               key={vendor.id} 
               className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl overflow-hidden hover:border-blue-400 transition-all duration-300 hover:shadow-lg relative"
             >
-              <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                <Edit
-                  className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditData(vendor);
-                  }}
-                />
-                <Trash2
-                  className="text-red-500 cursor-pointer hover:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteData(vendor.id);
-                  }}
-                />
-              </div>
+              {vendor.userId === auth.currentUser.uid && (
+                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                  <Edit
+                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditData(vendor);
+                    }}
+                  />
+                  <Trash2
+                    className="text-red-500 cursor-pointer hover:text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteData(vendor.id);
+                    }}
+                  />
+                </div>
+              )}
               <div className="relative h-48 bg-[#0b1a3b]/70 flex items-center justify-center p-4">
                 <img 
                   src={vendor.logo || 'https://via.placeholder.com/150'} 

@@ -35,14 +35,10 @@ const ShopsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch product data from Firestore
+  // Fetch all product data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Products'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setProducts(data);
     }, (error) => {
       console.error("Error fetching products:", error);
@@ -83,6 +79,13 @@ const ShopsPage = () => {
     }
     if (formData.imageSource === 'file' && formData.imageFile && !formData.imageFile.type.match(/image\/(jpg|jpeg|png|gif)/i)) {
       alert("Please select a valid image file (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    // Check add limit for current user
+    const userProductsCount = products.filter(p => p.userId === auth.currentUser.uid).length;
+    if (!editingId && userProductsCount >= 4) {
+      alert("You have reached the maximum limit of 4 products.");
       return;
     }
 
@@ -136,6 +139,12 @@ const ShopsPage = () => {
 
   // Handle deleting product data
   const handleDeleteData = async (id) => {
+    const product = products.find(p => p.id === id);
+    if (!product || product.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own products.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this product?")) return;
 
     try {
@@ -148,6 +157,11 @@ const ShopsPage = () => {
 
   // Handle editing product data
   const handleEditData = (product) => {
+    if (product.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own products.");
+      return;
+    }
+
     setFormData({
       name: product.name,
       price: product.price.toString(),
@@ -273,22 +287,24 @@ const ShopsPage = () => {
                     </span>
                   )}
                 </div>
-                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                  <FaEdit
-                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditData(item);
-                    }}
-                  />
-                  <FaTrash
-                    className="text-red-500 cursor-pointer hover:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteData(item.id);
-                    }}
-                  />
-                </div>
+                {item.userId === auth.currentUser.uid && (
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    <FaEdit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditData(item);
+                      }}
+                    />
+                    <FaTrash
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteData(item.id);
+                      }}
+                    />
+                  </div>
+                )}
                 <img
                   src={item.image || 'https://via.placeholder.com/150'}
                   alt={item.name}

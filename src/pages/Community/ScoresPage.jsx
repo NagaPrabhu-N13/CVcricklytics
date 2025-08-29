@@ -17,14 +17,10 @@ const ScoresPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch player data from Firestore
+  // Fetch all player data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'PlayerScores'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setScoresData(data);
     }, (error) => {
       console.error("Error fetching scores:", error);
@@ -83,6 +79,12 @@ const ScoresPage = () => {
 
   // Handle deleting player data
   const handleDeleteData = async (id) => {
+    const player = scoresData.find(p => p.id === id);
+    if (!player || player.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own scores.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this player?")) return;
 
     try {
@@ -95,6 +97,11 @@ const ScoresPage = () => {
 
   // Handle editing player data
   const handleEditData = (player) => {
+    if (player.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own scores.");
+      return;
+    }
+
     setFormData({
       name: player.name,
       location: player.location,
@@ -158,16 +165,18 @@ const ScoresPage = () => {
                     </h2>
                     <p className="text-gray-400 text-sm">{player.location}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <FiEdit
-                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                      onClick={() => handleEditData(player)}
-                    />
-                    <FiTrash2
-                      className="text-red-500 cursor-pointer hover:text-red-600"
-                      onClick={() => handleDeleteData(player.id)}
-                    />
-                  </div>
+                  {player.userId === auth.currentUser.uid && (
+                    <div className="flex gap-2">
+                      <FiEdit
+                        className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                        onClick={() => handleEditData(player)}
+                      />
+                      <FiTrash2
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                        onClick={() => handleDeleteData(player.id)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-2">

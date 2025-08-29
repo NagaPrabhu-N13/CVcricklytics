@@ -22,14 +22,10 @@ const OrganisersPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch organiser data from Firestore
+  // Fetch all organiser data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Organisers'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrganisers(data);
     }, (error) => {
       console.error("Error fetching organisers:", error);
@@ -62,6 +58,13 @@ const OrganisersPage = () => {
     }
     if (formData.avatarSource === 'file' && formData.avatarFile && !formData.avatarFile.type.match(/image\/(jpg|jpeg|png|gif)/i)) {
       alert("Please select a valid image file (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    // Check add limit for current user
+    const userOrganisersCount = organisers.filter(org => org.userId === auth.currentUser.uid).length;
+    if (!editingId && userOrganisersCount >= 4) {
+      alert("You have reached the maximum limit of 4 organisers.");
       return;
     }
 
@@ -111,6 +114,12 @@ const OrganisersPage = () => {
 
   // Handle deleting organiser data
   const handleDeleteData = async (id) => {
+    const org = organisers.find(o => o.id === id);
+    if (!org || org.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own organiser.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this organiser?")) return;
 
     try {
@@ -123,6 +132,11 @@ const OrganisersPage = () => {
 
   // Handle editing organiser data
   const handleEditData = (org) => {
+    if (org.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own organiser.");
+      return;
+    }
+
     setFormData({
       name: org.name,
       location: org.location,
@@ -201,22 +215,24 @@ const OrganisersPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold">{org.name}</h2>
-                      <div className="flex items-center gap-2">
-                        <FaEdit
-                          className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditData(org);
-                          }}
-                        />
-                        <FaTrash
-                          className="text-red-500 cursor-pointer hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteData(org.id);
-                          }}
-                        />
-                      </div>
+                      {org.userId === auth.currentUser.uid && (
+                        <div className="flex items-center gap-2">
+                          <FaEdit
+                            className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditData(org);
+                            }}
+                          />
+                          <FaTrash
+                            className="text-red-500 cursor-pointer hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteData(org.id);
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                       <FaMapMarkerAlt className="text-blue-400" />

@@ -42,14 +42,10 @@ const AcademicsPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch course data from Firestore
+  // Fetch all course data from Firestore
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCourses(data);
     }, (error) => {
       console.error("Error fetching courses:", error);
@@ -194,6 +190,12 @@ const AcademicsPage = () => {
 
   // Handle deleting course data
   const handleDeleteData = async (id) => {
+    const course = courses.find(c => c.id === id);
+    if (!course || course.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own courses.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this course?")) return;
 
     try {
@@ -209,6 +211,11 @@ const AcademicsPage = () => {
 
   // Handle editing course data
   const handleEditData = (course) => {
+    if (course.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own courses.");
+      return;
+    }
+
     setFormData({
       title: course.title,
       instructor: course.instructor,
@@ -228,6 +235,11 @@ const AcademicsPage = () => {
 
   // Handle editing course details
   const handleEditDetails = (course) => {
+    if (course.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own courses.");
+      return;
+    }
+
     setDetailsFormData({
       description: course.description,
       syllabus: course.syllabus
@@ -343,20 +355,24 @@ const AcademicsPage = () => {
                 onClick={() => setSelectedCourse(course)}
               >
                 <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                  <FaEdit
-                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditData(course);
-                    }}
-                  />
-                  <FaTrash
-                    className="text-red-500 cursor-pointer hover:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteData(course.id);
-                    }}
-                  />
+                  {course.userId === auth.currentUser.uid && (
+                    <>
+                      <FaEdit
+                        className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditData(course);
+                        }}
+                      />
+                      <FaTrash
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteData(course.id);
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="relative h-48">
                   <img
@@ -412,12 +428,14 @@ const AcademicsPage = () => {
                 >
                   ✕
                 </button>
-                <button
-                  onClick={() => handleEditDetails(selectedCourse)}
-                  className="absolute top-4 right-12 bg-yellow-500 rounded-full p-2 shadow-md hover:bg-yellow-600 text-white"
-                >
-                  <FaEdit />
-                </button>
+                {selectedCourse.userId === auth.currentUser.uid && (
+                  <button
+                    onClick={() => handleEditDetails(selectedCourse)}
+                    className="absolute top-4 right-12 bg-yellow-500 rounded-full p-2 shadow-md hover:bg-yellow-600 text-white"
+                  >
+                    <FaEdit />
+                  </button>
+                )}
               </div>
               <div className="p-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">

@@ -28,14 +28,10 @@ const UmpiresPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch umpire data from Firestore
+  // Fetch all umpire data from Firestore (no user filter)
   useEffect(() => {
-    if (!auth.currentUser) return;
-
     const unsubscribe = onSnapshot(collection(db, 'Umpires'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUmpiresData(data);
     }, (error) => {
       console.error("Error fetching umpires:", error);
@@ -52,7 +48,7 @@ const UmpiresPage = () => {
     return matchesSearch;
   });
 
-  // Calculate community stats
+  // Calculate community stats (now from all umpires)
   const calculateCommunityStats = () => {
     const totalUmpires = umpiresData.length;
     const availableUmpires = umpiresData.filter(u => u.availability === 'Available' || u.availability === 'Booked').length;
@@ -92,6 +88,14 @@ const UmpiresPage = () => {
     }
     if (formData.imageSource === 'url' && formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
       alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    // Check the limit: only allow add if under 4 and not editing
+    // Count only the current user's umpires for the limit
+    const userUmpiresCount = umpiresData.filter(u => u.userId === auth.currentUser.uid).length;
+    if (!editingId && userUmpiresCount >= 4) {
+      alert("You have reached the maximum limit of 4 umpires.");
       return;
     }
 
@@ -138,8 +142,14 @@ const UmpiresPage = () => {
     }
   };
 
-  // Handle deleting umpire data
+  // Handle deleting umpire data (only if owned by current user)
   const handleDeleteData = async (id) => {
+    const umpire = umpiresData.find(u => u.id === id);
+    if (!umpire || umpire.userId !== auth.currentUser.uid) {
+      alert("You can only delete your own umpire.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this umpire?")) return;
 
     try {
@@ -150,8 +160,13 @@ const UmpiresPage = () => {
     }
   };
 
-  // Handle editing umpire data
+  // Handle editing umpire data (only if owned by current user)
   const handleEditData = async (umpire) => {
+    if (umpire.userId !== auth.currentUser.uid) {
+      alert("You can only edit your own umpire.");
+      return;
+    }
+
     setFormData({
       name: umpire.name,
       rating: umpire.rating.toString(),
@@ -271,16 +286,18 @@ const UmpiresPage = () => {
               <div className="md:w-2/3">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-2xl font-bold">{selectedUmpire.name}</h2>
-                  <div className="flex gap-2">
-                    <FiEdit
-                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
-                      onClick={() => handleEditData(selectedUmpire)}
-                    />
-                    <FiTrash2
-                      className="text-red-500 cursor-pointer hover:text-red-600"
-                      onClick={() => handleDeleteData(selectedUmpire.id)}
-                    />
-                  </div>
+                  {selectedUmpire.userId === auth.currentUser.uid && (
+                    <div className="flex gap-2">
+                      <FiEdit
+                        className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                        onClick={() => handleEditData(selectedUmpire)}
+                      />
+                      <FiTrash2
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                        onClick={() => handleDeleteData(selectedUmpire.id)}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div className="flex items-center text-blue-300">
@@ -317,6 +334,7 @@ const UmpiresPage = () => {
               <div
                 key={umpire.id}
                 className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg relative"
+                onClick={() => setSelectedUmpire(umpire)}
               >
                 <div className="flex items-start gap-4">
                   <img
@@ -343,14 +361,19 @@ const UmpiresPage = () => {
                     {umpire.availability}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleDeleteData(umpire.id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
-                  aria-label="Delete Umpire"
-                  title="Delete Umpire"
-                >
-                  <FiTrash2 size={20} />
-                </button>
+                {umpire.userId === auth.currentUser.uid && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent card click
+                      handleDeleteData(umpire.id);
+                    }}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
+                    aria-label="Delete Umpire"
+                    title="Delete Umpire"
+                  >
+                    <FiTrash2 size={20} />
+                  </button>
+                )}
               </div>
             )) : (
               <p className="text-center text-gray-400 col-span-3">No umpires found. Add an umpire to get started!</p>
