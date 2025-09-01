@@ -544,17 +544,18 @@ const AcademicsPage = () => {
                 Level
               </label>
               <select
-                id="level"
-                value={formData.level}
-                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-blue-600 bg-[#0b1a3b] text-white focus:outline-none focus:ring-blue-500"
-                disabled={isLoading}
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-                <option value="All Levels">All Levels</option>
-              </select>
+  id="level"
+  value={formData.level}
+  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+  className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
+  disabled={isLoading}
+>
+  <option className="bg-white text-gray-700" value="Beginner">Beginner</option>
+  <option className="bg-white text-gray-700" value="Intermediate">Intermediate</option>
+  <option className="bg-white text-gray-700" value="Advanced">Advanced</option>
+  <option className="bg-white text-gray-700" value="All Levels">All Levels</option>
+</select>
+
               <label className="block mb-1 text-white font-semibold" htmlFor="duration">
                 Duration
               </label>

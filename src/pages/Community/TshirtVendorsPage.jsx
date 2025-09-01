@@ -502,20 +502,27 @@ const TShirtVendorsPage = () => {
                 </>
               )}
               <label className="block mb-1 text-white font-semibold" htmlFor="team">
-                Team
-              </label>
-              <select
-                id="team"
-                value={formData.team}
-                onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={isLoading}
-              >
-                <option value="">Select a team</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.name}>{team.name}</option>
-                ))}
-              </select>
+  Team
+</label>
+<select
+  id="team"
+  value={formData.team}
+  onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+  className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
+  disabled={isLoading}
+>
+  <option value="" className="bg-white text-gray-700">Select a team</option>
+  {teams.map((team) => (
+    <option
+      key={team.id}
+      value={team.name}
+      className="bg-white text-gray-700"
+    >
+      {team.name}
+    </option>
+  ))}
+</select>
+
               <label className="block mb-1 text-white font-semibold" htmlFor="description">
                 Description
               </label>

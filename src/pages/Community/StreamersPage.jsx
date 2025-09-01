@@ -349,11 +349,15 @@ const StreamersPage = () => {
                 id="platform"
                 value={formData.platform}
                 onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="w-full mb-3 p-2 rounded border border-white bg-transparent text-white focus:outline-none focus:ring-white"
+
+
+
+
                 disabled={isLoading}
               >
-                <option value="YouTube">YouTube</option>
-                <option value="Twitch">Twitch</option>
+                <option className="bg-white text-gray-700" value="YouTube">YouTube</option>
+                <option className="bg-white text-gray-700" value="Twitch">Twitch</option>
               </select>
               <label className="block mb-1 text-white font-semibold" htmlFor="isLive">
                 Live Status
