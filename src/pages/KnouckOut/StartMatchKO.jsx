@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase'; // Adjust path to your Firebase config
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, where  } from 'firebase/firestore';
 import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
 import PitchAnalyzer from '../../components/sophita/HomePage/PitchAnalyzer';
@@ -268,24 +268,65 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
     const fetchAllTeams = async () => {
       try {
         setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'teams');
-        const teamSnapshot = await getDocs(teamsCollectionRef);
-        const fetchedTeams = teamSnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          flagUrl: doc.data().flagUrl,
-          players: doc.data().players || []
-        }));
+        const clubTeamsCollectionRef = collection(db, 'clubTeams');
+        const teamSnapshot = await getDocs(clubTeamsCollectionRef);
+        
+        const fetchedTeams = teamSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.teamName || 'Unknown Team',  // Use teamName field as the display name
+            flagUrl: data.flagUrl || '',  // Optional flag URL
+            players: data.players || []  // Fetch the players array directly
+          };
+        });
+        
         setAllTeams(fetchedTeams);
+        console.group('Fetched Teams from clubTeams');
+        console.log('All Teams:', fetchedTeams);
+        console.groupEnd();
       } catch (err) {
-        console.error("Error fetching all teams:", err);
-        setTeamFetchError("Failed to load teams from database. Please check console.");
+        console.error('Error fetching teams from clubTeams:', err);
+        setTeamFetchError('Failed to load teams from clubTeams. Please check console.');
       } finally {
         setLoadingTeams(false);
       }
     };
     fetchAllTeams();
   }, []);
+  const fetchPlayersForTeam = async (teamName) => {
+  try {
+    const clubTeamsRef = collection(db, 'clubTeams');
+    const q = query(clubTeamsRef, where('teamName', '==', teamName));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      console.error(`No matching team found for ${teamName}`);
+      return [];
+    }
+    
+    // Assuming one document per teamName; get the first one
+    const teamDoc = querySnapshot.docs[0];
+    const players = teamDoc.data().players || [];
+    
+    console.log(`Players for ${teamName}:`, players);
+    return players;
+  } catch (err) {
+    console.error('Error fetching players:', err);
+    return [];
+  }
+};
+useEffect(() => {
+  if (selectedTeamA) {
+    fetchPlayersForTeam(selectedTeamA).then(players => {
+      // Update teamAObject or state with these players
+      const teamAObject = { name: selectedTeamA, players };
+      // Pass to PlayerSelector or update state
+    });
+  }
+}, [selectedTeamA]);
+
+
 
   // Fetch match details from Firebase for playOff format
   useEffect(() => {

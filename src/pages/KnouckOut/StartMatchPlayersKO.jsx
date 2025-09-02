@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Component } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth } from '../../firebase';
 import HeaderComponent from '../../components/kumar/startMatchHeader';
@@ -31,6 +31,211 @@ class ErrorBoundary extends Component {
       );
     }
     return this.props.children;
+  }
+}
+
+// Helper to update PlayerDetails for batting stats
+async function updatePlayerBattingDetails(playerName, newStats) {
+  try {
+    const playerDetailsRef = collection(db, 'PlayerDetails');
+    const q = query(playerDetailsRef, where('name', '==', playerName));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      // If no document found, create a new one with initial stats
+      const newDocRef = doc(playerDetailsRef);
+      await setDoc(newDocRef, {
+        name: playerName,
+        runs: newStats.runs || 0,
+        balls: newStats.balls || 0,
+        fours: newStats.fours || 0,
+        sixes: newStats.sixes || 0,
+        highestScore: newStats.runs || 0, // Initial highest
+        strikeRate: newStats.balls > 0 ? ((newStats.runs / newStats.balls) * 100).toFixed(2) : 0,
+        average: newStats.balls > 0 ? (newStats.runs / 1).toFixed(2) : 0, // Assuming one innings for simplicity
+        // Add other initial fields as needed
+        innings: 1,
+        notOuts: newStats.isOut ? 0 : 1,
+        centuries: newStats.runs >= 100 ? 1 : 0,
+        fifties: newStats.runs >= 50 ? 1 : 0,
+        // Nested careerStats if needed
+        careerStats: {
+          batting: {
+            runs: newStats.runs || 0,
+            balls: newStats.balls || 0,
+            fours: newStats.fours || 0,
+            sixes: newStats.sixes || 0,
+            highest: newStats.runs || 0,
+            strikeRate: newStats.balls > 0 ? ((newStats.runs / newStats.balls) * 100).toFixed(2) : 0,
+            average: newStats.balls > 0 ? (newStats.runs / 1).toFixed(2) : 0,
+            centuries: newStats.runs >= 100 ? 1 : 0,
+            fifties: newStats.runs >= 50 ? 1 : 0,
+            // Other fields
+          },
+          // Other nested fields
+        },
+        updatedAt: Timestamp.fromDate(new Date()),
+        // Add other required fields
+      });
+      console.log(`Created new PlayerDetails for ${playerName}`);
+    } else {
+      querySnapshot.forEach(async (docSnap) => {
+        const docData = docSnap.data();
+        const currentRuns = docData.runs || 0;
+        const currentBalls = docData.balls || 0;
+        const currentFours = docData.fours || 0;
+        const currentSixes = docData.sixes || 0;
+        const currentHighest = docData.highestScore || 0;
+        const currentInnings = docData.careerStats?.batting?.innings || 0;
+        const currentNotOuts = docData.careerStats?.batting?.notOuts || 0;
+        const currentCenturies = docData.centuries || 0;
+        const currentFifties = docData.fifties || 0;
+
+        const updatedRuns = currentRuns + (newStats.runs || 0);
+        const updatedBalls = currentBalls + (newStats.balls || 0);
+        const updatedFours = currentFours + (newStats.fours || 0);
+        const updatedSixes = currentSixes + (newStats.sixes || 0);
+        const updatedHighest = Math.max(currentHighest, updatedRuns);
+        const updatedInnings = currentInnings + (newStats.balls > 0 ? 1 : 0); // Increment innings if balls faced
+        const updatedNotOuts = newStats.isOut ? currentNotOuts : currentNotOuts + 1;
+        const updatedCenturies = updatedRuns >= 100 ? currentCenturies + 1 : currentCenturies;
+        const updatedFifties = updatedRuns >= 50 && updatedRuns < 100 ? currentFifties + 1 : currentFifties;
+
+        const updatedStrikeRate = updatedBalls > 0 ? ((updatedRuns / updatedBalls) * 100).toFixed(2) : 0;
+        const updatedAverage = updatedInnings > 0 ? (updatedRuns / (updatedInnings - updatedNotOuts)).toFixed(2) : 0;
+
+        await updateDoc(docSnap.ref, {
+          runs: updatedRuns,
+          balls: updatedBalls,
+          fours: updatedFours,
+          sixes: updatedSixes,
+          highestScore: updatedHighest,
+          strikeRate: updatedStrikeRate,
+          average: updatedAverage,
+          centuries: updatedCenturies,
+          fifties: updatedFifties,
+          // Update nested careerStats
+          'careerStats.batting.runs': updatedRuns,
+          'careerStats.batting.balls': updatedBalls,
+          'careerStats.batting.fours': updatedFours,
+          'careerStats.batting.sixes': updatedSixes,
+          'careerStats.batting.highest': updatedHighest,
+          'careerStats.batting.strikeRate': updatedStrikeRate,
+          'careerStats.batting.average': updatedAverage,
+          'careerStats.batting.innings': updatedInnings,
+          'careerStats.batting.notOuts': updatedNotOuts,
+          'careerStats.batting.centuries': updatedCenturies,
+          'careerStats.batting.fifties': updatedFifties,
+          updatedAt: Timestamp.fromDate(new Date()),
+        });
+        console.log(`Updated PlayerDetails for ${playerName}`);
+      });
+    }
+  } catch (error) {
+    console.error('Error updating PlayerDetails:', error);
+  }
+}
+
+// Helper to update PlayerDetails for bowling stats
+async function updatePlayerBowlingDetails(playerName, newStats) {
+  try {
+    const playerDetailsRef = collection(db, 'PlayerDetails');
+    const q = query(playerDetailsRef, where('name', '==', playerName));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      // If no document found, create a new one with initial bowling stats
+      const newDocRef = doc(playerDetailsRef);
+      const updatedWickets = newStats.wickets || 0;
+      const updatedBalls = newStats.balls || 0;
+      const updatedRunsConceded = newStats.runsConceded || 0;
+      const updatedEconomy = updatedBalls > 0 ? ((updatedRunsConceded / updatedBalls) * 6).toFixed(2) : 0;
+      const updatedAverage = updatedWickets > 0 ? (updatedRunsConceded / updatedWickets).toFixed(2) : 0;
+      const updatedBest = updatedWickets > 0 ? `${updatedWickets}/${updatedRunsConceded}` : "0";
+      await setDoc(newDocRef, {
+        name: playerName,
+        // Bowling fields
+        average: updatedAverage,
+        bestBowling: updatedBest,
+        economy: updatedEconomy,
+        innings: updatedBalls > 0 ? 1 : 0,
+        strikeRate: updatedWickets > 0 ? (updatedBalls / updatedWickets).toFixed(2) : 0,
+        wickets: updatedWickets,
+        // Nested careerStats
+        careerStats: {
+          bowling: {
+            average: updatedAverage,
+            best: updatedBest,
+            economy: updatedEconomy,
+            innings: updatedBalls > 0 ? 1 : 0,
+            strikeRate: updatedWickets > 0 ? (updatedBalls / updatedWickets).toFixed(2) : 0,
+            wickets: updatedWickets,
+          },
+          // Other nested fields
+        },
+        updatedAt: Timestamp.fromDate(new Date()),
+        // Add other required fields
+      });
+      console.log(`Created new PlayerDetails for bowler ${playerName}`);
+    } else {
+      querySnapshot.forEach(async (docSnap) => {
+        const docData = docSnap.data();
+        const currentAverage = docData.careerStats?.bowling?.average || 0;
+        const currentBest = docData.careerStats?.bowling?.best || "0";
+        const currentEconomy = docData.careerStats?.bowling?.economy || 0;
+        const currentInnings = docData.careerStats?.bowling?.innings || 0;
+        const currentStrikeRate = docData.careerStats?.bowling?.strikeRate || 0;
+        const currentWickets = docData.careerStats?.bowling?.wickets || 0;
+
+        const updatedWickets = currentWickets + (newStats.wickets || 0);
+        const updatedBalls = (docData.careerStats?.bowling?.balls || 0) + (newStats.balls || 0);
+        const updatedRunsConceded = (docData.careerStats?.bowling?.runs || 0) + (newStats.runsConceded || 0);
+        const updatedInnings = currentInnings + (newStats.balls > 0 ? 1 : 0);
+        const updatedEconomy = updatedBalls > 0 ? ((updatedRunsConceded / updatedBalls) * 6).toFixed(2) : currentEconomy;
+        const updatedAverage = updatedWickets > 0 ? (updatedRunsConceded / updatedWickets).toFixed(2) : currentAverage;
+        const updatedStrikeRate = updatedWickets > 0 ? (updatedBalls / updatedWickets).toFixed(2) : currentStrikeRate;
+        const updatedBest = updatedWickets > parseInt(currentBest.split('/')[0] || 0) ? `${updatedWickets}/${updatedRunsConceded}` : currentBest;
+
+        await updateDoc(docSnap.ref, {
+          average: updatedAverage,
+          bestBowling: updatedBest,
+          economy: updatedEconomy,
+          innings: updatedInnings,
+          strikeRate: updatedStrikeRate,
+          wickets: updatedWickets,
+          // Update nested careerStats.bowling
+          'careerStats.bowling.average': updatedAverage,
+          'careerStats.bowling.best': updatedBest,
+          'careerStats.bowling.economy': updatedEconomy,
+          'careerStats.bowling.innings': updatedInnings,
+          'careerStats.bowling.strikeRate': updatedStrikeRate,
+          'careerStats.bowling.wickets': updatedWickets,
+          'careerStats.bowling.balls': updatedBalls,
+          'careerStats.bowling.runs': updatedRunsConceded,
+          updatedAt: Timestamp.fromDate(new Date()),
+        });
+        console.log(`Updated bowling details for ${playerName}`);
+      });
+    }
+  } catch (error) {
+    console.error('Error updating bowling PlayerDetails:', error);
+  }
+}
+
+// Helper to increment matches count for players after the match ends
+async function incrementMatchesAfterMatch(players) {
+  for (const player of players) {
+    try {
+      const playerQuery = query(collection(db, 'PlayerDetails'), where('name', '==', player.name));
+      const querySnapshot = await getDocs(playerQuery);
+      querySnapshot.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        const currentMatches = data.matches || 0;
+        await updateDoc(docSnap.ref, { matches: currentMatches + 1 });
+      });
+    } catch (error) {
+      console.error(`Error incrementing matches for ${player.name}:`, error);
+    }
   }
 }
 
@@ -348,7 +553,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
           userId: auth.currentUser.uid
         };
       });
-
       const bowlerStatsArray = bowlingTeamPlayers.map(player => {
         const stats = bowlerStats[player.index] || {};
         return {
@@ -462,6 +666,12 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       const docId = `${tournamentId}_${matchId}`;
       await setDoc(doc(db, 'scoringpage', docId), matchData);
       console.log('Match data updated successfully:', matchData);
+
+      if (isFinal) {
+        // Increment matches for all players in both teams at the end of the match
+        const allPlayers = [...battingTeamPlayers, ...bowlingTeamPlayers];
+        await incrementMatchesAfterMatch(allPlayers);
+      }
     } catch (error) {
       console.error('Error saving match data:', error);
     }
@@ -501,6 +711,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
     let runsToAdd = 0;
     let isValidBall = false;
+    let isWicket = false; // For bowling update
 
     if (isLabel) {
       setActiveNumber(null);
@@ -518,7 +729,15 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       const newBalls = [...currentOverBalls, `W+${value}`];
       setCurrentOverBalls(newBalls);
       setCurrentOverScores(calculateCurrentOverScores(newBalls));
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+        // Update Firestore bowling stats
+        updatePlayerBowlingDetails(selectedBowler.name, {
+          balls: 0, // Wide is not a valid ball
+          runsConceded: runsToAdd,
+          wickets: 0
+        });
+      }
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -541,8 +760,25 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
         updateBatsmanScore(striker.index, value);
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
+
+        // Update PlayerDetails
+        updatePlayerBattingDetails(striker.name, {
+          runs: value,
+          balls: 1,
+          fours: value === 4 ? 1 : 0,
+          sixes: value === 6 ? 1 : 0,
+          isOut: false,
+        });
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+        // Update Firestore bowling stats (no-ball doesn't count as valid ball but runs are conceded)
+        updatePlayerBowlingDetails(selectedBowler.name, {
+          balls: 0, // No-ball not counted in overs
+          runsConceded: runsToAdd,
+          wickets: 0
+        });
+      }
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -552,7 +788,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       saveMatchData();
       return;
     }
-
     if (pendingLegBy && !isLabel && typeof value === 'number') {
       setShowRunInfo(false);
       runsToAdd = value;
@@ -563,7 +798,27 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       setCurrentOverScores(calculateCurrentOverScores(newBalls));
       setValidBalls(prev => prev + 1);
       isValidBall = true;
-      if (striker) updateBatsmanBalls(striker.index);
+      if (striker) {
+        updateBatsmanBalls(striker.index);
+
+        // Update PlayerDetails (leg byes don't count as runs for batsman, but balls faced might)
+        updatePlayerBattingDetails(striker.name, {
+          runs: 0, // Leg byes not added to batsman runs
+          balls: 1,
+          fours: value === 4 ? 1 : 0, // But count as four if applicable? Typically leg byes are extras, adjust as per rules
+          sixes: value === 6 ? 1 : 0,
+          isOut: false,
+        });
+      }
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        // Update Firestore bowling stats (leg byes are conceded runs, valid ball)
+        updatePlayerBowlingDetails(selectedBowler.name, {
+          balls: 1,
+          runsConceded: runsToAdd,
+          wickets: 0
+        });
+      }
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -617,8 +872,25 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
         updateBatsmanScore(striker.index, value);
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
+
+        // Update PlayerDetails
+        updatePlayerBattingDetails(striker.name, {
+          runs: value,
+          balls: 1,
+          fours: value === 4 ? 1 : 0,
+          sixes: value === 6 ? 1 : 0,
+          isOut: false,
+        });
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        // Update Firestore bowling stats
+        updatePlayerBowlingDetails(selectedBowler.name, {
+          balls: 1,
+          runsConceded: runsToAdd,
+          wickets: 0
+        });
+      }
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -655,10 +927,25 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
         updateBatsmanStats(striker.index, runsToAdd);
         updateBatsmanBalls(striker.index);
         recordWicketOver(striker.index, { type: selectedCatchType, fielder: selectedFielder.name });
+
+        // Update PlayerDetails for out
+        updatePlayerBattingDetails(striker.name, {
+          runs: runsToAdd,
+          balls: 1,
+          fours: runsToAdd === 4 ? 1 : 0,
+          sixes: runsToAdd === 6 ? 1 : 0,
+          isOut: true, // Mark as out
+        });
       }
       setValidBalls(prev => prev + 1);
       if (selectedBowler) {
         updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
+        // Update Firestore bowling stats for wicket
+        updatePlayerBowlingDetails(selectedBowler.name, {
+          balls: 1,
+          runsConceded: runsToAdd,
+          wickets: 1
+        });
       }
       setShowBatsmanDropdown(true);
       setShowCatchModal(false);
@@ -759,7 +1046,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       saveMatchData(true);
       return;
     }
-
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
         const overs = `${overNumber - 1}.${validBalls}`;
@@ -905,7 +1191,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       }
       return;
     }
-
     if (isChasing && playerScore >= targetScore && targetScore > 0) {
       displayModal('Match Result', `${teamB.name} wins!`);
       setGameFinished(true);
@@ -1227,7 +1512,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                   },
                 };
                 rounds[roundIndex].matches.push(newMatch);
-
                 await updateDoc(tournamentDocRef, {
                   rounds: rounds,
                   updatedAt: new Date(),
@@ -1611,7 +1895,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                 </>
               )}
             </div>
-
             {!bowlerVisible && (striker === null || nonStriker === null) && (
               <div id="batsman-selection" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
                 {getAvailableBatsmen().map((player) => (
@@ -1662,7 +1945,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                 <div className="text-sm">{selectedBowler.role}</div>
               </div>
             )}
-
             {bowlerVisible && (
               <>
                 <div id="bowler-selection" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
@@ -1733,7 +2015,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                 />
               </div>
             </div>
-
             <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-2 md:pr-15">
               <div className="flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-4 md:mb-0">
                 <div className="text-white text-center">
@@ -1852,7 +2133,6 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                 );
               })}
             </div>
-
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
               {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => {
                 const isActive = activeLabel === label;
@@ -1999,9 +2279,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
             </button>
           </div>
         )}
-
-
-                  {/* Place MainWheel here, outside condition */}
+        {/* Place MainWheel here, outside condition */}
         {showMainWheel && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="relative bg-white p-6 rounded-lg w-[90%] max-w-3xl mx-auto">

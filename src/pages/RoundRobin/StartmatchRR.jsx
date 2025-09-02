@@ -343,27 +343,67 @@ const Startmatch = ({
     const fetchAllTeams = async () => {
       try {
         setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'teams');
-        const teamSnapshot = await getDocs(teamsCollectionRef);
-        const fetchedTeams = teamSnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          flagUrl: doc.data().flagUrl,
-          players: doc.data().players || [],
-        }));
+        const clubTeamsCollectionRef = collection(db, 'clubTeams');
+        const teamSnapshot = await getDocs(clubTeamsCollectionRef);
+        
+        const fetchedTeams = teamSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.teamName || 'Unknown Team',  // Use teamName field as the display name
+            flagUrl: data.flagUrl || '',  // Optional flag URL
+            players: data.players || []  // Fetch the players array directly
+          };
+        });
+        
         setAllTeams(fetchedTeams);
-        console.group('Fetched Teams');
+        console.group('Fetched Teams from clubTeams');
         console.log('All Teams:', fetchedTeams);
         console.groupEnd();
       } catch (err) {
-        console.error('Error fetching teams:', err);
-        setTeamFetchError('Failed to load teams. Please check console.');
+        console.error('Error fetching teams from clubTeams:', err);
+        setTeamFetchError('Failed to load teams from clubTeams. Please check console.');
       } finally {
         setLoadingTeams(false);
       }
     };
     fetchAllTeams();
   }, []);
+
+  const fetchPlayersForTeam = async (teamName) => {
+  try {
+    const clubTeamsRef = collection(db, 'clubTeams');
+    const q = query(clubTeamsRef, where('teamName', '==', teamName));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      console.error(`No matching team found for ${teamName}`);
+      return [];
+    }
+    
+    // Assuming one document per teamName; get the first one
+    const teamDoc = querySnapshot.docs[0];
+    const players = teamDoc.data().players || [];
+    
+    console.log(`Players for ${teamName}:`, players);
+    return players;
+  } catch (err) {
+    console.error('Error fetching players:', err);
+    return [];
+  }
+};
+
+useEffect(() => {
+  if (selectedTeamA) {
+    fetchPlayersForTeam(selectedTeamA).then(players => {
+      // Update teamAObject or state with these players
+      const teamAObject = { name: selectedTeamA, players };
+      // Pass to PlayerSelector or update state
+    });
+  }
+}, [selectedTeamA]);
+
+
 
   // Fetch tournament image
   useEffect(() => {
@@ -975,20 +1015,15 @@ const Startmatch = ({
               >
                 <h2 className="text-xl font-semibold mb-4 text-blue-800">Assign Scorer</h2>
                 <div className="w-full">
-                  <select
-                    className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${
-                      hasValue(scorer) ? 'bg-gray-200 text-gray-700' : 'bg-white'
-                    }`}
+                  <input
+                    type="text"
+                    placeholder="Enter scorer name"
+                    className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(scorer) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                     value={scorer}
                     onChange={(e) => setScorer(e.target.value)}
-                    disabled={isDifferentUser} // Disable for different user
-                  >
-                    <option value="">Select Scorer</option>
-                    {scorers.map(person => (
-                      <option key={person} value={person}>{person}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
+
               </motion.div>
             </motion.div>
           </div>  <div className="mt-8 flex flex-col items-center">

@@ -628,7 +628,7 @@ const FixtureGenerator = () => {
         setActiveTab('Knockout Brackets');
         break;
       case 'Live Score':
-        setActiveTab('Start Match');
+        setActiveTab('Knockout Brackets');
         break;
       case 'Match Results':
         setActiveTab('Live Score');
