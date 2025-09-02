@@ -32,7 +32,7 @@ const PersonalCoachingPage = () => {
   });
   const [editingId, setEditingId] = useState(null);
 
-  const categories = ['batting', 'bowling', 'fielding', 'fitness', 'mental'];
+  const categories = ['batting', 'bowling', 'fielding', 'fitness', 'Counsellor'];
 
   // Fetch all coach data from Firestore
   useEffect(() => {
@@ -493,22 +493,30 @@ const PersonalCoachingPage = () => {
               disabled={isLoading}
             />
             <label className="block mb-1 text-white font-semibold">Category</label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            >
-              <option value="">Select a category</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
-              ))}
-            </select>
-            <label className="block mb-1 text-white font-semibold">Session Types</label>
-            <div className="mb-3">
-              {formData.sessionTypes.map((session, index) => (
-                <div key={index} className="flex items-center gap-2 mb-1">
-                  <span className="text-gray-300">{session.name} ({session.description}) - ₹{session.price}</span>
+           <select
+  id="categories"
+  value={formData.category}
+  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+  className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
+  disabled={isLoading}
+>
+  {categories.map((category) => (
+    <option
+      key={category}
+      value={category}
+      className="bg-white text-gray-700"
+    >
+      {category.charAt(0).toUpperCase() + category.slice(1)}
+    </option>
+  ))}
+</select>
+           <label className="block mb-1 text-white font-semibold">Session Types</label>
+<div className="mb-3">
+  {formData.sessionTypes.map((session, index) => (
+    <div key={index} className="flex items-center gap-2 mb-1">
+      <span className="text-gray-300">
+        {session.name} ({session.description}) - ₹{session.price}
+      </span>
                   <button
                     onClick={() => removeSessionType(index)}
                     className="text-red-500 hover:text-red-600"

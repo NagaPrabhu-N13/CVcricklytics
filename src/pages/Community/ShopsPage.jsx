@@ -488,12 +488,13 @@ const ShopsPage = () => {
                 id="category"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                
+                className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
                 disabled={isLoading}
               >
-                <option value="gear">Gear</option>
-                <option value="jerseys">Jerseys</option>
-                <option value="accessories">Accessories</option>
+                <option className="bg-white text-gray-700" value="gear">Gear</option>
+                <option className="bg-white text-gray-700" value="jerseys">Jerseys</option>
+                <option  className="bg-white text-gray-700" value="accessories">Accessories</option>
               </select>
               <div className="flex justify-between">
                 <button
