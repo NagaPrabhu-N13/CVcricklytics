@@ -38,6 +38,17 @@ const HeroSection1 = () => {
           © 2025 Creativity Ventures. All rights reserved
         </div>
 
+  <div className="flex gap-4 mt-22 md:mt-7 text-xs ">
+    <a href="/terms" className="text-white hover:text-blue-600">Terms & Conditions</a>
+    <span>|</span>
+    <a href="/privacy" className="text-white hover:text-blue-600">Privacy Policy</a>
+    <span>|</span>
+    <a href="/refunds" className="text-white hover:text-blue-600">Refunds & Cancellations</a>
+    <span>|</span>
+    <a href="/contact" className="text-white hover:text-blue-600">Contact Us</a>
+  </div>
+
+
 
       </motion.div>
       <motion.div 

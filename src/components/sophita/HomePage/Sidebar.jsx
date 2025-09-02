@@ -1507,6 +1507,14 @@ const AccountSettingsContent = ({
 
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => navigate("/termsandconditions")}
+      >
+        <FaCreditCard style={getIconStyle()} />
+        <span>Terms & Condition</span>
+      </div>
+
+      <div 
+        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
         onClick={() => setActiveSection(activeSection === "hideStories" ? "" : "hideStories")}
       >
         <FaEyeSlash style={getIconStyle()} />

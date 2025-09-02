@@ -34,6 +34,7 @@ import Message from "./pages/Message";
 import Contact from './pages/contacts';
 import FieldingStatsPage from './components/sophita/HomePage/Fielding';
 import Tabletoppers from './pages/Tabletoppers';
+import Termsandconditions from './components/sophita/Termsandconditions';
 
 
 import Startmatch from './pages/Startmatch';
@@ -249,6 +250,7 @@ function App() {
           <Route path="/contacts" element={<Contact/>} />
           <Route path="/subscription" element={<Subscription/>} />
           <Route path="/subscription/success" element={<SubscriptionSuccess/>} />
+          <Route path="/termsandconditions" element={<Termsandconditions/>} />
 
 
 
