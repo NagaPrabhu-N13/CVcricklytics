@@ -672,7 +672,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         playAnimation('four');
       }
 
-      if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number') {
+      if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number' && value !==0) {
         setSelectedRun(value);
         setShowMainWheel(true);
       }

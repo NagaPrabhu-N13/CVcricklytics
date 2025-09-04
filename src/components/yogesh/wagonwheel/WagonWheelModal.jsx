@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect }) {
+export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect ,setShowMainWheel}) {
   const regions = [
     'Long Off', 'Cover', 'Point', 'Third Man',
     'Fine Leg', 'Mid Wicket', 'Long On', 'Straight'
@@ -15,13 +15,6 @@ export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect }) 
           <h2 className="text-lg md:text-xl lg:text-2xl font-semibold text-gray-800">
             Select Shot Direction
           </h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl md:text-2xl"
-            aria-label="Close modal"
-          >
-            &times;
-          </button>
         </div>
         
         <div className="grid grid-cols-2 gap-2 md:gap-3">
@@ -39,6 +32,16 @@ export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect }) 
             </button>
           ))}
         </div>
+                {/* Skip button */}
+        <button
+          className="mt-4 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+          onClick={() => {
+            setShowMainWheel(false);  // Close main wheel completely
+            onClose();                // Close this modal
+          }}
+        >
+          Skip
+        </button>
       </div>
     </div>
   );

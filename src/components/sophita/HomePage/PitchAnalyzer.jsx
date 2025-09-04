@@ -1,31 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom'; // New import
+import { useNavigate } from 'react-router-dom';
 
-const pitchTypes = ["Dry", "Green", "Dusty", "Flat", "Bouncy", "Spinning"];
+const pitchTypes = ["Red Soil", "Black Soil", "Matting", "Astro Turf"];
 const tossOptions = ["Bat First", "Bowl First"];
+const weatherOptions = ["Sunny", "Cloudy", "Humid", "Rainy"];
 
-export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournamentName, tournamentId }) {
+export default function PitchAnalyzer({
+  teamA,
+  teamB,
+  onAnalyzeComplete,
+  tournamentName,
+  tournamentId,
+  enableSummary = true,
+  enableAdvice = true,
+  enablePrediction = true,
+  isPremium = false
+}) {
   const [pitchType, setPitchType] = useState('');
   const [tossResult, setTossResult] = useState('');
+  const [weather, setWeather] = useState('');
   const [location, setLocation] = useState('');
-  const [pitchImage, setPitchImage] = useState(null);
+  const [pitchMedia, setPitchMedia] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [mediaType, setMediaType] = useState(null); // 'image' or 'video'
   const [result, setResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  console.log(tournamentName)
-  console.log(tournamentId)
 
-  const navigate = useNavigate(); // New hook
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (pitchImage) {
-      const url = URL.createObjectURL(pitchImage[0]);
+    if (pitchMedia) {
+      const file = pitchMedia[0];
+      const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url); // Clean up to prevent memory leaks
+      setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
+      return () => URL.revokeObjectURL(url);
     }
-  }, [pitchImage]);
+  }, [pitchMedia]);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -34,9 +47,10 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
       const formData = new FormData();
       formData.append("pitchType", pitchType);
       formData.append("tossResult", tossResult);
+      formData.append("weather", weather);
       formData.append("location", location);
-      if (pitchImage) formData.append("image", pitchImage);
-
+      if (pitchMedia) formData.append("media", pitchMedia[0]);
+      // TODO: Integrate actual API call to Firebase storage + AI API for real analysis
       const analysisResult = handleDummyData();
       setResult(analysisResult);
       setShowModal(true);
@@ -47,45 +61,79 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
   };
 
   const handleDummyData = () => {
-    const analysisResult = {
-      pitchSummary: `The pitch at ${location || 'this venue'} is ${pitchType.toLowerCase() || 'typically'} and expected to assist ${pitchType === 'Spinning' || pitchType === 'Dusty' ? 'spinners' : 'fast bowlers'} in the second innings. The surface shows visible cracks which will open up as the match progresses.`,
-      playerAdvice: `Focus on ${pitchType === 'Spinning' || pitchType === 'Dusty' ? 'spin bowlers and batsmen who play spin well' : 'fast bowlers and technically sound batsmen'}. All-rounders who can contribute with both bat and ball will be valuable.`,
-      topPlayers: getRecommendedPlayers(pitchType),
-      matchPrediction: `Teams winning the toss are ${tossResult === 'Bat First' ? 'likely to bat first and aim for 280+ runs' : 'expected to bowl first and restrict the opposition'}. ${pitchType === 'Dry' || pitchType === 'Dusty' ? 'Chasing may be difficult in the second innings.' : 'The pitch should remain consistent throughout the match.'}`,
+    let pitchBehavior = '';
+    let strategicAdvice = '';
+    let scorePrediction = '';
+    let suggestedXI = [];
+    let matchPrediction = '';
+
+    // Dummy logic based on new pitch types and weather
+    switch (pitchType) {
+      case 'Red Soil':
+        pitchBehavior = `The pitch is dry and likely to help spinners, especially under ${weather.toLowerCase() || 'typical'} conditions.`;
+        strategicAdvice = 'Focus on spin bowlers and batsmen who handle turn well. Pick 1-2 all-rounders for balance.';
+        scorePrediction = 'Expected first innings score: 250-300 runs.';
+        suggestedXI = [
+          'Openers: Technically sound batsmen',
+          'Middle Order: Spin-playing specialists',
+          'Bowlers: 3 spinners, 2 pacers'
+        ];
+        break;
+      case 'Black Soil':
+        pitchBehavior = `The pitch retains moisture and assists seamers, particularly in ${weather.toLowerCase() || 'overcast'} weather.`;
+        strategicAdvice = 'Emphasize fast bowlers and resilient batsmen. Include seam-bowling all-rounders.';
+        scorePrediction = 'Expected first innings score: 200-250 runs.';
+        suggestedXI = [
+          'Openers: Defensive batsmen',
+          'Middle Order: All-round contributors',
+          'Bowlers: 3 pacers, 2 spinners'
+        ];
+        break;
+      case 'Matting':
+        pitchBehavior = `The pitch offers consistent bounce, behaving predictably regardless of ${weather.toLowerCase() || 'any'} conditions.`;
+        strategicAdvice = 'Balance the team with versatile players. Focus on consistent performers.';
+        scorePrediction = 'Expected first innings score: 275-325 runs.';
+        suggestedXI = [
+          'Openers: Aggressive stroke-makers',
+          'Middle Order: Anchor players',
+          'Bowlers: Mix of pace and spin'
+        ];
+        break;
+      case 'Astro Turf':
+        pitchBehavior = `The pitch is fast and bouncy, favoring pace under ${weather.toLowerCase() || 'sunny'} skies.`;
+        strategicAdvice = 'Prioritize quick bowlers and batsmen with good technique against bounce.';
+        scorePrediction = 'Expected first innings score: 180-220 runs.';
+        suggestedXI = [
+          'Openers: Quick-scoring batsmen',
+          'Middle Order: Bounce handlers',
+          'Bowlers: 4 pacers, 1 spinner'
+        ];
+        break;
+      default:
+        pitchBehavior = `The pitch at ${location || 'this venue'} is expected to behave neutrally.`;
+        strategicAdvice = 'Build a balanced team with all-round capabilities.';
+        scorePrediction = 'Expected first innings score: 220-270 runs.';
+        suggestedXI = ['Balanced XI recommended'];
+    }
+
+    matchPrediction = `Teams winning the toss are ${tossResult === 'Bat First' ? 'likely to bat first and post a competitive total' : 'expected to bowl first and exploit conditions'}.`;
+
+    return {
+      pitchBehavior,
+      strategicAdvice,
+      scorePrediction,
+      suggestedXI,
+      matchPrediction,
       pitchType,
       tossResult,
+      weather,
       location
     };
-    
-    return analysisResult;
   };
 
-  const getRecommendedPlayers = (type) => {
-    const basePlayers = [
-      "Ravindra Jadeja", "Kuldeep Yadav", "Shreyas Iyer", 
-      "Joe Root", "Ravichandran Ashwin", "Steve Smith"
-    ];
-    
-    if (type === 'Green' || type === 'Bouncy') {
-      return [
-        "Jasprit Bumrah", "Pat Cummins", "Virat Kohli",
-        "Kane Williamson", "Mitchell Starc", "KL Rahul"
-      ];
-    }
-    
-    if (type === 'Flat') {
-      return [
-        "Rohit Sharma", "David Warner", "Babar Azam",
-        "Jos Buttler", "Glenn Maxwell", "Ben Stokes"
-      ];
-    }
-    
-    return basePlayers;
-  };
-
-  const handleImageChange = (e) => {
+  const handleMediaChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setPitchImage(e.target.files);
+      setPitchMedia(e.target.files);
     }
   };
 
@@ -95,7 +143,6 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
         <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-3 border-b border-blue-700">
           <h2 className="text-lg font-bold text-white">Pitch Analysis</h2>
         </div>
-
         <div className="p-4">
           {teamA && teamB && (
             <div className="mb-4 bg-gradient-to-r from-blue-100 to-indigo-100 p-3 rounded-md border border-blue-200">
@@ -107,7 +154,6 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
               </div>
             </div>
           )}
-
           <div className="bg-white bg-opacity-80 p-4 rounded-lg border border-blue-100 mb-4">
             <div className="grid gap-4">
               <div className="space-y-1">
@@ -126,7 +172,6 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   {pitchTypes.map(type => <option key={type}>{type}</option>)}
                 </select>
               </div>
-
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700 flex items-center gap-1">
                   <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +188,22 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   {tossOptions.map(option => <option key={option}>{option}</option>)}
                 </select>
               </div>
-
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-700 flex items-center gap-1">
+                  <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                  </svg>
+                  Weather
+                </label>
+                <select
+                  value={weather}
+                  onChange={e => setWeather(e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select weather</option>
+                  {weatherOptions.map(option => <option key={option}>{option}</option>)}
+                </select>
+              </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700 flex items-center gap-1">
                   <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,27 +220,26 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700 flex items-center gap-1">
                   <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Pitch Image
+                  Pitch Photo/Video (5-10 sec video preferred)
                 </label>
                 <div className="flex items-center gap-2">
                   <label className="flex-1 cursor-pointer">
                     <div className="px-3 py-1.5 border border-dashed border-gray-300 rounded-md hover:border-blue-400 text-center text-xs">
-                      {pitchImage ? "Image selected" : "Click to upload"}
+                      {pitchMedia ? "Media selected" : "Click to upload"}
                       <input
                         type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
+                        accept="image/*,video/*"
+                        onChange={handleMediaChange}
                         className="hidden"
                       />
                     </div>
                   </label>
-                  {pitchImage && (
+                  {pitchMedia && (
                     <span className="text-xs text-green-600 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -191,27 +250,33 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                 </div>
                 {previewUrl && (
                   <div className="mt-1 flex justify-center">
-                    <img 
-                      src={previewUrl} 
-                      alt="Pitch preview" 
-                      className="w-32 h-32 object-cover rounded border border-gray-200"
-                    />
+                    {mediaType === 'image' ? (
+                      <img 
+                        src={previewUrl} 
+                        alt="Pitch preview" 
+                        className="w-32 h-32 object-cover rounded border border-gray-200"
+                      />
+                    ) : (
+                      <video 
+                        src={previewUrl} 
+                        className="w-32 h-32 object-cover rounded border border-gray-200"
+                        controls
+                      />
+                    )}
                   </div>
                 )}
               </div>
             </div>
-
-            {!pitchType && !tossResult && !pitchImage && (
+            {!pitchType && !tossResult && !weather && !pitchMedia && (
               <p className="text-xs text-red-500 mt-2 text-center">
                 Please provide at least one input for analysis
               </p>
             )}
-
             <div className="mt-4 flex flex-wrap gap-2 justify-center">
               <button
                 onClick={handleAnalyze}
-                disabled={isAnalyzing || (!pitchType && !tossResult && !pitchImage)}
-                className={`px-4 py-2 text-sm rounded-md font-medium flex items-center gap-1 ${isAnalyzing || (!pitchType && !tossResult && !pitchImage) 
+                disabled={isAnalyzing || (!pitchType && !tossResult && !weather && !pitchMedia)}
+                className={`px-4 py-2 text-sm rounded-md font-medium flex items-center gap-1 ${isAnalyzing || (!pitchType && !tossResult && !weather && !pitchMedia) 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                   : 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:shadow-md'}`}
               >
@@ -232,12 +297,10 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   </>
                 )}
               </button>
-              
             </div>
           </div>
         </div>
       </div>
-
       <AnimatePresence>
         {showModal && result && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -259,36 +322,76 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   </svg>
                 </button>
               </div>
-
               <div className="p-4 space-y-4">
-                <div>
-                  <h3 className="text-md font-bold text-blue-800 mb-2 flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-800 p-1.5 rounded-full">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </span>
-                    Pitch Behavior Summary
-                  </h3>
-                  <div className="bg-blue-50 p-3 rounded-md border border-blue-200 text-sm">
-                    <p>{result.pitchSummary}</p>
+                {/* Pitch Type Recognition */}
+                {result.pitchType && (
+                  <div>
+                    <h3 className="text-md font-bold text-blue-800 mb-2 flex items-center gap-2">
+                      <span className="bg-blue-100 text-blue-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </span>
+                      Pitch Type
+                    </h3>
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-200 text-sm">
+                      <p>{result.pitchType}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h3 className="text-md font-bold text-green-800 mb-2 flex items-center gap-2">
-                    <span className="bg-green-100 text-green-800 p-1.5 rounded-full">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </span>
-                    Strategic Advice
-                  </h3>
-                  <div className="bg-green-50 p-3 rounded-md border border-green-200 text-sm">
-                    <p>{result.playerAdvice}</p>
+                {/* AI Pitch Behavior Summary */}
+                {enableSummary && (
+                  <div>
+                    <h3 className="text-md font-bold text-blue-800 mb-2 flex items-center gap-2">
+                      <span className="bg-blue-100 text-blue-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </span>
+                      Pitch Behavior Summary
+                    </h3>
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-200 text-sm">
+                      <p>{result.pitchBehavior}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
+                {/* Strategic Advice */}
+                {enableAdvice && (
+                  <div>
+                    <h3 className="text-md font-bold text-green-800 mb-2 flex items-center gap-2">
+                      <span className="bg-green-100 text-green-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </span>
+                      Strategic Advice
+                    </h3>
+                    <div className="bg-green-50 p-3 rounded-md border border-green-200 text-sm">
+                      <p>{result.strategicAdvice}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Score Prediction */}
+                {enablePrediction && (
+                  <div>
+                    <h3 className="text-md font-bold text-purple-800 mb-2 flex items-center gap-2">
+                      <span className="bg-purple-100 text-purple-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </span>
+                      Score Prediction
+                    </h3>
+                    <div className="bg-purple-50 p-3 rounded-md border border-purple-200 text-sm">
+                      <p>{result.scorePrediction}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Match Prediction */}
                 {result.matchPrediction && (
                   <div>
                     <h3 className="text-md font-bold text-purple-800 mb-2 flex items-center gap-2">
@@ -305,45 +408,73 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                   </div>
                 )}
 
-                <div>
-                  <h3 className="text-md font-bold text-amber-800 mb-2 flex items-center gap-2">
-                    <span className="bg-amber-100 text-amber-800 p-1.5 rounded-full">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </span>
-                    Top Player Recommendations
-                  </h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {result.topPlayers.map((player, index) => (
-                      <div key={player} className="bg-white p-2 rounded border border-blue-100 hover:border-blue-300 text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{player}</h4>
-                            <p className="text-xs text-gray-500">Specialist {player.includes("Jadeja") || player.includes("Ashwin") || player.includes("Yadav") ? "Spin Bowler" : "Batsman"}</p>
+                {/* Player Suggestion (Premium) */}
+                {isPremium && result.suggestedXI && (
+                  <div>
+                    <h3 className="text-md font-bold text-amber-800 mb-2 flex items-center gap-2">
+                      <span className="bg-amber-100 text-amber-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </span>
+                      Suggested XI for this Pitch Type
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {result.suggestedXI.map((item, index) => (
+                        <div key={index} className="bg-white p-2 rounded border border-blue-100 hover:border-blue-300 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="bg-blue-100 text-blue-800 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium">
+                              {index + 1}
+                            </div>
+                            <p>{item}</p>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Conditional Next Button - New addition */}
+                {/* Visual Pitch Card (Premium) */}
+                {isPremium && previewUrl && (
+                  <div>
+                    <h3 className="text-md font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                      <span className="bg-indigo-100 text-indigo-800 p-1.5 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </span>
+                      Visual Pitch Card
+                    </h3>
+                    <div className="bg-indigo-50 p-3 rounded-md border border-indigo-200 flex justify-center">
+                      {mediaType === 'image' ? (
+                        <img 
+                          src={previewUrl} 
+                          alt="Pitch visual" 
+                          className="max-w-full h-auto rounded"
+                        />
+                      ) : (
+                        <video 
+                          src={previewUrl} 
+                          className="max-w-full h-auto rounded"
+                          controls
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Conditional Next Button */}
                 {tournamentName && tournamentId && (
-                  <div className="mt-6 flex justify-center">  {/* Changed to justify-center and increased margin-top for spacing */}
+                  <div className="mt-6 flex justify-center">
                     <button
                       onClick={() => {
-                        navigate("/match", {  // Replace "/match-page" with your actual match page route
+                        navigate("/match", {
                           state: {
                             tournamentId,
                             tournamentName,
                           }
                         });
-                        setShowModal(false); // Optionally close the modal after navigation
+                        setShowModal(false);
                       }}
                       className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 text-base rounded-lg font-semibold hover:shadow-lg transition w-full sm:w-auto"
                     >
@@ -351,7 +482,6 @@ export default function PitchAnalyzer({ teamA, teamB, onAnalyzeComplete, tournam
                     </button>
                   </div>
                 )}
-
               </div>
             </motion.div>
           </div>

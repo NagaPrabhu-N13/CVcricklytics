@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaBell, FaUser, FaSearch, FaComment, FaTimes, FaPaperPlane, FaPlus, FaUpload } from "react-icons/fa";
+import { FaBell, FaUser, FaSearch, FaComment, FaTimes, FaPaperPlane, FaPlus, FaUpload, FaTrash, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { Search } from 'lucide-react'; 
 import Sidebar from "../components/sophita/HomePage/Sidebar";
 import mImg from '../assets/sophita/HomePage/player.png';
@@ -15,8 +15,10 @@ import { useNavigate } from "react-router-dom";
 import { FaUserShield } from "react-icons/fa";
 
 import { db, storage } from "../firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, query, where, onSnapshot, addDoc, arrayUnion, arrayRemove, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, query, where, onSnapshot, addDoc, arrayUnion, arrayRemove, updateDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import { serverTimestamp } from "firebase/firestore"; // Added for timestamps
 
 const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const navigate = useNavigate();
@@ -59,6 +61,15 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const [showStoryUpload, setShowStoryUpload] = useState(false); // Modal for uploading
   const storyInputRef = useRef(null); // For file input
 
+  // New states for story upload with mentions
+  const [selectedStoryMedia, setSelectedStoryMedia] = useState([]);
+  const [storyMentions, setStoryMentions] = useState('');
+  const [availableUsers, setAvailableUsers] = useState([]); // Users for mentioning
+  const [mentionSuggestions, setMentionSuggestions] = useState([]);
+
+  // New state for story reply input
+  const [storyReply, setStoryReply] = useState('');
+
   const highlightRef = useRef(null);
   const searchBarRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -94,6 +105,18 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     requests: [],
     general: []
   };
+
+  // States for upload modal
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [mediaPreview, setMediaPreview] = useState(null);
+  const [description, setDescription] = useState('');
+  const [mediaType, setMediaType] = useState(null);
+
+  // States for description truncation
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
+
+  const auth = getAuth(); // Added for current user
 
   const handleToggleSearch = () => {
     setShowSearch(!showSearch);
@@ -169,13 +192,11 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     setShowShareBox(showShareBox === highlight.id ? null : highlight.id);
     setShowCommentBox(null); 
   };
-
   const handleShare = (platform) => {
     console.log(`Sharing ${selectedHighlight.title} via ${platform}`);
     setShowShareBox(null);
     alert(`Shared "${selectedHighlight.title}" via ${platform}`);
   };
-
   // Handle clicks outside comment/share boxes
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -246,7 +267,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         const users = usersSnapshot.docs.map(doc => ({
           id: doc.id,
           firstName: doc.data().firstName || 'Unknown',
-          profileImageUrl: doc.data().profileImageUrl || 'path/to/default/image.png', // Use profileImageUrl or fallback
+          profileImageUrl: doc.data().profileImageUrl || '', // Changed to empty string for conditional check
           isFollowing: false // Will update based on current user's following
         }));
         
@@ -264,6 +285,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         // Filter out current user
         const filteredUsers = users.filter(user => user.id !== userProfile?.uid);
         setFollowersData(filteredUsers);
+        setAvailableUsers(filteredUsers); // Set available users for mentions
       } catch (err) {
         console.error("Error fetching users:", err);
       }
@@ -272,37 +294,37 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     fetchUsers();
   }, [userProfile?.uid]);
 
-  // Fetch reels for Reels tab from landingFeed
-  useEffect(() => {
-    const fetchReels = async () => {
-      try {
-        const reelsSnapshot = await getDocs(collection(db, "landingFeed"));
-        const reels = reelsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setReelsData(reels);
+  // Fetch reels for Reels tab from landingFeed - only current user's reels
+  const fetchReels = async () => {
+    if (!userProfile?.uid) return;
+    try {
+      const q = query(collection(db, "landingFeed"), where("userId", "==", userProfile.uid));
+      const reelsSnapshot = await getDocs(q);
+      const reels = reelsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setReelsData(reels);
 
-        // Set likedVideos with likes count and check if liked by current user
-        const likedState = {};
-        for (const item of reels) {
-          const likesRef = collection(db, "landingFeed", item.id, "likes");
-          const likesSnapshot = await getDocs(likesRef);
-          const likedByCurrentUser = likesSnapshot.docs.some(likeDoc => likeDoc.id === userProfile?.uid);
-          likedState[item.id] = {
-            count: likesSnapshot.size,
-            liked: likedByCurrentUser,
-          };
-        }
-        setLikedVideos(likedState);
-      } catch (err) {
-        console.error("Error fetching reels:", err);
+      // Set likedVideos with likes count and check if liked by current user
+      const likedState = {};
+      for (const item of reels) {
+        const likesRef = collection(db, "landingFeed", item.id, "likes");
+        const likesSnapshot = await getDocs(likesRef);
+        const likedByCurrentUser = likesSnapshot.docs.some(likeDoc => likeDoc.id === userProfile?.uid);
+        likedState[item.id] = {
+          count: likesSnapshot.size,
+          liked: likedByCurrentUser,
+        };
       }
-    };
-
+      setLikedVideos(likedState);
+    } catch (err) {
+      console.error("Error fetching reels:", err);
+    }
+  };
+  useEffect(() => {
     fetchReels();
   }, [userProfile?.uid]);
-
   // Fetch reels for For You tab: current user's and followed users'
   useEffect(() => {
     if (activeTab === 'forYou' && userProfile?.uid) {
@@ -311,7 +333,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
           const followingSnapshot = await getDocs(collection(db, "following", userProfile.uid, "myFollowing"));
           const followedIds = followingSnapshot.docs.map(doc => doc.id);
           followedIds.push(userProfile.uid); // Include current user
-
           const q = query(collection(db, "landingFeed"), where("userId", "in", followedIds));
           const querySnapshot = await getDocs(q);
           const reels = querySnapshot.docs.map(doc => ({
@@ -429,13 +450,11 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
       clearTimeout(timeoutId);
     };
   }, []);
-
   useEffect(() => {
     if (highlightVisible && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [highlightVisible]);
-
   const handleMainClick = (e) => {
     if (
       isPriceVisible ||
@@ -484,12 +503,23 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     fetchStories(profile.id === 'user' ? userProfile.uid : profile.id);
   };
 
+  // Story media selection handler
+  const handleStoryMediaSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedStoryMedia(files);
+    setStoryMentions('');
+    setMentionSuggestions([]);
+    setShowStoryUpload(true);
+  };
+
   // Story upload handler
-  const handleStoryUpload = async (files) => {
-    if (!userProfile?.uid || !files.length) return;
+  const handleStoryUpload = async () => {
+    if (!userProfile?.uid || !selectedStoryMedia.length) return;
 
     try {
-      for (const file of files) {
+      const mentionsArray = storyMentions.split('#').filter(m => m.trim());
+
+      for (const file of selectedStoryMedia) {
         const isVideo = file.type.startsWith('video');
         const path = isVideo ? `stories/videos/${userProfile.uid}/${file.name}` : `stories/images/${userProfile.uid}/${file.name}`;
         const storageRefPath = ref(storage, path);
@@ -502,16 +532,99 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               mediaUrl,
               type: isVideo ? 'video' : 'image',
               timestamp: Date.now(),
+              mentions: mentionsArray // Store mentions as array
             });
             resolve();
           });
         });
       }
+      
+for (const mention of mentionsArray) {
+  const trimmedMention = mention.trim();   // remove front/back spaces
+  console.log(`Processing mention: "${trimmedMention}"`);
+
+  // Query Firestore users collection
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("firstName", "==", trimmedMention));
+  const querySnapshot = await getDocs(q);
+
+  if (!querySnapshot.empty) {
+    const mentionedUserDoc = querySnapshot.docs[0];
+    const mentionedUser = { id: mentionedUserDoc.id, ...mentionedUserDoc.data() };
+
+    console.log("✅ Mentioned user found:", mentionedUser);
+
+    const recipientId = mentionedUser.id;
+    const currentUserId = userProfile.uid;
+
+    // Generate unique chatId
+    const generateChatId = (uid1, uid2) => {
+      return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+    };
+    const chatId = generateChatId(currentUserId, recipientId);
+
+    // Ensure chat document exists
+    const chatRef = doc(db, "chats", chatId);
+    const chatSnap = await getDoc(chatRef);
+    if (!chatSnap.exists()) {
+      await setDoc(chatRef, {
+        participants: [currentUserId, recipientId],
+        lastMessage: "",
+        lastUpdated: serverTimestamp()
+      });
+    }
+
+    // Add the mention message
+    await addDoc(collection(db, "chats", chatId, "messages"), {
+      senderId: currentUserId,
+      text: "Mentioned You in their Story",
+      createdAt: serverTimestamp(),
+      read: false
+    });
+
+    // Update lastMessage in chat doc
+    await setDoc(chatRef, {
+      lastMessage: "Mentioned You in their Story",
+      lastUpdated: serverTimestamp()
+    }, { merge: true });
+
+  } else {
+    console.warn(`❌ No user found in Firestore with firstName: "${trimmedMention}"`);
+  }
+}
+
       setShowStoryUpload(false);
+      setSelectedStoryMedia([]);
+      setStoryMentions('');
+      setMentionSuggestions([]);
       fetchStories(userProfile.uid);
     } catch (err) {
       console.error("Error uploading story:", err);
     }
+  };
+
+  // Handle mention input change
+  const handleMentionChange = (e) => {
+    const text = e.target.value;
+    setStoryMentions(text);
+
+    const matches = text.match(/#(\w*)$/);
+    if (matches) {
+      const fragment = matches[1].toLowerCase();
+      const suggestions = availableUsers
+        .filter(user => user.firstName.toLowerCase().startsWith(fragment))
+        .map(user => user.firstName);
+      setMentionSuggestions(suggestions);
+    } else {
+      setMentionSuggestions([]);
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion) => {
+    const text = storyMentions.replace(/#(\w*)$/, `#${suggestion} `);
+    setStoryMentions(text);
+    setMentionSuggestions([]);
   };
 
   // Autoplay stories effect
@@ -522,7 +635,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     const currStory = userStories[currentStoryIndex];
 
     if (!currStory) return;
-
     if (currStory.type === 'image') {
       timer = setTimeout(() => {
         const nextIndex = (currentStoryIndex + 1) % userStories.length;
@@ -541,65 +653,75 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     setHighlightVisible(true);
   };
 
-  // Updated handleReelUploadClick to prompt for video, caption, or URL
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [reelFile, setReelFile] = useState(null);
-  const [reelThumbnail, setReelThumbnail] = useState(null);
-  const [reelTitle, setReelTitle] = useState('');
-  const [reelCaption, setReelCaption] = useState('');
-  const [reelUrl, setReelUrl] = useState('');
-
-  const handleReelUploadClick = () => {
-    setShowUploadModal(true);
+  // Reel upload modal handler
+  const handleUploadReelClick = () => {
+    reelInputRef.current.click();
   };
 
-  const handleReelUpload = async () => {
-    if (!userProfile?.uid) return;
-    let videoUrl = reelUrl;
-    let thumbnailUrl = null;
+  const handleReelInputChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedMedia(file);
+      setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
+      setMediaPreview(URL.createObjectURL(file));
+      setDescription('');
+      setShowUploadModal(true);
+    }
+  };
 
-    if (reelFile) {
-      const storageRef = ref(storage, `reels/${userProfile.uid}/${reelFile.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, reelFile);
+  const handleUploadReel = async () => {
+    if (!selectedMedia || !description.trim() || !userProfile?.uid) return;
+
+    try {
+      const isVideo = selectedMedia.type.startsWith('video/');
+      const storagePath = isVideo ? `reels/videos/${userProfile.uid}/${selectedMedia.name}` : `reels/images/${userProfile.uid}/${selectedMedia.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, selectedMedia);
+
       await new Promise((resolve, reject) => {
         uploadTask.on('state_changed', null, reject, async () => {
-          videoUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          // Store in Firestore with description
+          await addDoc(collection(db, "landingFeed"), {
+            userId: userProfile.uid,
+            mediaUrl,
+            type: isVideo ? 'video' : 'image',
+            description,
+            createdAt: new Date()
+          });
           resolve();
         });
       });
-    }
 
-    if (reelThumbnail) {
-      const thumbnailRef = ref(storage, `thumbnails/${userProfile.uid}/${reelThumbnail.name}`);
-      const thumbnailUploadTask = uploadBytesResumable(thumbnailRef, reelThumbnail);
-      await new Promise((resolve, reject) => {
-        thumbnailUploadTask.on('state_changed', null, reject, async () => {
-          thumbnailUrl = await getDownloadURL(thumbnailUploadTask.snapshot.ref);
-          resolve();
-        });
-      });
-    }
+      // Refresh reels - only current user's
+      await fetchReels();
 
-    if (videoUrl) {
-      await addDoc(collection(db, "landingFeed"), {
-        userId: userProfile.uid,
-        videoUrl,
-        title: reelTitle,
-        caption: reelCaption,
-        thumbnailUrl,
-        likes: 0,
-        createdAt: new Date()
-      });
       setShowUploadModal(false);
-      setReelFile(null);
-      setReelThumbnail(null);
-      setReelTitle('');
-      setReelCaption('');
-      setReelUrl('');
-      // Refresh reels
-      const reelsSnapshot = await getDocs(collection(db, "landingFeed"));
-      setReelsData(reelsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSelectedMedia(null);
+      setMediaPreview(null);
+      setDescription('');
+      setMediaType(null);
+    } catch (error) {
+      console.error('Error uploading reel:', error);
     }
+  };
+
+  // Delete reel handler
+  const handleDeleteReel = async (reelId) => {
+    if (!window.confirm('Are you sure you want to delete this reel?')) return;
+    try {
+      await deleteDoc(doc(db, "landingFeed", reelId));
+      await fetchReels();
+    } catch (error) {
+      console.error("Error deleting reel:", error);
+    }
+  };
+
+  const toggleDescription = (id) => {
+    setExpandedDescriptions(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -642,6 +764,68 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     );
   };
 
+  // Function to send story reply to chat
+  const handleSendStoryReply = async (storyOwnerId) => {
+    if (!storyReply.trim() || !userProfile?.uid) return;
+
+    const currentUserId = userProfile.uid;
+    const recipientId = storyOwnerId;
+
+    // Generate unique chatId (same as in Chat.jsx)
+    const generateChatId = (uid1, uid2) => {
+      return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+    };
+
+    const chatId = generateChatId(currentUserId, recipientId);
+
+    try {
+      // Ensure chat document exists
+      const chatRef = doc(db, "chats", chatId);
+      const chatSnap = await getDoc(chatRef);
+      if (!chatSnap.exists()) {
+        await setDoc(chatRef, {
+          participants: [currentUserId, recipientId],
+          lastMessage: "",
+          lastUpdated: serverTimestamp()
+        });
+      }
+
+      // Add the reply as a message
+      await addDoc(collection(db, "chats", chatId, "messages"), {
+        senderId: currentUserId,
+        text: `Reply to your story: ${storyReply}`, // Prefix to indicate it's a story reply
+        createdAt: serverTimestamp(),
+        read: false
+      });
+
+      // Update lastMessage in chat doc
+      await setDoc(chatRef, {
+        lastMessage: `Reply to your story: ${storyReply}`,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+
+      // Clear the reply input
+      setStoryReply('');
+      alert('Reply sent successfully!');
+    } catch (err) {
+      console.error("Error sending story reply:", err);
+    }
+  };
+
+  // Navigation for stories
+  const handlePrevStory = () => {
+    setCurrentStoryIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextStory = () => {
+    const nextIndex = currentStoryIndex + 1;
+    if (nextIndex < userStories.length) {
+      setCurrentStoryIndex(nextIndex);
+    } else {
+      setProfileStoryVisible(false); // Close modal if at the end
+    }
+  };
+
   const toggleHighlightVisibility = () => {
     setHighlightVisible(prev => !prev);
   };
@@ -664,9 +848,9 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         <input
           type="file"
           ref={reelInputRef}
-          onChange={(e) => setReelFile(e.target.files[0])}
-          accept="video/*"
           style={{ display: 'none' }}
+          accept="video/*,image/*"
+          onChange={handleReelInputChange}
         />
         {/* Story Upload Hidden Input */}
         <input
@@ -675,10 +859,10 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
           accept="image/*,video/*"
           multiple
           style={{ display: 'none' }}
-          onChange={(e) => handleStoryUpload(Array.from(e.target.files))}
+          onChange={handleStoryMediaSelect}
         />
 
-        {/* Upload Modal */}
+        {/* Upload Reel Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
@@ -689,43 +873,28 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                 X
               </button>
               <div className="flex flex-col gap-4">
-                <input
-                  type="text"
-                  placeholder="Title (required)"
-                  value={reelTitle}
-                  onChange={(e) => setReelTitle(e.target.value)}
-                  className="bg-transparent border border-white p-2 rounded"
-                />
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setReelFile(e.target.files[0])}
-                />
-                <input
-                  type="text"
-                  placeholder="Or enter video URL"
-                  value={reelUrl}
-                  onChange={(e) => setReelUrl(e.target.value)}
-                  className="bg-transparent border border-white p-2 rounded"
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setReelThumbnail(e.target.files[0])}
-                />
-                <input
-                  type="text"
-                  placeholder="Caption"
-                  value={reelCaption}
-                  onChange={(e) => setReelCaption(e.target.value)}
-                  className="bg-transparent border border-white p-2 rounded"
+                <h2 className="text-white text-xl">Add Description</h2>
+                {mediaPreview && (
+                  <div className="relative w-full aspect-video overflow-hidden rounded-lg">
+                    {mediaType === 'video' ? (
+                      <video src={mediaPreview} controls className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                )}
+                <textarea
+                  placeholder="Add a description..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="bg-transparent border border-white p-2 rounded h-24 text-white"
                 />
                 <button
-                  onClick={handleReelUpload}
+                  onClick={handleUploadReel}
                   className="bg-[#5DE0E6] text-white p-2 rounded"
-                  disabled={!reelTitle.trim()}
+                  disabled={!description.trim()}
                 >
-                  Upload Reel
+                  Upload
                 </button>
               </div>
             </div>
@@ -756,11 +925,10 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                         <button
                           className="text-white text-2xl font-bold"
                           onClick={() => {
-                            setShowStoryUpload(true);
                             storyInputRef.current.click();
                           }}
                         >
-                          +
+                          <FaPlus />
                         </button>
                       )}
                     </div>
@@ -790,21 +958,39 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                           className="w-full h-full object-cover"
                         />
                       )}
+                      {/* Navigation Arrows */}
+                      <button 
+                        onClick={handlePrevStory}
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white bg-black bg-opacity-50 p-2 rounded-full"
+                      >
+                        <FaArrowLeft size={24} />
+                      </button>
+                      <button 
+                        onClick={handleNextStory}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white bg-black bg-opacity-50 p-2 rounded-full"
+                      >
+                        <FaArrowRight size={24} />
+                      </button>
                     </>
                   ) : (
                     <p className="text-white text-center py-20">No active stories</p>
                   )}
                 </div>
                 
-                <div className="w-full flex justify-between items-center gap-3 md:gap-5">
+                <div className="w-full flex justify-between items-center gap-3">
                   <input
                     type="text"
                     placeholder="Reply"
+                    value={storyReply} // Added state binding
+                    onChange={(e) => setStoryReply(e.target.value)} // Added change handler
                     className="bg-transparent border border-white border-[2px] h-8 md:h-10 rounded-3xl text-white w-full pl-3 md:pl-5 text-sm md:text-base"
                   />
                   <button
                     className="w-fit p-1 px-2 md:px-3 text-center rounded-2xl text-sm md:text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
-                    onClick={() => setProfileStoryVisible(false)}
+                    onClick={() => {
+                      handleSendStoryReply(selectedProfile.id); // Send reply to chat
+                      setStoryReply(''); // Clear input after sending
+                    }}
                   >
                     send
                   </button>
@@ -813,7 +999,61 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
             </div>
           </div>
         )}
-
+        {/* Story Upload Modal */}
+        {showStoryUpload && (
+          <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
+            <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
+              <button
+                className="absolute top-4 right-4 text-2xl text-white cursor-pointer"
+                onClick={() => setShowStoryUpload(false)}
+              >
+                X
+              </button>
+              <div className="flex flex-col gap-4 items-center">
+                <h2 className="text-white text-xl">Upload Story</h2>
+                {selectedStoryMedia.length > 0 && (
+                  <div className="w-full flex flex-wrap gap-2">
+                    {selectedStoryMedia.map((file, index) => (
+                      <div key={index} className="relative w-24 h-24">
+                        {file.type.startsWith('image/') ? (
+                          <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover rounded" />
+                        ) : (
+                          <video src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  placeholder="Add mentions with # (e.g. #user1 #user2)"
+                  value={storyMentions}
+                  onChange={handleMentionChange}
+                  className="bg-transparent border border-white p-2 rounded h-24 text-white w-full"
+                />
+                {mentionSuggestions.length > 0 && (
+                  <ul className="bg-gray-800 rounded-lg w-full max-h-32 overflow-y-auto">
+                    {mentionSuggestions.map((suggestion, index) => (
+                      <li 
+                        key={index} 
+                        className="p-2 text-white cursor-pointer hover:bg-gray-700"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        #{suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  onClick={handleStoryUpload}
+                  className="bg-[#5DE0E6] text-white p-2 rounded mt-4"
+                  disabled={selectedStoryMedia.length === 0}
+                >
+                  Send Media
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Navbar */}
         <nav className="fixed top-0 z-[1000] h-20 md:h-30 flex w-full items-center justify-between bg-gradient-to-b from-[#02101E] to-[#040C15] px-3 md:px-5 py-2 text-white">
           <div className="flex items-center">
@@ -832,7 +1072,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               id="cricklytics-title" 
               className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold cursor-pointer select-none" onClick={toggleHighlightVisibility} >Cricklytics</span>
           </div>
-
           <div className="fixed inset-0 -z-10 flex items-center justify-center">
             <img
               src={mImg}
@@ -872,7 +1111,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         </nav>
 
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
-
         {/* Content */}
         <div
           className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${
@@ -923,30 +1161,36 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                 ))}
               </div>
             </div>
-
             {/* Tabs */}
             <div className="w-full flex justify-center mt-2 md:mt-4">
-              <div className="w-full md:w-[50%] flex justify-around text-white text-sm md:text-xl underline cursor-pointer">
-                <span 
-                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'forYou' ? 'text-[#800080]' : ''}`}
+              <div className="w-full md:w-[50%] flex justify-around text-white text-sm md:text-xl cursor-pointer">
+                <span
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
+                    hover:text-[#800080] 
+                    ${activeTab === 'forYou' ? 'text-[#800080] border border-white' : ''}`}
                   onClick={() => setActiveTab('forYou')}
                 >
                   Following
                 </span>
-                <span 
-                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'following' ? 'text-[#800080]' : ''}`}
+                <span
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
+                    hover:text-[#800080] 
+                    ${activeTab === 'following' ? 'text-[#800080] border border-white' : ''}`}
                   onClick={() => setActiveTab('following')}
                 >
                   People You May Know
                 </span>
-                <span 
-                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'reels' ? 'text-[#800080]' : ''}`}
+                <span
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
+                    hover:text-[#800080] 
+                    ${activeTab === 'reels' ? 'text-[#800080] border border-white' : ''}`}
                   onClick={() => setActiveTab('reels')}
                 >
                   For You
                 </span>
               </div>
             </div>
+
           </div>
 
           {/* Content based on active tab */}
@@ -959,82 +1203,101 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               highlightsData.length > 0 ? highlightsData.map((item) => (
                 <div
                   key={item.id}
-                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-3xl md:rounded-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-t-3xl md:rounded-t-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]  min-h-[350px]"
                 >
-                  {/* Video container with fixed aspect ratio and local overflow control */}
-                  <div className="relative w-full aspect-video overflow-hidden rounded-3xl md:rounded-3xl">
-                    <iframe
-                      src={item.videoUrl}
-                      title={`Highlight ${item.title}`}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="absolute top-0 left-0 w-full h-full brightness-125"
-                    />
+                  {/* Media container with fixed aspect ratio and local overflow control */}
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl min-h-[350px] md:rounded-t-3xl">
+                    {item.type === 'image' ? (
+                      <img
+                        src={item.mediaUrl}
+                        alt="Highlight"
+                        className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+                      />
+                    ) : (
+                      <video
+                        src={item.mediaUrl}
+                        controls
+                        className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+                      />
+                    )}
                   </div>
-
                   {/* Title and actions below the video */}
                   <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl">
-                    <h3 className="text-white text-base md:text-lg font-bold m-0">
-                      {item.title}
-                    </h3>
-                    <div className="flex justify-evenly items-center mt-2 mb-1 md:mb-2">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }} 
-                        className="z-10 flex items-center"
-                      >
-                        <img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
-                        <span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
-                      </button>
-                      
-                      {/* Comment Button and Box */}
-                      <div className="relative">
-                        <button 
-                          onClick={(e) => handleCommentClick(item, e)}
-                          className={`comment-icon-${item.id} flex items-center`}
-                        >
-                          <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-                          <span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
-                        </button>
-                        
-                        {showCommentBox === item.id && (
-                          <div 
-                            ref={el => commentRefs.current[item.id] = el}
-                            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                    {/* Description */}
+                    {item.description && (
+                      <div>
+                        <p className={`${expandedDescriptions[item.id] ? '' : 'line-clamp-1'} text-white`}>
+                          {item.description}
+                        </p>
+                        {item.description.length > 100 && (  // Change this line: check length instead of split('\n')
+                          <button
+                            onClick={() => toggleDescription(item.id)}
+                            className="text-blue-500 text-sm mt-1"  // Add basic styling for visibility
                           >
-                            <div className="max-h-40 overflow-y-auto mb-2">
-                              {comments[item.id]?.length > 0 ? (
-                                comments[item.id].map(comment => (
-                                  <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
-                                    <p className="text-white text-sm">{comment.text}</p>
-                                    <p className="text-gray-400 text-xs">{comment.user}</p>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-gray-400 text-sm">No comments yet</p>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Add a comment..."
-                                className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
-                              />
-                              <button
-                                onClick={handleAddComment}
-                                className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
-                                disabled={!newComment.trim()}
-                              >
-                                Post
-                              </button>
-                            </div>
-                          </div>
+                            {expandedDescriptions[item.id] ? 'Show less' : 'Show more'}
+                          </button>
                         )}
                       </div>
-                      
-                      {/* Share Button and Box */}
+                    )}
+                    <div className="flex justify-between items-center mt-2 mb-1 md:mb-2">
+                      {/* Left side: Like + Comment */}
+                      <div className="flex items-center gap-6">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }} 
+                          className="z-10 flex items-center"
+                        >
+                          <img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
+                          <span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
+                        </button>
+                        {/* Comment Button and Box */}
+                        <div className="relative">
+                          <button 
+                            onClick={(e) => handleCommentClick(item, e)}
+                            className={`comment-icon-${item.id} flex items-center`}
+                          >
+                            <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+                            <span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
+                          </button>
+                          
+                          {showCommentBox === item.id && (
+                            <div 
+                              ref={el => commentRefs.current[item.id] = el}
+                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                            >
+                              <div className="max-h-40 overflow-y-auto mb-2">
+                                {comments[item.id]?.length > 0 ? (
+                                  comments[item.id].map(comment => (
+                                    <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+                                      <p className="text-white text-sm">{comment.text}</p>
+                                      <p className="text-gray-400 text-xs">{comment.user}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-gray-400 text-sm">No comments yet</p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  placeholder="Add a comment..."
+                                  className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
+                                />
+                                <button
+                                  onClick={handleAddComment}
+                                  className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
+                                  disabled={!newComment.trim()}
+                                >
+                                  Post
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side: Share */}
                       <div className="relative">
                         <button 
                           onClick={(e) => handleShareClick(item, e)}
@@ -1079,11 +1342,17 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                   {followersData.map(follower => (
                     <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between">
                       <div className="flex items-center mb-2 sm:mb-0">
-                        <img 
-                          src={follower.profileImageUrl} 
-                          alt={follower.firstName}
-                          className="w-12 h-12 rounded-full object-cover mr-0 sm:mr-4"
-                        />
+                        {follower.profileImageUrl ? (
+                          <img 
+                            src={follower.profileImageUrl} 
+                            alt={follower.firstName}
+                            className="w-12 h-12 rounded-full object-cover mr-0 sm:mr-4"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold text-xl mr-0 sm:mr-4">
+                            {follower.firstName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <h3 className="text-white font-semibold text-center sm:text-left">{follower.firstName}</h3>
                           <p className="text-gray-400 text-sm text-center sm:text-left">
@@ -1106,36 +1375,53 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                 </div>
               </div>
             )}
-
             {activeTab === 'reels' && (
               <div className="w-full px-2 md:px-4">
                 {/* Upload Reel Button */}
                 <div className="p-4 flex justify-center">
                   <button
-                    onClick={handleReelUploadClick}
+                    onClick={handleUploadReelClick}
                     className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-medium hover:opacity-90 transition-opacity w-full sm:w-auto"
                   >
                     <FaUpload />
                     Upload Reel
                   </button>
                 </div>
-
                 {/* Reels Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {reelsData.map(reel => (
                     <div key={reel.id} className="bg-[#0D171E] rounded-xl overflow-hidden shadow-lg">
                       <div className="relative pt-[177.78%]">
-                        <iframe
-                          src={reel.videoUrl}
-                          title={reel.title || reel.caption}
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="absolute top-0 left-0 w-full h-full"
-                        ></iframe>
+                        {reel.type === 'image' ? (
+                          <img
+                            src={reel.mediaUrl}
+                            alt="Reel"
+                            className="absolute top-0 left-0 w-full h-full object-cover"
+                          />
+                        ) : (
+                          <video
+                            src={reel.mediaUrl}
+                            controls
+                            className="absolute top-0 left-0 w-full h-full object-cover"
+                          />
+                        )}
                       </div>
                       <div className="p-3 md:p-4">
-                        <h3 className="text-white font-semibold mb-2 text-base md:text-lg">{reel.title || reel.caption}</h3>
+                        {reel.description && (
+                          <div>
+                            <p className={`${expandedDescriptions[reel.id] ? '' : 'line-clamp-1'} text-white`}>
+                              {reel.description}
+                            </p>
+                            {reel.description.length > 100 && (  // Change this line: check length instead of split('\n')
+                              <button
+                                onClick={() => toggleDescription(reel.id)}
+                                className="text-blue-500 text-sm mt-1"  // Add basic styling for visibility
+                              >
+                                {expandedDescriptions[reel.id] ? 'Show less' : 'Show more'}
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <div className="flex justify-between items-center">
                           <div className="flex items-center">
                             <button onClick={() => toggleLike(reel.id)} className="mr-2 flex items-center">
@@ -1151,6 +1437,9 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                             <button className="text-white">
                               <img src={share} alt="Share" className="w-5 h-5 md:w-6 md:h-6" />
                             </button>
+                            <button onClick={() => handleDeleteReel(reel.id)} className="text-red-500">
+                              <FaTrash className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1160,7 +1449,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               </div>
             )}
           </div>
-
         </div>
       </div>
       <AIAssistance

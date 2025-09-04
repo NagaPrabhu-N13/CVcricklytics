@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import '../../index.css';
 import nav from '../../assets/kumar/right-chevron.png'; // Added one more level
 import logo from '../../assets/sophita/HomePage/Picture3_2.png'; // Added one more level
-
+ 
 const plans = [
   {
     name: 'Bronze',
@@ -129,7 +129,7 @@ const plans = [
     },
   },
 ];
-
+ 
 const faqs = [
   {
     question: 'What is included in the Core Features Access?',
@@ -147,8 +147,40 @@ const faqs = [
     question: 'Is the AI Chatbot available 24/7?',
     answer: 'Yes, the AI Chatbot is available 24/7 across all plans to assist with your queries.',
   },
+    {
+    question: 'Terms & Conditions',
+    answer: `Welcome to Cricklytics, a product by Creativity Ventures Pvt. Ltd. By accessing or using our platform, you agree to comply with the following terms:
+      - The platform provides cricket analytics, AI-based predictions, and engagement features.
+      - Users are responsible for maintaining the confidentiality of their account.
+      - Unauthorized use, resale, or redistribution of our content is strictly prohibited.
+      - Creativity Ventures reserves the right to suspend accounts in case of fraudulent or abusive activities.
+      - All disputes will be governed by Indian law and subject to Chennai jurisdiction.`
+  },
+  {
+    question: 'Privacy Policy',
+    answer: `Your privacy is important to us.
+      - We collect only necessary information (e.g., email, login credentials) to provide our services.
+      - All data is securely stored via Firebase & Razorpay systems.
+      - Payment details are processed securely by Razorpay; we do not store card/bank details.
+      - We do not sell or share personal data with third parties, except as required by law.
+      - Users may contact us anytime to request deletion of their data.`
+  },
+  {
+    question: 'Refund & Cancellation Policy',
+    answer: `Subscription fees are non-refundable once payment is successful.
+      - In case of double payments or technical errors, refunds will be initiated within 7–10 business days.
+      - If a user cancels a subscription, access will remain until the billing cycle ends, but no partial refunds will be issued.
+      - For refund requests, contact our support team with your transaction details.`
+  },
+  {
+    question: 'Contact Us',
+    answer: `Creativity Ventures IT solution & IT consulting
+      📍 Location: Chennai, Tamil Nadu, India
+      📧 Email: support_cricklytics@creativityventures.co.in
+      📞 Phone: +91 7397362027`
+  }
 ];
-
+ 
 const Subscription = () => {
   const [billingCycle, setBillingCycle] = useState('yearly');
   const [activeFaq, setActiveFaq] = useState(null);
@@ -157,11 +189,11 @@ const Subscription = () => {
   const auth = getAuth();
   const db = getFirestore();
   const navigate = useNavigate();
-
+ 
   const handleBack = () => {
     navigate(-1); // Go back to previous page
   };
-
+ 
   // Fetch user's subscription status
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -177,7 +209,7 @@ const Subscription = () => {
     });
     return () => unsubscribe();
   }, [auth, db]);
-
+ 
   // Load Razorpay checkout script
   useEffect(() => {
     const script = document.createElement('script');
@@ -188,7 +220,7 @@ const Subscription = () => {
       document.body.removeChild(script);
     };
   }, []);
-
+ 
   // Handle Razorpay Checkout
   const handleCheckout = async (plan) => {
     if (plan.name === 'Bronze') {
@@ -199,7 +231,7 @@ const Subscription = () => {
       }
       return;
     }
-
+ 
     setLoading(true);
     try {
       const user = auth.currentUser;
@@ -208,12 +240,12 @@ const Subscription = () => {
         setLoading(false);
         return;
       }
-
+ 
       // Convert price to paise (Razorpay uses smallest currency unit)
       const price = plan.name === 'Silver' ? (billingCycle === 'yearly' ? 250000 : 21000) :
                     plan.name === 'Gold' ? (billingCycle === 'yearly' ? 500000 : 42000) :
                     (billingCycle === 'yearly' ? 750000 : 63000);
-
+ 
       // Call backend to create Razorpay order
       const response = await fetch('/api/create-razorpay-order', {
         method: 'POST',
@@ -226,9 +258,9 @@ const Subscription = () => {
           billingCycle,
         }),
       });
-
+ 
       const order = await response.json();
-
+ 
       const options = {
         key: 'rzp_test_cJbmy9En8XJvPv',
         amount: order.amount,
@@ -250,7 +282,7 @@ const Subscription = () => {
                 planName: plan.name,
               }),
             });
-
+ 
             const result = await verifyResponse.json();
             if (result.success) {
               // Update Firestore
@@ -274,7 +306,7 @@ const Subscription = () => {
           color: '#16a34a',
         },
       };
-
+ 
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (error) {
@@ -283,7 +315,7 @@ const Subscription = () => {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100">
       <div className="max-w-7xl mx-auto">
@@ -306,7 +338,7 @@ const Subscription = () => {
             onClick={handleBack}
           />
         </div>
-        
+       
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -50 }}
@@ -335,7 +367,7 @@ const Subscription = () => {
             </button>
           </div>
         </motion.div>
-
+ 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {plans.map((plan, index) => (
@@ -370,47 +402,9 @@ const Subscription = () => {
             </motion.div>
           ))}
         </div>
+ 
 
-        {/* Feature Comparison Table */}
-        {/* <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="bg-gray-800 rounded-lg shadow-lg p-6 mb-12"
-        >
-          <h2 className="text-3xl font-bold text-green-400 mb-6 text-center">Compare Features Across Plans</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-300">
-              <thead>
-                <tr className="bg-green-900">
-                  <th className="p-4">Feature</th>
-                  {plans.map((plan) => (
-                    <th key={plan.name} className="p-4 text-center">{plan.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Object.keys(plans[0].features).map((feature) => (
-                  <tr key={feature} className="border-t border-gray-700">
-                    <td className="p-4">{feature}</td>
-                    {plans.map((plan) => (
-                      <td key={plan.name} className="p-4 text-center">
-                        {plan.features[feature] === true ? (
-                          <span className="text-2xl">✅</span>
-                        ) : plan.features[feature] === false ? (
-                          <span className="text-2xl">🔒</span>
-                        ) : (
-                          plan.features[feature]
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div> */}
-
+ 
         {/* FAQs Section */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -436,7 +430,7 @@ const Subscription = () => {
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="text-gray-300 mt-2"
+                      className="text-gray-300 mt-2 whitespace-pre-line"
                     >
                       {faq.answer}
                     </motion.div>
@@ -450,11 +444,5 @@ const Subscription = () => {
     </div>
   );
 };
-
-export default Subscription;
-
-// put it in .env file
-// RAZORPAY_KEY_ID = rzp_test_cJbmy9En8XJvPv	RAZORPAY_KEY_SECRET=6R5F7B44V1lmv3q5FS5UKLDe
-
-
  
+export default Subscription;
