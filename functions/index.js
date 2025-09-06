@@ -1,7 +1,8 @@
-const functions = require('firebase-functions');
+// const functions = require('firebase-functions');
+const functions = require("firebase-functions");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, doc, setDoc } = require("firebase-admin/firestore");
+const { getFirestore, updateDoc, doc } = require("firebase-admin/firestore"); 
 const { getStorage } = require("firebase-admin/storage");
 const textToSpeech = require("@google-cloud/text-to-speech");
 const fs = require("fs");
@@ -10,6 +11,9 @@ const util = require("util");
 const crypto = require("crypto");
 const Razorpay = require('razorpay');
 const log = require("./logger");
+const os = require('os');
+const { promisify } = require('util');
+
 
 initializeApp();
 const db = getFirestore();
@@ -17,6 +21,110 @@ const storage = getStorage();
 const client = new textToSpeech.TextToSpeechClient();
 const razorpay = new Razorpay({ key_id: 'rzp_test_cJbmy9En8XJvPv', key_secret: '6R5F7B44V1lmv3q5FS5UKLDe' });
 
+// Helper function to generate audio and return URL
+async function generateAndUploadAudio(player, playerId) {
+  const battingAvgAfter = player.careerStats?.batting?.average ?? 0;
+  const bowlingAvgAfter = player.careerStats?.bowling?.average ?? 0;
+  const highestScoreAfter = player.careerStats?.batting?.runs ?? 0;
+
+  const text = `${player.name}, a ${player.age ?? ''}-year-old ${player.role} from the ${player.teamName ?? ''}.
+${player.name} is a ${player.battingStyle ?? ''}, with a batting average of ${battingAvgAfter}, a bowling average of ${bowlingAvgAfter}, and a highest score of ${highestScoreAfter}.`;
+
+  const request = {
+    input: { text },
+    voice: { languageCode: 'en-IN', ssmlGender: 'MALE', name: 'en-IN-Wavenet-C' },
+    audioConfig: { audioEncoding: 'MP3' }
+  };
+
+  let tempFilePath;
+  try {
+    const [response] = await client.synthesizeSpeech(request);
+    tempFilePath = path.join(os.tmpdir(), `${playerId}.mp3`);
+    await util.promisify(fs.writeFile)(tempFilePath, response.audioContent, 'binary');
+
+    const destination = `player_audio/${playerId}.mp3`;
+    await storage.bucket().upload(tempFilePath, { destination });
+
+    const audioUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(destination)}?alt=media`;
+
+    // Clean up temp file if it exists
+    if (fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
+
+    return audioUrl;
+  } catch (error) {
+    console.error('Error generating/uploading audio:', error);
+    // Clean up temp file if it was created
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
+    throw error;
+  }
+}
+
+// Trigger on new player creation
+exports.generatePlayerAudioOnCreate = onDocumentCreated("PlayerDetails/{playerId}", async (event) => {
+  const playerId = event.params.playerId;
+  const data = event.data.data();
+
+  try {
+    const audioUrl = await generateAndUploadAudio(data, playerId);
+    await event.data.after.ref.update({ audioUrl });
+    console.log(`Audio generated on create for player ${playerId}`);
+  } catch (error) {
+    console.error(`Failed to generate audio on create for player ${playerId}:`, error);
+  }
+});
+
+// Trigger on player update
+exports.generatePlayerAudioOnUpdate = onDocumentUpdated("PlayerDetails/{playerId}", async (event) => {
+  const playerId = event.params.playerId;
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
+
+  if (JSON.stringify(beforeData.careerStats) === JSON.stringify(afterData.careerStats)) {
+    console.log('No change in careerStats, skipping audio generation.');
+    return;
+  }
+
+  try {
+    const audioUrl = await generateAndUploadAudio(afterData, playerId);
+    await event.data.after.ref.update({ audioUrl });
+    console.log(`Audio regenerated on update for player ${playerId}`);
+  } catch (error) {
+    console.error(`Failed to regenerate audio on update for player ${playerId}:`, error);
+  }
+});
+
+// One-time backfill function for existing players without audioUrl (trigger via HTTP request)
+exports.backfillPlayerAudio = functions.https.onRequest(async (req, res) => {
+  try {
+    const snapshot = await db.collection('PlayerDetails').get();
+    const promises = snapshot.docs.map(async (docSnapshot) => {
+      const data = docSnapshot.data();
+      const playerId = docSnapshot.id;
+
+      if (!data.audioUrl) {
+        try {
+          const audioUrl = await generateAndUploadAudio(data, playerId);
+          await docSnapshot.ref.update({ audioUrl });
+          console.log(`Backfilled audio for player ${playerId}`);
+        } catch (error) {
+          console.error(`Failed to backfill audio for player ${playerId}:`, error);
+        }
+      } else {
+        console.log(`Audio already exists for player ${playerId}, skipping.`);
+      }
+    });
+
+    await Promise.all(promises);
+    res.status(200).send('Backfill completed successfully.');
+  } catch (error) {
+    console.error('Error during backfill:', error);
+    res.status(500).send('Backfill failed.');
+  }
+});
 // ✅ 1. Generate Player Details Audio
 exports.generatePlayerDetailsAudio = onDocumentCreated("players/{playerId}", async (event) => {
     const snap = event.data;

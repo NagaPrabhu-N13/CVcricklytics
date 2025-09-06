@@ -64,6 +64,54 @@ async function updatePlayerCareerStats(playerName, statUpdates, db) {
   }
 }
 
+async function updatePlayerBattingAverage(playerName, db) {
+  try {
+    const q = query(collection(db, "PlayerDetails"), where("name", "==", playerName));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const docRef = querySnapshot.docs[0].ref;
+      const playerData = querySnapshot.docs[0].data();
+
+      const runs = playerData?.careerStats?.batting?.runs || 0;
+      const dismissals = playerData?.careerStats?.batting?.dismissals || 0;
+      let battingAverage = 0;
+      if (dismissals > 0) battingAverage = runs / dismissals;
+
+      await updateDoc(docRef, { "careerStats.batting.average": battingAverage });
+      console.log(`Updated batting average for ${playerName}: ${battingAverage}`);
+    } else {
+      console.error(`Player ${playerName} not found`);
+    }
+  } catch (error) {
+    console.error("Error updating batting average:", error);
+  }
+}
+
+async function updatePlayerBowlingAverage(playerName, db) {
+  try {
+    const q = query(collection(db, "PlayerDetails"), where("name", "==", playerName));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const docRef = querySnapshot.docs[0].ref;
+      const playerData = querySnapshot.docs[0].data();
+
+      const runsConceded = playerData?.careerStats?.bowling?.runsConceded || 0;
+      const wickets = playerData?.careerStats?.bowling?.wickets || 0;
+      let bowlingAverage = 0;
+      if (wickets > 0) bowlingAverage = runsConceded / wickets;
+
+      await updateDoc(docRef, { "careerStats.bowling.average": bowlingAverage });
+      console.log(`Updated bowling average for ${playerName}: ${bowlingAverage}`);
+    } else {
+      console.error(`Player ${playerName} not found`);
+    }
+  } catch (error) {
+    console.error("Error updating bowling average:", error);
+  }
+}
+
 function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -168,7 +216,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
     console.log('Tournament Name:', tournamentName);
-
     if (!teamA || !teamB || !selectedPlayersFromProps.left || !selectedPlayersFromProps.right || !tournamentId || !matchId || !phase) {
       console.error("Missing match data in location state. Redirecting.");
       navigate('/');
@@ -344,6 +391,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.batting.wickets": 0 // If applicable
       };
       await updatePlayerCareerStats(player.name, statUpdates, db);
+      await updatePlayerBattingAverage(player.name, db); // Update batting average
     }
   };
 
@@ -369,12 +417,14 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       const statUpdates = {
         "careerStats.bowling.wickets": isWicket ? 1 : 0,
         "careerStats.bowling.innings": isValidBall ? 1 : 0,
+        "careerStats.bowling.runsConceded": runsConceded, // Added for conceded runs update
         "careerStats.bowling.average": 0, // Recalculate
         "careerStats.bowling.best": 0, // Update best if applicable
         "careerStats.bowling.economy": 0, // Recalculate
         "careerStats.bowling.strikeRate": 0 // Recalculate
       };
       await updatePlayerCareerStats(player.name, statUpdates, db);
+      await updatePlayerBowlingAverage(player.name, db); // Update bowling average
     }
   };
 
@@ -386,12 +436,21 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       catchType,
       fielder: fielder ? { name: fielder.name, index: fielder.index } : null
     }]);
-
     if (fielder) {
       const statUpdates = {
         "careerStats.fielding.catches": 1
       };
       await updatePlayerCareerStats(fielder.name, statUpdates, db);
+    }
+
+    // New: Update dismissed field for the batsman
+    const batsman = battingTeamPlayers.find(p => p.index === batsmanIndex);
+    if (batsman) {
+      const statUpdates = {
+        "careerStats.batting.dismissals": 1 // Increment dismissed count
+      };
+      await updatePlayerCareerStats(batsman.name, statUpdates, db);
+      await updatePlayerBattingAverage(batsman.name, db); // Update batting average
     }
   };
 
@@ -595,9 +654,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setShowRunInfo(true);
       } else {
         setShowRunInfo(false);
-      }
-
-      if (value === 'Six') {
+      }if (value === 'Six') {
         playAnimation('six');
         runsToAdd = 6;
         setPlayerScore(prev => prev + runsToAdd);
@@ -699,12 +756,28 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }
       setValidBalls(prev => prev + 1);
       if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, catchRuns);
-      setShowBatsmanDropdown(true);
-      setShowCatchModal(false);
-      setPendingOut(false);
-      setSelectedCatchType('');
-      setSelectedFielder(null);
-      setCatchRuns(null);
+
+      // Increment outCount here
+      setOutCount(prev => prev + 1);
+
+      // Check if this was the last wicket
+      const availableBatsmen = getAvailableBatsmen();
+      if (availableBatsmen.length === 0) {
+        // All out, end innings without showing dropdown
+        setShowCatchModal(false);
+        setPendingOut(false);
+        setSelectedCatchType('');
+        setSelectedFielder(null);
+        setCatchRuns(null);
+        // Trigger innings end logic (handled in useEffect)
+      } else {
+        setShowBatsmanDropdown(true);
+        setShowCatchModal(false);
+        setPendingOut(false);
+        setSelectedCatchType('');
+        setSelectedFielder(null);
+        setCatchRuns(null);
+      }
       saveMatchData();
     }, 1000);
   };
@@ -798,7 +871,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       saveMatchData(true);
       return;
     }
-
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
         const overs = `${overNumber - 1}.${validBalls}`;
@@ -1020,7 +1092,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         milestone: null
       }
     }));
-    setOutCount(prev => prev + 1);
+    // OutCount is now incremented in handleCatchModalSubmit
     saveMatchData();
   };
 
@@ -1044,7 +1116,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setStriker(null);
     saveMatchData();
   };
-
   const cancelNonStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== nonStriker?.index));
     const newScores = { ...batsmenScores };
@@ -1256,7 +1327,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
-
         {showAnimation && (
           <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
             <div className="w-full h-full flex items-center justify-center">
@@ -1404,7 +1474,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 {bowlerVisible ? (isChasing ? 'Choose the bowler' : 'Choose the Bowler') : 'Select Batsmen'}
               </h2>
             </div>
-
             <div className="flex gap-4">
               {!bowlerVisible && (
                 <>
@@ -1548,10 +1617,11 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             )}
           </>
         )}
-
         {showThirdButtonOnly && (
           <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
-            <h2 className="gap-5 text-white font-bold text-center text-4xl md:text-3xl lg:text-5xl">Score Board</h2>
+            <h2 className="gap-5 text-white font-bold text-center text-4xl md:text-3xl lg:text-5xl">
+              Score Board
+            </h2>
             <div className="mt-4 flex w-full md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
               <div className="flex items-center justify-center mb-4 md:mb-0">
                 <img
@@ -1698,7 +1768,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 )
               })}
             </div>
-
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
               {['Wide', 'No-ball', 'OUT', 'Leg By', 'nb'].map((label) => {
                 const isActive = activeLabel === label;

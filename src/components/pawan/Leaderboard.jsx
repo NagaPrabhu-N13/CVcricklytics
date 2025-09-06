@@ -23,7 +23,7 @@ const Leaderboard = ({ players }) => {
   // Filter and sort top 3 bowlers by bowling average (lower is better, but we'll use wickets or avg for demo)
   const topBowlers = players
     .filter((player) => player.bowlingAvg !== null)
-    .sort((a, b) => a.bowlingAvg - b.bowlingAvg) // Lower bowling avg is better
+    .sort((a, b) => b.bowlingAvg - a.bowlingAvg) // Lower bowling avg is better
     .slice(0, 3);
 
   // Batting Chart Data

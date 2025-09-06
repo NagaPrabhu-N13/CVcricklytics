@@ -58,6 +58,7 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminPanel from './pages/AdminPanel';
 
 import PlayerPages from './pages/PlayerPages';
+import BowlingPlayerPages from './pages/BowlingPlayerPages';
 import Awards from './components/pawan/Awards';
 import Winner from './components/pawan/Winner';
 import Winner25 from './components/pawan/Winner25';
@@ -237,6 +238,7 @@ function App() {
           <Route path="/TournamentBracket" element={<TournamentBracket/>} />
 
           <Route path="/playerpages" element={<PlayerPages />} />
+          <Route path="/bowlingPlayerPages" element={<BowlingPlayerPages />} />
           <Route path="/awards" element={<Awards />} />
           <Route path="/winner25" element={<Winner25 />} />
           <Route path="/winner24" element={<Winner24 />} />

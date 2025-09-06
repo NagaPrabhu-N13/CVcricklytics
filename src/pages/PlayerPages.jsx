@@ -42,7 +42,7 @@ function PlayerPages() {
         if (!window.confirm("Are you sure you want to delete this player?")) return;
 
         try {
-            console.warn("Player deletion not fully implemented. Requiresupdating clubTeams players array.");
+            console.warn("Player deletion not fully implemented. Requires updating clubTeams players array.");
             setPlayers(players.filter(player => player.id !== playerId));
         } catch (err) {
             console.error("Error deleting player:", err);
@@ -51,46 +51,43 @@ function PlayerPages() {
     };
 
     useEffect(() => {
-        // Fetch all clubTeams data
-        const clubTeamsQuery = query(collection(db, 'clubTeams'));
+        // Fetch all players from PlayerDetails collection
+        const playersQuery = query(collection(db, 'PlayerDetails'));
 
-        const unsubscribeTeams = onSnapshot(clubTeamsQuery, (teamSnapshot) => {
-            const playersMap = new Map(); // Map to store players by playerId
-
-            // Process clubTeams players
-            teamSnapshot.docs.forEach((doc) => {
-                const teamData = doc.data();
-                const teamPlayers = teamData.players || [];
-                teamPlayers.forEach((player) => {
-                    playersMap.set(player.playerId?.toString(), {
-                        id: player.playerId?.toString() || `${doc.id}-${player.name}`,
-                        name: player.name || 'Unknown',
-                        battingStyle: player.battingStyle || 'Unknown',
-                        team: teamData.teamName || teamData.lastMatch || 'Unknown',
-                        role: player.role || 'player',
-                        photoUrl: player.image || '',
-                        runs: player.careerStats?.batting?.runs || 0,
-                        wickets: player.careerStats?.bowling?.wickets || 0,
-                        matches: player.careerStats?.batting?.matches || 0,
-                        notOuts: player.careerStats?.batting?.notOuts || 0,
-                        overs: player.careerStats?.bowling?.overs || 0,
-                        highest: player.careerStats?.batting?.highest || 0,
-                        userId: player.userId,
-                        playerId: player.playerId?.toString(),
-                        audioUrl: player.audioUrl || '', // Use audioUrl from clubTeams players array
-                    });
-                });
+        const unsubscribePlayers = onSnapshot(playersQuery, (playerSnapshot) => {
+            const playersList = playerSnapshot.docs.map((doc) => {
+                const playerData = doc.data();
+                return {
+                    id: doc.id,
+                    name: playerData.name || 'Unknown',
+                    battingStyle: playerData.battingStyle || 'Unknown',
+                    team: playerData.teamName || 'Unknown', // Assuming teamName field in PlayerDetails
+                    role: playerData.role || 'player',
+                    photoUrl: playerData.image || '',
+                    runs: playerData.careerStats?.batting?.runs || 0,
+                    average: playerData.careerStats?.batting?.average ?? 0,
+                    bowlingAverage: playerData.careerStats?.bowling?.average ?? 0,
+                    battingAvg: playerData.careerStats?.batting?.average ?? null, // Added: from careerStats.batting.average
+                    bowlingAvg: playerData.careerStats?.bowling?.average ?? null, // Added: from careerStats.bowling.average
+                    wickets: playerData.careerStats?.bowling?.wickets || 0,
+                    matches: playerData.careerStats?.batting?.matches || 0,
+                    notOuts: playerData.careerStats?.batting?.notOuts || 0,
+                    overs: playerData.careerStats?.bowling?.overs || 0,
+                    highest: playerData.careerStats?.batting?.highest || 0,
+                    userId: playerData.userId,
+                    playerId: doc.id,
+                    audioUrl: playerData.audioUrl || '',
+                };
             });
 
-            const playersList = Array.from(playersMap.values());
             setPlayers(playersList);
             console.log("Players Fetched:", playersList);
         }, (error) => {
-            console.error("Error fetching clubTeams data:", error);
+            console.error("Error fetching PlayerDetails data:", error);
             setPlayers([]);
         });
 
-        return () => unsubscribeTeams();
+        return () => unsubscribePlayers();
     }, []);
 
     const filteredPlayers = players.filter((player) => {
