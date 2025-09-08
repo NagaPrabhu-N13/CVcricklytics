@@ -710,7 +710,12 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
     instagram: userProfile?.socialMedia?.instagram || "",
     twitter: userProfile?.socialMedia?.twitter || ""
   });
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingSocial, setIsEditingSocial] = useState(false);
+  
+  // New states for editable name
+  const [name, setName] = useState(userProfile?.firstName || "");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(userProfile?.firstName || "");
 
   const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
   const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
@@ -731,14 +736,69 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
       await updateDoc(doc(db, "users", auth.currentUser.uid), {
         socialMedia: socialMediaLinks
       });
-      setIsEditing(false);
+      setIsEditingSocial(false);
     } catch (err) {
       console.error("Error updating social media links:", err);
     }
   };
 
+  // New function to save edited name
+  const handleSaveName = async () => {
+    if (!tempName.trim()) return;
+    try {
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        firstName: tempName.trim()
+      });
+      setName(tempName.trim());
+      setIsEditingName(false);
+    } catch (err) {
+      console.error("Error updating name:", err);
+    }
+  };
+
+  // Fetch initial name if not provided in userProfile
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setName(data.firstName || "");
+          setTempName(data.firstName || "");
+        }
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   return (
     <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+      {/* Editable Name above Email */}
+      <div className="flex items-center justify-between">
+        <div>
+          {isEditingName ? (
+            <input
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              className="p-2 border rounded"
+            />
+          ) : (
+            <span className="font-bold">{name || "No name"}</span>
+          )}
+        </div>
+        {isEditingName ? (
+          <>
+            <button onClick={handleSaveName} className="ml-2 text-green-600">Save</button>
+            <button onClick={() => setIsEditingName(false)} className="ml-2 text-red-600">Cancel</button>
+          </>
+        ) : (
+          <button onClick={() => setIsEditingName(true)} className="ml-2 text-blue-600">Edit</button>
+        )}
+      </div>
+
       <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
         <FaEnvelope style={getIconStyle()} />
         <span>Email: {userProfile?.email || "No email"}</span>
@@ -801,7 +861,7 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
         <div className="pl-8 space-y-3">
           <p className="text-xs">Link your social media profiles to verify your identity:</p>
           
-          {isEditing ? (
+          {isEditingSocial ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <FaFacebook style={{ color: '#1877F2' }} />
@@ -849,7 +909,7 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
               
               <div className="flex justify-end gap-2 pt-2">
                 <button 
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => setIsEditingSocial(false)}
                   className="px-3 py-1 text-xs rounded bg-gray-500 hover:bg-gray-600"
                 >
                   Cancel
@@ -899,7 +959,7 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
               )}
               
               <button 
-                onClick={() => setIsEditing(true)}
+                onClick={() => setIsEditingSocial(true)}
                 className="flex items-center gap-1 text-xs mt-2"
                 style={{ color: selectedColor }}
               >
@@ -1835,7 +1895,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
                 </li>
                 <li 
                   className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
-                  onClick={() => navigate("/playerpages")} 
+                  onClick={() => navigate("/bowlingPlayerPages")} 
                 >
                   🎳 Bowling <FaLock className="text-gray-600 ml-auto" />
                 </li>
