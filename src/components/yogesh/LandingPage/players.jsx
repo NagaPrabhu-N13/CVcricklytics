@@ -109,7 +109,7 @@ const PlayersList = () => {
     setError(null);
 
     const q = query(
-      collection(db, 'clubPlayers'),
+      collection(db, 'PlayerDetails'),
       where('clubName', '==', clubName),
       where('teamName', '==', teamFilter)
     );

@@ -58,7 +58,7 @@ const AddPlayer = ({ onClose }) => {
     name: '',
     image: '',
     teamName: '',
-    role: 'player',
+    role: '',
     age: '',
     battingStyle: '',
     bowlingStyle: '',

@@ -1,18 +1,12 @@
+// PlayerCard.jsx (updated to conditionally display wickets if type === "Bowling")
 import React from 'react';
 
-const PlayerCard = ({ player, onPlay }) => {
+const PlayerCard = ({ player, onPlay, type }) => {  // Added 'type' prop
   const handleCardClick = () => {
     if (player.audioUrl) {
       onPlay(player.audioUrl); // 🔊 Play using parent-managed audio
     }
   };
-
-  // Calculate batting average: runs / outs, where outs = matches - notOuts
-  const outs = player.matches && player.notOuts ? Math.abs(player.matches - player.notOuts) : 0;
-  const battingAvg = outs > 0 && player.runs ? (player.runs / outs).toFixed(2) : 'N/A';
-
-  // Calculate bowling average: overs / wickets
-  const bowlingAvg = player.wickets > 0 && player.overs ? (player.overs / player.wickets).toFixed(2) : 'N/A';
 
   // Get first letter of player name for avatar fallback
   const firstLetter = player.name ? player.name.charAt(0).toUpperCase() : '?';
@@ -50,18 +44,27 @@ const PlayerCard = ({ player, onPlay }) => {
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="flex flex-col">
           <span className="text-sm text-gray-500">Batting Avg</span>
-          <span className="text-lg font-medium text-gray-800">{battingAvg}</span>
+          <span className="text-lg font-medium text-gray-800">{typeof player.average === 'number' && isFinite(player.average) 
+    ? player.average.toFixed(2) 
+    : 'N/A'}</span>
         </div>
         <div className="flex flex-col">
           <span className="text-sm text-gray-500">Bowling Avg</span>
-          <span className="text-lg font-medium text-gray-800">{bowlingAvg}</span>
+          <span className="text-lg font-medium text-gray-800">{typeof player.bowlingAverage === 'number' && isFinite(player.bowlingAverage) 
+    ? player.bowlingAverage.toFixed(2) 
+    : 'N/A'}</span>
         </div>
       </div>
 
       <div>
-        <span className="text-sm text-gray-500 block mb-1">Highest Score</span>
+        {/* Conditionally display based on type prop */}
+        <span className="text-sm text-gray-500 block mb-1">
+          {type === "Bowling" ? "Wickets" : "Total Runs"}
+        </span>
         <span className="text-lg font-medium text-gray-800">
-          {player.highest !== undefined ? player.highest : 'N/A'}
+          {type === "Bowling"
+            ? (player.wickets !== undefined ? player.wickets : 'N/A')
+            : (player.runs !== undefined ? player.runs : 'N/A')}
         </span>
       </div>
     </div>

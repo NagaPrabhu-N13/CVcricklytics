@@ -538,7 +538,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
           });
         });
       }
-      
+
 for (const mention of mentionsArray) {
   const trimmedMention = mention.trim();   // remove front/back spaces
   console.log(`Processing mention: "${trimmedMention}"`);
@@ -1199,40 +1199,40 @@ for (const mention of mentionsArray) {
             ref={highlightRef}
             className={`transition-opacity duration-700 ease-in-out mt-4 md:mt-0 flex flex-col md:flex-row md:flex-wrap justify-center items-center w-full h-full overflow-y-auto scrollbar-hide gap-4 md:gap-6 px-2 md:px-4 ${highlightVisible && !isAIExpanded ? "opacity-100" : "opacity-0"} flex-grow`}
           >
-            {activeTab === 'forYou' && (
-              highlightsData.length > 0 ? highlightsData.map((item) => (
-                <div
-                  key={item.id}
-                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-t-3xl md:rounded-t-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]  min-h-[350px]"
-                >
-                  {/* Media container with fixed aspect ratio and local overflow control */}
-                  <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl min-h-[350px] md:rounded-t-3xl">
-                    {item.type === 'image' ? (
-                      <img
-                        src={item.mediaUrl}
-                        alt="Highlight"
-                        className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
-                      />
-                    ) : (
-                      <video
-                        src={item.mediaUrl}
-                        controls
-                        className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
-                      />
-                    )}
-                  </div>
-                  {/* Title and actions below the video */}
-                  <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl">
-                    {/* Description */}
+           {activeTab === 'forYou' && (
+            highlightsData.length > 0 ? highlightsData.map((item) => (
+            <div
+              key={item.id}
+              className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-t-3xl md:rounded-t-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+            >
+              {/* Media container with fixed aspect ratio and local overflow control */}
+              <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl md:rounded-t-3xl">
+                {item.type === 'image' ? (
+              <img
+                src={item.mediaUrl}
+                alt="Highlight"
+                className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+              />
+              ) : (
+                <video
+                  src={item.mediaUrl}
+                  controls
+                  className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+                />
+              )}
+              </div>
+                {/* Title and actions below the video */}
+                <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl flex flex-col">
+                  {/* Description */}
                     {item.description && (
-                      <div>
-                        <p className={`${expandedDescriptions[item.id] ? '' : 'line-clamp-1'} text-white`}>
+                      <div className="flex flex-col">
+                        <p className={`${expandedDescriptions[item.id] ? '' : 'line-clamp-1'} text-white text-sm md:text-base`}>
                           {item.description}
                         </p>
-                        {item.description.length > 100 && (  // Change this line: check length instead of split('\n')
+                        {item.description.length > 100 && (
                           <button
                             onClick={() => toggleDescription(item.id)}
-                            className="text-blue-500 text-sm mt-1"  // Add basic styling for visibility
+                            className="text-blue-500 text-sm mt-1 self-start"
                           >
                             {expandedDescriptions[item.id] ? 'Show less' : 'Show more'}
                           </button>
@@ -1242,78 +1242,78 @@ for (const mention of mentionsArray) {
                     <div className="flex justify-between items-center mt-2 mb-1 md:mb-2">
                       {/* Left side: Like + Comment */}
                       <div className="flex items-center gap-6">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }} 
-                          className="z-10 flex items-center"
-                        >
-                          <img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
-                          <span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
-                        </button>
-                        {/* Comment Button and Box */}
-                        <div className="relative">
-                          <button 
-                            onClick={(e) => handleCommentClick(item, e)}
-                            className={`comment-icon-${item.id} flex items-center`}
-                          >
-                            <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-                            <span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
-                          </button>
-                          
-                          {showCommentBox === item.id && (
-                            <div 
-                              ref={el => commentRefs.current[item.id] = el}
-                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
-                            >
-                              <div className="max-h-40 overflow-y-auto mb-2">
-                                {comments[item.id]?.length > 0 ? (
-                                  comments[item.id].map(comment => (
-                                    <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
-                                      <p className="text-white text-sm">{comment.text}</p>
-                                      <p className="text-gray-400 text-xs">{comment.user}</p>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <p className="text-gray-400 text-sm">No comments yet</p>
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={newComment}
-                                  onChange={(e) => setNewComment(e.target.value)}
-                                  placeholder="Add a comment..."
-                                  className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
-                                />
-                                <button
-                                  onClick={handleAddComment}
-                                  className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
-                                  disabled={!newComment.trim()}
-                                >
-                                  Post
-                                </button>
-                              </div>
-                            </div>
+<button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLike(item.id);
+                    }}
+                    className="z-10 flex items-center"
+>
+<img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
+<span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
+</button>
+                  {/* Comment Button and Box */}
+<div className="relative">
+<button
+                      onClick={(e) => handleCommentClick(item, e)}
+                      className={`comment-icon-${item.id} flex items-center`}
+>
+<img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+<span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
+</button>
+                    {showCommentBox === item.id && (
+<div
+                        ref={(el) => (commentRefs.current[item.id] = el)}
+                        className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+>
+<div className="max-h-40 overflow-y-auto mb-2">
+                          {comments[item.id]?.length > 0 ? (
+                            comments[item.id].map((comment) => (
+<div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+<p className="text-white text-sm">{comment.text}</p>
+<p className="text-gray-400 text-xs">{comment.user}</p>
+</div>
+                            ))
+                          ) : (
+<p className="text-gray-400 text-sm">No comments yet</p>
                           )}
-                        </div>
+</div>
+<div className="flex gap-2">
+<input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Add a comment..."
+                            className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
+                          />
+<button
+                            onClick={handleAddComment}
+                            className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
+                            disabled={!newComment.trim()}
+>
+                            Post
+</button>
+</div>
+</div>
+                    )}
+</div>
                       </div>
-
                       {/* Right side: Share */}
                       <div className="relative">
-                        <button 
+                        <button
                           onClick={(e) => handleShareClick(item, e)}
                           className={`share-icon-${item.id}`}
                         >
                           <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
                         </button>
-                        
                         {showShareBox === item.id && (
-                          <div 
-                            ref={el => shareRefs.current[item.id] = el}
+                          <div
+                            ref={(el) => (shareRefs.current[item.id] = el)}
                             className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-48 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
                           >
                             <h4 className="text-white text-sm mb-2">Share via</h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {shareOptions.map(option => (
+                              {shareOptions.map((option) => (
                                 <button
                                   key={option.name}
                                   onClick={() => handleShare(option.name)}
@@ -1328,13 +1328,12 @@ for (const mention of mentionsArray) {
                         )}
                       </div>
                     </div>
-                  </div>
                 </div>
-              )) : (
-                <p className="text-white mt-10 text-center">No highlights yet. Please add some!</p>
-              )
+              </div>
+            )) : (
+            <p className="text-white mt-10 text-center">No highlights yet. Please add some!</p>
+            )
             )}
-
             {activeTab === 'following' && (
               <div className="w-full p-4 overflow-y-auto">
                 <h2 className="text-white text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center md:text-left">People You Follow</h2>
