@@ -60,15 +60,15 @@ function BowlingPlayerPages() {
         return {
             id: doc.id,
             name: playerData.name || 'Unknown',
-            bowlingStyle: playerData.bowlingStyle || 'Unknown', // Changed to bowlingStyle
-            team: playerData.teamName || 'Unknown', // Assuming teamName field in PlayerDetails
+            bowlingStyle: playerData.bowlingStyle || 'Unknown',
+            team: playerData.teamName || 'Unknown',
             role: playerData.role || 'player',
             photoUrl: playerData.image || '',
             runs: playerData.careerStats?.batting?.runs || 0,
             average: playerData.careerStats?.batting?.average ?? 0,
             bowlingAverage: playerData.careerStats?.bowling?.average ?? 0,
-            battingAvg: playerData.careerStats?.batting?.average ?? null, // Added: from careerStats.batting.average
-            bowlingAvg: playerData.careerStats?.bowling?.average ?? null, // Added: from careerStats.bowling.average
+            battingAvg: playerData.careerStats?.batting?.average ?? null,
+            bowlingAvg: playerData.careerStats?.bowling?.average ?? null,
             wickets: playerData.careerStats?.bowling?.wickets || 0,
             matches: playerData.careerStats?.batting?.matches || 0,
             notOuts: playerData.careerStats?.batting?.notOuts || 0,
@@ -80,8 +80,15 @@ function BowlingPlayerPages() {
         };
       });
 
-      setPlayers(playersList);
-      console.log("Players Fetched:", playersList);
+      // Sort players by bowling average in descending order
+      const sortedPlayers = playersList.sort((a, b) => {
+        const bowlingAvgA = Number(a.bowlingAvg) || 0;
+        const bowlingAvgB = Number(b.bowlingAvg) || 0;
+        return bowlingAvgB - bowlingAvgA;
+      });
+
+      setPlayers(sortedPlayers);
+      console.log("Players Fetched and Sorted by Bowling Average:", sortedPlayers);
     }, (error) => {
       console.error("Error fetching PlayerDetails data:", error);
       setPlayers([]);
@@ -90,15 +97,22 @@ function BowlingPlayerPages() {
     return () => unsubscribePlayers();
   }, []);
 
-  const filteredPlayers = players.filter((player) => {
-    const matchesSearch = player.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTeam = teamFilter ? player.team === teamFilter : true;
-    const matchesBowlingStyle = bowlingStyleFilter ? player.bowlingStyle === bowlingStyleFilter : true; // Changed to bowlingStyle
-    return matchesSearch && matchesTeam && matchesBowlingStyle;
-  });
+  // Apply filters and maintain sorting by bowling average
+  const filteredPlayers = players
+    .filter((player) => {
+      const matchesSearch = player.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTeam = teamFilter ? player.team === teamFilter : true;
+      const matchesBowlingStyle = bowlingStyleFilter ? player.bowlingStyle === bowlingStyleFilter : true;
+      return matchesSearch && matchesTeam && matchesBowlingStyle;
+    })
+    .sort((a, b) => {
+      const bowlingAvgA = Number(a.bowlingAvg) || 0;
+      const bowlingAvgB = Number(b.bowlingAvg) || 0;
+      return bowlingAvgB - bowlingAvgA;
+    });
 
   const teams = [...new Set(players.map((player) => player.team))];
-  const bowlingStyles = [...new Set(players.map((player) => player.bowlingStyle))]; // Changed to bowlingStyles
+  const bowlingStyles = [...new Set(players.map((player) => player.bowlingStyle))];
 
   return (
     <div className="bg-gradient-to-r from-[#0a1f44] to-[#123456] scrollbar-hide min-h-screen">

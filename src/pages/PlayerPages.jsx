@@ -80,8 +80,16 @@ function PlayerPages() {
                 };
             });
 
-            setPlayers(playersList);
-            console.log("Players Fetched:", playersList);
+            // Sort players by batting average (highest to lowest)
+            const sortedPlayers = playersList.sort((a, b) => {
+                // Handle null/undefined values by treating them as 0 for sorting
+                const avgA = a.battingAvg || 0;
+                const avgB = b.battingAvg || 0;
+                return avgB - avgA; // Descending order
+            });
+
+            setPlayers(sortedPlayers);
+            console.log("Players Fetched and Sorted:", sortedPlayers);
         }, (error) => {
             console.error("Error fetching PlayerDetails data:", error);
             setPlayers([]);
