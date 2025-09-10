@@ -24,6 +24,8 @@ const PlayerSelector = ({
   tournamentName,
   tournamentImageUrl,
   information,
+  tossWinner,
+  tossDecision,
   onBack, // Add new prop for handling back
 }) => {
   const [leftSearch, setLeftSearch] = useState('');
@@ -94,6 +96,8 @@ const PlayerSelector = ({
         tournamentName,
         tournamentImageUrl,
         information,
+        tossWinner,
+        tossDecision,
       },
     });
   };
@@ -194,7 +198,6 @@ const PlayerSelector = ({
                 </div>
               </div>
             </motion.div>
-
             <motion.div className="flex-1" whileHover={{ scale: 1.02 }}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xl font-semibold text-indigo-800">{teamB?.name || 'Team B'}</span>
@@ -307,7 +310,6 @@ const Startmatch = ({
   console.log('information:', information);
   console.log(User);
   console.groupEnd();
-
   const [allTeams, setAllTeams] = useState([]);
   const [allMatches, setAllMatches] = useState([]);
   const [tournamentWinner, setTournamentWinner] = useState(null);
@@ -392,7 +394,6 @@ const Startmatch = ({
     return [];
   }
 };
-
 useEffect(() => {
   if (selectedTeamA) {
     fetchPlayersForTeam(selectedTeamA).then(players => {
@@ -402,10 +403,7 @@ useEffect(() => {
     });
   }
 }, [selectedTeamA]);
-
-
-
-  // Fetch tournament image
+// Fetch tournament image
   useEffect(() => {
     const fetchTournamentDetails = async () => {
       if (!tournamentName) {
@@ -529,7 +527,6 @@ useEffect(() => {
             });
           }
         }
-
         let matchesToDisplay = [];
         let phase = 'Group Stage';
 
@@ -637,7 +634,6 @@ useEffect(() => {
             .map(team => team.teamName),
         });
       }
-
       let semiFinalTeams = [];
       const semiFinalMatches = Object.values(tournamentData.semiFinals || {});
       if (semiFinalMatches.length > 0 && semiFinalMatches[0].team1 !== 'TBD') {
@@ -785,6 +781,8 @@ useEffect(() => {
         tournamentImageUrl={tournamentImageUrl}
         onBack={handleBackFromPlayerSelector} // Pass the back handler
         information = {information}
+        tossWinner={tossWinner}
+        tossDecision={tossDecision}
       />
     );
   }
@@ -830,7 +828,6 @@ useEffect(() => {
               </h2>
             </motion.div>
           )}
-
           <motion.div
             className="text-center mb-8"
             initial={{ opacity: 0, y: 20 }}
@@ -949,7 +946,6 @@ useEffect(() => {
                 </div>
               </motion.div>
             </motion.div>
-
             <motion.div
               className="flex flex-col space-y-6 w-full"
               initial={{ opacity: 0, x: 20 }}
@@ -1008,7 +1004,6 @@ useEffect(() => {
                   </div>
                 </div>
               </motion.div>
-
               <motion.div
                 className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col justify-center"
                 whileHover={{ scale: 1.01 }}
@@ -1032,6 +1027,7 @@ useEffect(() => {
                         onClose={() => setIsPitchAnalyzerOpen(false)}
                         teamA={selectedTeamA}
                         teamB={selectedTeamB}
+                        tournamentId={tournamentId}
                         onAnalyzeComplete={() => setIsPitchAnalyzed(true)}
                       />
                     </div>

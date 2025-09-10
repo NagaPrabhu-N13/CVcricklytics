@@ -82,8 +82,8 @@ function BowlingPlayerPages() {
 
       // Sort players by bowling average in descending order
       const sortedPlayers = playersList.sort((a, b) => {
-        const bowlingAvgA = Number(a.bowlingAvg) || 0;
-        const bowlingAvgB = Number(b.bowlingAvg) || 0;
+        const bowlingAvgA = Number(a.wickets) || 0;
+        const bowlingAvgB = Number(b.wickets) || 0;
         return bowlingAvgB - bowlingAvgA;
       });
 
@@ -106,8 +106,8 @@ function BowlingPlayerPages() {
       return matchesSearch && matchesTeam && matchesBowlingStyle;
     })
     .sort((a, b) => {
-      const bowlingAvgA = Number(a.bowlingAvg) || 0;
-      const bowlingAvgB = Number(b.bowlingAvg) || 0;
+      const bowlingAvgA = Number(a.wickets) || 0;
+      const bowlingAvgB = Number(b.wickets) || 0;
       return bowlingAvgB - bowlingAvgA;
     });
 

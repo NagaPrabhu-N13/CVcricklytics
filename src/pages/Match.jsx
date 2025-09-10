@@ -217,6 +217,7 @@ const Match = () => {
 
     return {
       id: match.id,
+      tournamentId: match.tournamentId || "unknown", // Include tournamentId,
       tournament: match.tournamentName || "Unknown Tournament",
       location: matchData.venue,
       date: matchData.date + " | Current Overs",
@@ -539,7 +540,7 @@ const Match = () => {
                       <div
                         key={transformedMatch.id}
                         className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
-                        onClick={() => navigate("/match-details", { state: transformedMatch })}
+                        onClick={() => navigate("/match-details", { state: transformedMatch, tournamentId })}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="text-lg md:text-xl font-semibold">{transformedMatch.tournament}</h3>

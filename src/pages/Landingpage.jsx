@@ -89,6 +89,9 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
 
+  // New state for search in following tab
+  const [followingSearchTerm, setFollowingSearchTerm] = useState('');
+
   const shareOptions = [
     { name: 'WhatsApp', icon: '📱' },
     { name: 'Facebook', icon: '👍' },
@@ -115,6 +118,11 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
 
   // States for description truncation
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
+
+  // New states for profile tab
+  const [postCount, setPostCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followersCount, setFollowersCount] = useState(0);
 
   const auth = getAuth(); // Added for current user
 
@@ -180,11 +188,10 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
 
         setNewComment('');
       } catch (error) {
-        console.error("Error adding comment:", error);
+        console.error("Error PROGRESS adding comment:", error);
       }
     }
   };
-
   // Share handlers
   const handleShareClick = (highlight, e) => {
     e.stopPropagation();
@@ -340,8 +347,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
             ...doc.data()
           }));
           setHighlightsData(reels);
-
-          // Set likedVideos with likes count and check if liked by current user
+           // Set likedVideos with likes count and check if liked by current user
           const likedState = {};
           for (const item of reels) {
             const likesRef = collection(db, "landingFeed", item.id, "likes");
@@ -438,12 +444,10 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     if (highlightEl) {
       highlightEl.addEventListener("scroll", showHighlightOnScroll);
     }
-
     const timeoutId = setTimeout(() => {
       setHighlightVisible(true);
     }, 3000);
-
-    return () => {
+     return () => {
       if (highlightEl) {
         highlightEl.removeEventListener("scroll", showHighlightOnScroll);
       }
@@ -562,7 +566,6 @@ for (const mention of mentionsArray) {
       return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
     };
     const chatId = generateChatId(currentUserId, recipientId);
-
     // Ensure chat document exists
     const chatRef = doc(db, "chats", chatId);
     const chatSnap = await getDoc(chatRef);
@@ -573,7 +576,6 @@ for (const mention of mentionsArray) {
         lastUpdated: serverTimestamp()
       });
     }
-
     // Add the mention message
     await addDoc(collection(db, "chats", chatId, "messages"), {
       senderId: currentUserId,
@@ -692,10 +694,8 @@ for (const mention of mentionsArray) {
           resolve();
         });
       });
-
       // Refresh reels - only current user's
       await fetchReels();
-
       setShowUploadModal(false);
       setSelectedMedia(null);
       setMediaPreview(null);
@@ -741,17 +741,23 @@ for (const mention of mentionsArray) {
     setEditingProfileId(null);
   };
 
-  // Updated toggleFollow to use Firestore
+  // Updated toggleFollow to use Firestore for both following and followers
   const toggleFollow = async (id) => {
     if (!userProfile?.uid) return;
     const targetUser = followersData.find(f => f.id === id);
     if (!targetUser) return;
 
-    const followingRef = doc(db, "following", userProfile.uid, "myFollowing", id);
+    const myFollowingRef = doc(db, "following", userProfile.uid, "myFollowing", id);
+    const theirFollowersRef = doc(db, "followers", id, "myFollowers", userProfile.uid);
+
     if (targetUser.isFollowing) {
-      await deleteDoc(followingRef);
+      // Unfollow: remove from both
+      await deleteDoc(myFollowingRef);
+      await deleteDoc(theirFollowersRef);
     } else {
-      await setDoc(followingRef, { uid: id, followedAt: new Date() });
+      // Follow: add to both
+      await setDoc(myFollowingRef, { uid: id, followedAt: new Date() });
+      await setDoc(theirFollowersRef, { uid: userProfile.uid, followedAt: new Date() });
     }
 
     // Update local state
@@ -830,6 +836,31 @@ for (const mention of mentionsArray) {
     setHighlightVisible(prev => !prev);
   };
 
+  // Fetch profile data when profile tab is active
+  useEffect(() => {
+    if (activeTab === 'profile' && userProfile?.uid) {
+      const fetchProfileData = async () => {
+        try {
+          // Post count
+          const postsQuery = query(collection(db, "landingFeed"), where("userId", "==", userProfile.uid));
+          const postsSnapshot = await getDocs(postsQuery);
+          setPostCount(postsSnapshot.size);
+
+          // Following count
+          const followingSnapshot = await getDocs(collection(db, "following", userProfile.uid, "myFollowing"));
+          setFollowingCount(followingSnapshot.size);
+
+          // Followers count
+          const followersSnapshot = await getDocs(collection(db, "followers", userProfile.uid, "myFollowers"));
+          setFollowersCount(followersSnapshot.size);
+        } catch (err) {
+          console.error("Error fetching profile data:", err);
+        }
+      };
+      fetchProfileData();
+    }
+  }, [activeTab, userProfile?.uid]);
+
   return (
     <div className="bg-[#02101E]">
       <div
@@ -899,9 +930,7 @@ for (const mention of mentionsArray) {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Profile Story Modal */}
+        )} {/* Profile Story Modal */}
         {profileStoryVisible && selectedProfile && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
@@ -1003,7 +1032,7 @@ for (const mention of mentionsArray) {
         {showStoryUpload && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
-              <button
+               <button
                 className="absolute top-4 right-4 text-2xl text-white cursor-pointer"
                 onClick={() => setShowStoryUpload(false)}
               >
@@ -1079,7 +1108,6 @@ for (const mention of mentionsArray) {
               className={`h-full w-full -z-[-989] object-contain transition-all duration-300 ${highlightVisible ? "blur-md brightness-75" : ""}`}
             />
           </div>
-
           <div className="mt-1 md:mt-9 flex items-center gap-4 md:gap-8">
             <div className="z-[2000] mt-9 md:mt-5 h-16 md:h-22 w-fit">
               <button
@@ -1109,7 +1137,6 @@ for (const mention of mentionsArray) {
             </div>
           </div>
         </nav>
-
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
         {/* Content */}
         <div
@@ -1124,17 +1151,23 @@ for (const mention of mentionsArray) {
                 {userProfile && (
                   <div key={userProfile.uid} className="relative profile-image-container" id="user-profile-image-container">
                     <button
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white"
+                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white flex items-center justify-center"
                       style={{
                         backgroundImage: userProfile.profileImageUrl
                           ? `url(${userProfile.profileImageUrl})`
-                          : 'url(path/to/default/image.png)',
+                          : 'none',
+                        backgroundColor: userProfile.profileImageUrl ? 'transparent' : 'gray',
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleProfileClick({ id: 'user', image: userProfile.profileImageUrl || 'path/to/default/image.png', name: userProfile.userName || 'You' });
                       }}
                     >
+                      {!userProfile.profileImageUrl && (
+                        <span className="text-white font-bold text-xl md:text-2xl">
+                          {userProfile?.userName?.charAt(0).toUpperCase() || 'Y'}
+                        </span>
+                      )}
                     </button>
                     {!userProfile.profileImageUrl && (
                       <button
@@ -1150,20 +1183,29 @@ for (const mention of mentionsArray) {
                 {followersData.filter(f => f.isFollowing).map((follower) => (
                   <div key={follower.id} className="relative profile-image-container">
                     <button
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${follower.profileImageUrl})` }}
+                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center flex items-center justify-center"
+                      style={{ 
+                        backgroundImage: follower.profileImageUrl ? `url(${follower.profileImageUrl})` : 'none',
+                        backgroundColor: follower.profileImageUrl ? 'transparent' : 'gray',
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleProfileClick({ id: follower.id, image: follower.profileImageUrl, name: follower.firstName });
                       }}
-                    ></button>
+                    >
+                      {!follower.profileImageUrl && (
+                        <span className="text-white font-bold text-xl md:text-2xl">
+                          {follower.firstName.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
             {/* Tabs */}
             <div className="w-full flex justify-center mt-2 md:mt-4">
-              <div className="w-full md:w-[50%] flex justify-around text-white text-sm md:text-xl cursor-pointer">
+              <div className="w-full md:w-[60%] flex justify-around text-white text-sm md:text-xl cursor-pointer">
                 <span
                   className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
                     hover:text-[#800080] 
@@ -1188,11 +1230,17 @@ for (const mention of mentionsArray) {
                 >
                   For You
                 </span>
+                <span
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
+                    hover:text-[#800080] 
+                    ${activeTab === 'profile' ? 'text-[#800080] border border-white' : ''}`}
+                  onClick={() => setActiveTab('profile')}
+                >
+                  My Profile
+                </span>
               </div>
             </div>
-
           </div>
-
           {/* Content based on active tab */}
           <div
             id="highlight"
@@ -1242,61 +1290,61 @@ for (const mention of mentionsArray) {
                     <div className="flex justify-between items-center mt-2 mb-1 md:mb-2">
                       {/* Left side: Like + Comment */}
                       <div className="flex items-center gap-6">
-<button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleLike(item.id);
-                    }}
-                    className="z-10 flex items-center"
->
-<img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
-<span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
-</button>
-                  {/* Comment Button and Box */}
-<div className="relative">
-<button
-                      onClick={(e) => handleCommentClick(item, e)}
-                      className={`comment-icon-${item.id} flex items-center`}
->
-<img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-<span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
-</button>
-                    {showCommentBox === item.id && (
-<div
-                        ref={(el) => (commentRefs.current[item.id] = el)}
-                        className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
->
-<div className="max-h-40 overflow-y-auto mb-2">
-                          {comments[item.id]?.length > 0 ? (
-                            comments[item.id].map((comment) => (
-<div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
-<p className="text-white text-sm">{comment.text}</p>
-<p className="text-gray-400 text-xs">{comment.user}</p>
-</div>
-                            ))
-                          ) : (
-<p className="text-gray-400 text-sm">No comments yet</p>
+                        < button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLike(item.id);
+                          }}
+                          className="z-10 flex items-center"
+                        >
+                          < img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
+                          < span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
+                        </button>
+                        {/* Comment Button and Box */}
+                        <div className="relative">
+                          < button
+                            onClick={(e) => handleCommentClick(item, e)}
+                            className={`comment-icon-${item.id} flex items-center`}
+                          >
+                            < img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+                            < span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
+                          </button>
+                          {showCommentBox === item.id && (
+                            < div
+                              ref={(el) => (commentRefs.current[item.id] = el)}
+                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                            >
+                              < div className="max-h-40 overflow-y-auto mb-2">
+                                {comments[item.id]?.length > 0 ? (
+                                  comments[item.id].map((comment) => (
+                                    < div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+                                      < p className="text-white text-sm">{comment.text}</p>
+                                      < p className="text-gray-400 text-xs">{comment.user}</p>
+                                    </div>
+                                  ))
+                                  ) : (
+                                   < p className="text-gray-400 text-sm">No comments yet</p>
+                                )}
+                              </div>
+                              < div className="flex gap-2">
+                                < input
+                                  type="text"
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  placeholder="Add a comment..."
+                                  className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
+                                />
+                                < button
+                                  onClick={handleAddComment}
+                                  className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
+                                  disabled={!newComment.trim()}
+                                  >
+                                  Post
+                                </button>
+                              </div>
+                            </div>
                           )}
-</div>
-<div className="flex gap-2">
-<input
-                            type="text"
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Add a comment..."
-                            className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
-                          />
-<button
-                            onClick={handleAddComment}
-                            className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
-                            disabled={!newComment.trim()}
->
-                            Post
-</button>
-</div>
-</div>
-                    )}
-</div>
+                        </div>
                       </div>
                       {/* Right side: Share */}
                       <div className="relative">
@@ -1336,9 +1384,21 @@ for (const mention of mentionsArray) {
             )}
             {activeTab === 'following' && (
               <div className="w-full p-4 overflow-y-auto">
-                <h2 className="text-white text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center md:text-left">People You Follow</h2>
+                <h2 className="text-white text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center md:text-left">People You May Know</h2>
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search users by name..."
+                    value={followingSearchTerm}
+                    onChange={(e) => setFollowingSearchTerm(e.target.value)}
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+                  />
+                </div>
                 <div className="flex flex-col gap-4">
-                  {followersData.map(follower => (
+                  {followersData
+                    .filter(follower => follower.firstName.toLowerCase().includes(followingSearchTerm.toLowerCase()))
+                    .sort((a, b) => b.isFollowing - a.isFollowing) // Followed first
+                    .map(follower => (
                     <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between">
                       <div className="flex items-center mb-2 sm:mb-0">
                         {follower.profileImageUrl ? (
@@ -1444,6 +1504,33 @@ for (const mention of mentionsArray) {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+            {activeTab === 'profile' && (
+              <div className="w-full p-4 overflow-y-auto flex flex-col items-center">
+                <h2 className="text-white text-xl md:text-2xl font-bold mb-4 md:mb-6">My Profile</h2>
+                <div className="bg-[#0D171E] rounded-lg p-6 flex flex-col items-center w-full max-w-md">
+                  <img
+                    src={userProfile?.profileImageUrl || 'path/to/default/image.png'}
+                    alt="Profile"
+                    className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover mb-4"
+                  />
+                  <h3 className="text-white text-lg md:text-xl font-semibold mb-4">{userProfile?.userName || 'You'}</h3>
+                  <div className="flex justify-around w-full text-white mb-4">
+                    <div className="text-center">
+                      <p className="font-bold text-xl">{postCount}</p>
+                      <p className="text-sm">Posts</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-xl">{followingCount}</p>
+                      <p className="text-sm">Following</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-xl">{followersCount}</p>
+                      <p className="text-sm">Followers</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

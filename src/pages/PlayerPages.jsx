@@ -83,8 +83,8 @@ function PlayerPages() {
             // Sort players by batting average (highest to lowest)
             const sortedPlayers = playersList.sort((a, b) => {
                 // Handle null/undefined values by treating them as 0 for sorting
-                const avgA = a.battingAvg || 0;
-                const avgB = b.battingAvg || 0;
+                const avgA = a.runs || 0;
+                const avgB = b.runs || 0;
                 return avgB - avgA; // Descending order
             });
 

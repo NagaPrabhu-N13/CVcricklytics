@@ -98,7 +98,7 @@ function Tournament_nextpg() {
     navigate('/TeamProfile');
   };
   
-  const Tournament = (e) => {
+  const Tournament = async (e) => {
     e.preventDefault();
     
     // Check if all required fields are filled
@@ -112,6 +112,18 @@ function Tournament_nextpg() {
       setShowValidationError(true);
       return;
     }
+
+    // Reset form data in Firestore for tournamentseries and tournament_nextpg
+    if (user) {
+      const tournamentSeriesRef = doc(db, `users/${user.uid}/forms/tournamentseries`);
+      const tournamentNextPgRef = doc(db, `users/${user.uid}/forms/tournament_nextpg`);
+      
+      // Set both collections to null
+      await setDoc(tournamentSeriesRef, {});
+      await setDoc(tournamentNextPgRef, {});
+    }
+
+    // Navigate to TournamentPage
     navigate('/TournamentPage', { state: { noOfTeams, tournamentName } });
   };
 

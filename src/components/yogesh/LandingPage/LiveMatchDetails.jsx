@@ -7,6 +7,9 @@ const MatchDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const match = location.state;
+  const tournamentId = location.state; // Assuming tournamentId is passed in match state
+
+  console.log(tournamentId);
 
   const [isModalOpen, setIsModalOpen] = useState(true); // Local state: open by default
   const [predictionData, setPredictionData] = useState(null); // Example: fetch or set data here
@@ -150,7 +153,7 @@ const MatchDetails = () => {
       <AIMatchCompanionModal
         isOpen={isModalOpen}
         onClose={handleClose}
-        predictionData={predictionData}
+        tournamentId={tournamentId}
       />
     </div>
   );

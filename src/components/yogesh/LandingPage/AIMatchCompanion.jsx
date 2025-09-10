@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, TrendingUp, HelpCircle, X } from "lucide-react";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { db } from "../../../firebase"; // Adjust this import to match your Firebase config file
 
 // 🔢 Win Probability Calculation Logic
 function calculateWinProbability(battingScore, bowlingScore) {
@@ -23,9 +25,69 @@ function calculateWinProbability(battingScore, bowlingScore) {
   return { winA, winB };
 }
 
-export default function AIMatchCompanionModal({ isOpen, onClose, predictionData }) {
+export default function AIMatchCompanionModal({ isOpen, onClose, predictionData, tournamentId }) {
+  const [displayData, setDisplayData] = useState(predictionData);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Extract the actual document ID if tournamentId is an object
+  let safeTournamentId = null;
+  if (typeof tournamentId === 'object' && tournamentId !== null && tournamentId.tournamentId) {
+    safeTournamentId = String(tournamentId.tournamentId);
+  } else if (typeof tournamentId === 'string') {
+    safeTournamentId = tournamentId;
+  }
+
+  // Function to update Firestore with predictionData
+  const updateFirestore = async (data) => {
+    if (!safeTournamentId || !data) return;
+    try {
+      const docRef = doc(db, "AIMatchCompanion", safeTournamentId);
+      await setDoc(docRef, data, { merge: true });
+      console.log("Document updated for tournamentId:", safeTournamentId);
+    } catch (err) {
+      console.error("Error updating Firestore:", err);
+      setError("Failed to update match data.");
+    }
+  };
+
+  // Update Firestore whenever predictionData changes
+  useEffect(() => {
+    if (predictionData && safeTournamentId) {
+      setDisplayData(predictionData);
+      updateFirestore(predictionData);
+    }
+  }, [predictionData, safeTournamentId]);
+
+  // Real-time listener for fetching from Firestore if no predictionData is provided
+  useEffect(() => {
+    if (!isOpen || predictionData || !safeTournamentId) return;
+
+    setLoading(true);
+    setError(null);
+
+    const docRef = doc(db, "AIMatchCompanion", safeTournamentId);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDisplayData(docSnap.data());
+        setError(null);
+      } else {
+        setError("No match data found for this tournament.");
+      }
+      setLoading(false);
+    }, (err) => {
+      console.error("Error in real-time Firestore listener:", err);
+      setError("Failed to fetch match data.");
+      setLoading(false);
+    });
+
+    // Cleanup listener on unmount or when dependencies change
+    return () => unsubscribe();
+  }, [isOpen, predictionData, safeTournamentId]);
+
   if (!isOpen) return null;
 
+  const data = displayData || {};
   const {
     battingTeam,
     bowlingTeam,
@@ -34,7 +96,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData 
     overNumber,
     nextOverProjection,
     alternateOutcome,
-  } = predictionData || {};
+  } = data;
 
   const { winA, winB } = calculateWinProbability(battingScore, bowlingScore);
 
@@ -63,8 +125,8 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData 
           exit={{ y: 30, opacity: 0 }}
           className="bg-[#121212] text-white w-full max-w-3xl p-6 rounded-2xl relative shadow-xl border border-gray-700"
         >
-          {/* Close Button */}
-          
+          {/* Close Button (add your onClose logic here if needed) */}
+          {/* <button onClick={onClose} className="absolute top-4 right-4"><X className="w-5 h-5 text-gray-400" /></button> */}
 
           {/* Header */}
           <div className="flex items-center gap-2 mb-6">
@@ -72,7 +134,11 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData 
             <h2 className="text-xl font-semibold">AI Match Companion</h2>
           </div>
 
-          {predictionData ? (
+          {loading ? (
+            <p className="text-sm text-gray-500 italic">Loading match insights…</p>
+          ) : error ? (
+            <p className="text-sm text-red-500">{error}</p>
+          ) : displayData ? (
             <div className="space-y-6">
               {/* Current Scores */}
               <div>

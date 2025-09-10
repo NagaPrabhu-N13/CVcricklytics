@@ -1911,6 +1911,12 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
                 >
                   🏆 Table Toppers <FaLock className="text-gray-600 ml-auto" />
                 </li>
+                <li
+                  className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  onClick={() => navigate("/tournamentStats")}
+                >
+                  🥇 Tournament stats <FaLock className="text-gray-600 ml-auto" />
+                </li>
               </ul>
             )}
 

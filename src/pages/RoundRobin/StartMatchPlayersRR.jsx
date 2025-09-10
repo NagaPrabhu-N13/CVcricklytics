@@ -111,11 +111,9 @@ async function updatePlayerBowlingAverage(playerName, db) {
     console.error("Error updating bowling average:", error);
   }
 }
-
 function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const location = useLocation();
   const navigate = useNavigate();
-
   // Extract all relevant data from location.state
   const originPage = location.state?.origin;
   const maxOvers = location.state?.overs;
@@ -127,8 +125,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentName = location.state?.tournamentName;
   const information =  location.state?.information;
+  const tossWinner = location.state?.tossWinner;
+  const tossDecision = location.state?.tossDecision;
   console.log(information);
-
   const [playedOvers, setPlayedOvers] = useState(0);
   const [playedWickets, setPlayedWickets] = useState(0);
   const [currentView, setCurrentView] = useState('toss');
@@ -186,6 +185,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
 
+  const [currentBattingTeam, setCurrentBattingTeam] = useState(null);
+  const [currentBowlingTeam, setCurrentBowlingTeam] = useState(null);
+
   useEffect(() => {
     const isOverCompleted = validBalls === 0 && overNumber > 0;
     const shouldTriggerPrediction =
@@ -201,6 +203,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         bowlingScore: targetScore,
         winA,
         winB,
+        tournamentId,
         overNumber,
         nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
         alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
@@ -221,24 +224,62 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       navigate('/');
       return;
     }
+
+    // Determine initial batting and bowling teams based on toss
+    let initialBattingTeam = teamA;
+    let initialBowlingTeam = teamB;
+    let initialBattingPlayers = selectedPlayersFromProps.left;
+    let initialBowlingPlayers = selectedPlayersFromProps.right;
+
+    if (tossWinner && tossDecision) {
+      if (tossWinner === teamA.name) {
+        if (tossDecision === 'Batting') {
+          initialBattingTeam = teamA;
+          initialBowlingTeam = teamB;
+          initialBattingPlayers = selectedPlayersFromProps.left;
+          initialBowlingPlayers = selectedPlayersFromProps.right;
+        } else if (tossDecision === 'Bowling') {
+          initialBattingTeam = teamB;
+          initialBowlingTeam = teamA;
+          initialBattingPlayers = selectedPlayersFromProps.right;
+          initialBowlingPlayers = selectedPlayersFromProps.left;
+        }
+      } else if (tossWinner === teamB.name) {
+        if (tossDecision === 'Batting') {
+          initialBattingTeam = teamB;
+          initialBowlingTeam = teamA;
+          initialBattingPlayers = selectedPlayersFromProps.right;
+          initialBowlingPlayers = selectedPlayersFromProps.left;
+        } else if (tossDecision === 'Bowling') {
+          initialBattingTeam = teamA;
+          initialBowlingTeam = teamB;
+          initialBattingPlayers = selectedPlayersFromProps.left;
+          initialBowlingPlayers = selectedPlayersFromProps.right;
+        }
+      }
+    }
     if (!isChasing) {
-      setBattingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
+      setCurrentBattingTeam(initialBattingTeam);
+      setCurrentBowlingTeam(initialBowlingTeam);
+      setBattingTeamPlayers(initialBattingPlayers.map((player, index) => ({
         ...player,
         index: player.name + index,
         photoUrl: player.photoUrl
       })));
-      setBowlingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
+      setBowlingTeamPlayers(initialBowlingPlayers.map((player, index) => ({
         ...player,
         index: player.name + index,
         photoUrl: player.photoUrl
       })));
     } else {
-      setBattingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
+      setCurrentBattingTeam(initialBowlingTeam);
+      setCurrentBowlingTeam(initialBattingTeam);
+      setBattingTeamPlayers(initialBowlingPlayers.map((player, index) => ({
         ...player,
         index: player.name + index,
         photoUrl: player.photoUrl
       })));
-      setBowlingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
+      setBowlingTeamPlayers(initialBattingPlayers.map((player, index) => ({
         ...player,
         index: player.name + index,
         photoUrl: player.photoUrl
@@ -254,7 +295,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
-  }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase]);
+  }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase, tossWinner, tossDecision]);
 
   const displayModal = (title, message) => {
     setModalContent({ title, message });
@@ -311,7 +352,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       ...prev,
       [batsmanIndex]: (prev[batsmanIndex] || 0) + runs
     }));
-
     const player = battingTeamPlayers.find(p => p.index === batsmanIndex);
     if (player) {
       const statUpdates = {
@@ -326,7 +366,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       ...prev,
       [batsmanIndex]: (prev[batsmanIndex] || 0) + 1
     }));
-
     const player = battingTeamPlayers.find(p => p.index === batsmanIndex);
     if (player) {
       const statUpdates = {
@@ -427,7 +466,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       await updatePlayerBowlingAverage(player.name, db); // Update bowling average
     }
   };
-
   const recordWicket = async (batsmanIndex, catchType = null, fielder = null) => {
     const currentOver = `${overNumber - 1}.${validBalls + 1}`;
     setWicketOvers(prev => [...prev, { 
@@ -472,7 +510,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       const overs = `${overNumber - 1}.${validBalls}`;
       const battingTeam = isChasing ? teamB : teamA;
       const bowlingTeam = isChasing ? teamA : teamB;
-
       const playerStats = battingTeamPlayers.map(player => {
         const stats = batsmenStats[player.index] || {};
         const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
@@ -507,7 +544,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           runsConceded: stats.runsConceded || 0
         };
       });
-
       const matchData = {
         matchId,
         tournamentId,
@@ -633,7 +669,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       saveMatchData();
       return;
     }
-
     if (pendingOut && !isLabel && typeof value === 'number') {
       if (value !== 0 && value !== 1 && value !== 2) {
         return;
@@ -645,10 +680,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }, 3000);
       return;
     }
-
     const extraBalls = ['No-ball', 'Wide', 'No ball'];
     const playValue = typeof value === 'string' ? value.charAt(0) : value;
-
     if (isLabel) {
       if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT') {
         setShowRunInfo(true);
@@ -782,6 +815,119 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     }, 1000);
   };
 
+  const handleUndoBall = async () => {
+    if (currentOverBalls.length === 0) {
+      if (pastOvers.length === 0) return; // Nothing to undo
+      // Restore last over to current
+      const lastOver = pastOvers.pop();
+      setCurrentOverBalls(lastOver);
+      setPastOvers([...pastOvers]);
+      setOverNumber(prev => prev - 1);
+      setValidBalls(6); // Since we're undoing a full over completion
+      // Swap strikers back if needed
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+
+    const lastBall = currentOverBalls.pop();
+    setCurrentOverBalls([...currentOverBalls]);
+    setTopPlays(prev => prev.slice(0, -1));
+
+    let runs = 0;
+    let isValid = false;
+    let isWicket = false;
+    let isWide = false;
+    let isNoBall = false;
+    let isLegBy = false;
+    let catchType = null;
+    let fielder = null;
+
+    if (typeof lastBall === 'number') {
+      runs = lastBall;
+      isValid = true;
+      if (runs % 2 !== 0) {
+        // Swap back strikers
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+    } else if (typeof lastBall === 'string') {
+      if (lastBall.startsWith('W+')) {
+        isWide = true;
+        runs = parseInt(lastBall.slice(2)) + 1;
+      } else if (lastBall.startsWith('NB+')) {
+        isNoBall = true;
+        runs = parseInt(lastBall.slice(3)) + 1;
+      } else if (lastBall.startsWith('L+')) {
+        isLegBy = true;
+        runs = parseInt(lastBall.slice(2));
+        isValid = true;
+        if (runs % 2 !== 0) {
+          const temp = striker;
+          setStriker(nonStriker);
+          setNonStriker(temp);
+        }
+      } else if (lastBall.startsWith('O+')) {
+        isWicket = true;
+        isValid = true;
+        const parts = lastBall.match(/O\+(\d+) \((.+)\)/);
+        if (parts) {
+          runs = parseInt(parts[1]);
+          catchType = parts[2];
+        } else {
+          runs = parseInt(lastBall.slice(2));
+        }
+        // Remove last wicket
+        const lastWicket = wicketOvers.pop();
+        setWicketOvers([...wicketOvers]);
+        setOutCount(prev => prev - 1);
+        if (lastWicket && lastWicket.fielder) {
+          await updatePlayerCareerStats(lastWicket.fielder.name, { "careerStats.fielding.catches": -1 }, db);
+        }
+        const batsman = battingTeamPlayers.find(p => p.index === lastWicket.batsmanIndex);
+        if (batsman) {
+          await updatePlayerCareerStats(batsman.name, { "careerStats.batting.dismissals": -1 }, db);
+          await updatePlayerBattingAverage(batsman.name, db);
+        }
+        // Restore striker if needed (assuming the out was on striker)
+        // This might need more logic if non-striker was out, but assuming striker for simplicity
+      }
+    }
+
+    setPlayerScore(prev => prev - runs);
+    if (isValid) {
+      setValidBalls(prev => Math.max(0, prev - 1));
+      if (striker) {
+        await updateBatsmanScore(striker.index, -runs);
+        await updateBatsmanStats(striker.index, -runs, runs === 0);
+        await updateBatsmanBalls(striker.index, -1);
+      }
+      if (selectedBowler) {
+        await updateBowlerStats(selectedBowler.index, isWicket ? -1 : 0, true, -runs);
+      }
+    } else if (isWide || isNoBall) {
+      if (striker) {
+        await updateBatsmanScore(striker.index, -runs);
+        await updateBatsmanStats(striker.index, -runs);
+      }
+      if (selectedBowler) {
+        await updateBowlerStats(selectedBowler.index, false, false, -runs);
+      }
+    }
+
+    // Reset pendings if applicable
+    setPendingWide(false);
+    setPendingNoBall(false);
+    setPendingLegBy(false);
+    setPendingOut(false);
+    setActiveLabel(null);
+    setActiveNumber(null);
+    setShowRunInfo(false);
+
+    saveMatchData();
+  };
+
   useEffect(() => {
     if (modalContent.title !== 'Match Result') return;
 
@@ -865,7 +1011,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       ctx.clearRect(0, 0, width, height);
     };
   }, [modalContent.title]);
-
   useEffect(() => {
     if (gameFinished) {
       saveMatchData(true);
@@ -999,14 +1144,12 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setSelectedFielder(null);
     setCatchRuns(null);
   };
-
   const resetGame = () => {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
     setViewHistory(['toss']);
   };
-
   const getStrikeRate = (batsmanIndex) => {
     const runs = batsmenScores[batsmanIndex] || 0;
     const balls = batsmenBalls[batsmanIndex] || 0;
@@ -1101,7 +1244,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       !selectedBatsmenIndices.includes(player.index)
     );
   };
-
   const cancelStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== striker?.index));
     const newScores = { ...batsmenScores };
@@ -1238,10 +1380,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       console.error('Error updating winner in Firebase:', err);
     }
   };
-
   const handleModalOkClick = () => {
     setShowModal(false);
-
     if (gameFinished && modalContent.title === 'Match Result') {
       let winnerTeamName = '';
       let winningDifference = '';
@@ -1304,7 +1444,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       </div>
     );
   }
-
   if (!teamA || !teamB) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -1312,7 +1451,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       </div>
     );
   }
-
   return (
     <ErrorBoundary>
       <section
@@ -1368,7 +1506,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             onError={(e) => (e.target.src = '')}
           />
         </button>
-
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
@@ -1391,7 +1528,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   autoplay
                 />
               )}
-
               <h3 className="text-white text-xl font-bold mb-4 relative z-10">{modalContent.title}</h3>
               <p className="text-white mb-6 relative z-10">{modalContent.message}</p>
               <div className="flex justify-center relative z-10">
@@ -1468,10 +1604,10 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           <>
             <div id="toss" className="text-center mb-4">
               <h2 className="text-white font-bold text-3xl md:text-[3rem] mt-20 md:mt-6">
-                {bowlerVisible ? (isChasing ? teamA.name : teamB.name) : (isChasing ? teamB.name : teamA.name)}
+                {bowlerVisible ? currentBowlingTeam?.name : currentBattingTeam?.name}
               </h2>
               <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#F0167C] to-white text-center">
-                {bowlerVisible ? (isChasing ? 'Choose the bowler' : 'Choose the Bowler') : 'Select Batsmen'}
+                {bowlerVisible ? 'Choose the bowler' : 'Select Batsmen'}
               </h2>
             </div>
             <div className="flex gap-4">
@@ -1484,12 +1620,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     {striker && (
                       <div className="relative text-white text-center mt-2 relative">
                         <div className="inline-block">
-                          <img
-                            src={striker.photoUrl} 
-                            alt="Striker"
-                            className="w-20 h-20 md:w-10 md:h-10 lg:w-10 lg:h-10 rounded-full mx-auto object-cover aspect-square"
-                            onError={(e) => (e.target.src = '')}
-                          />
+                          {striker.photoUrl ? (
+                            <img
+                              src={striker.photoUrl} 
+                              alt="Striker"
+                              className="w-20 h-20 md:w-10 md:h-10 lg:w-10 lg:h-10 rounded-full mx-auto object-cover aspect-square"
+                              onError={(e) => (e.target.src = '')}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 md:w-10 md:h-10 lg:w-10 lg:h-10 rounded-full mx-auto flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                              {striker.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <button
                             onClick={cancelStriker}
                             className="absolute -top-2 right-4 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
@@ -1509,19 +1651,25 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     {nonStriker && (
                       <div className="relative text-white text-center mt-2 relative">
                         <div className=" inline-block">
-                          <img
-                            src={nonStriker.photoUrl} 
-                            alt="Non-striker"
-                            className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 w-full"
-                            onError={(e) => (e.target.src = '')}
-                          />
+                          {nonStriker.photoUrl ? (
+                            <img
+                              src={nonStriker.photoUrl} 
+                              alt="Non-striker"
+                              className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 w-full"
+                              onError={(e) => (e.target.src = '')}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                              {nonStriker.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <button
                             onClick={cancelNonStriker}
                             className="absolute -top-0 right-0 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
                           >
                             ×
                           </button>
-                        </div>
+                          </div>
                         <div>{nonStriker.name}</div>
                         <div className="text-sm">{nonStriker.role}</div>
                       </div>
@@ -1539,12 +1687,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
                   >
                     <div className="w-20 h-20 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center">
-                      <img
-                        src={player.photoUrl}
-                        alt="Player"
-                        className="w-full h-full object-cover"
-                        onError={(e) => (e.target.src = '')}
-                      />
+                      {player.photoUrl ? (
+                        <img
+                          src={player.photoUrl}
+                          alt="Player"
+                          className="w-full h-full object-cover"
+                          onError={(e) => (e.target.src = '')}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                          {player.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <span className="mt-2 font-bold text-lg">{player.name}</span>
                     <h2 className="text-sm font-light">{player.role}</h2>
@@ -1569,15 +1723,20 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 Choose Bowler
               </button>
             )}
-
             {selectedBowler && (
               <div className="relative inline-block text-center text-white">
-                <img
-                  src={selectedBowler.photoUrl} 
-                  alt="Bowler"
-                  className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full mx-auto object-cover aspect-square"
-                  onError={(e) => (e.target.src = '')}
-                />
+                {selectedBowler.photoUrl ? (
+                  <img
+                    src={selectedBowler.photoUrl} 
+                    alt="Bowler"
+                    className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full mx-auto object-cover aspect-square"
+                    onError={(e) => (e.target.src = '')}
+                  />
+                ) : (
+                  <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full mx-auto flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                    {selectedBowler.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>{selectedBowler.name}</div>
                 <div className="text-sm">{selectedBowler.role}</div>
               </div>
@@ -1592,19 +1751,24 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                       className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === player.index ? 'opacity-50' : ''}`}
                     >
                       <div className="w-20 h-20 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center">
-                        <img
-                          src={player.photoUrl}
-                          alt="Player"
-                          className="w-full h-full object-cover"
-                          onError={(e) => (e.target.src = '')}
-                        />
+                        {player.photoUrl ? (
+                          <img
+                            src={player.photoUrl}
+                            alt="Player"
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = '')}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                            {player.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                       </div>
                       <span className="mt-2 font-bold text-lg">{player.name}</span>
                       <h2 className="text-sm font-light">{player.role}</h2>
                     </div>
                   ))}
                 </div>
-
                 {selectedBowler && (
                   <button
                     onClick={() => handleButtonClick('start')}
@@ -1624,12 +1788,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             </h2>
             <div className="mt-4 flex w-full md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
               <div className="flex items-center justify-center mb-4 md:mb-0">
-                <img
-                  src={isChasing ? teamB.flagUrl : teamA.flagUrl}
-                  className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                  alt="Team A Flag"
-                  onError={(e) => (e.target.src = '')}
-                />
+                {currentBattingTeam?.flagUrl ? (
+                  <img
+                    src={currentBattingTeam?.flagUrl}
+                    className="w-16 h-16 md:w-30 md:h-30 aspect-square"
+                    alt="Batting Team Flag"
+                    onError={(e) => (e.target.src = '')}
+                  />
+                ) : (
+                  <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                    {currentBattingTeam?.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="ml-4 md:ml-10">
                   <h3 className="text-white font-bold text-center text-sm md:text-2xl sm:text-3xl lg:text-4xl">
                     {playerScore} - {outCount}
@@ -1643,12 +1813,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     {isChasing ? `Target: ${targetScore}` : 'Not yet'}
                   </h3>
                 </div>
-                <img
-                  src={isChasing ? teamA.flagUrl : teamB.flagUrl}
-                  className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                  alt="Team B Flag"
-                  onError={(e) => (e.target.src = '')}
-                />
+                {currentBowlingTeam?.flagUrl ? (
+                  <img
+                    src={currentBowlingTeam?.flagUrl}
+                    className="w-16 h-16 md:w-30 md:h-30 aspect-square"
+                    alt="Bowling Team Flag"
+                    onError={(e) => (e.target.src = '')}
+                  />
+                ) : (
+                  <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+                    {currentBowlingTeam?.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
             </div>
             <div className="w-full flex flex-col md:flex-row md:w-[50%] justify-around items-center justify-between mt-12">
@@ -1675,7 +1851,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                       <div className="text-xs md:text-sm">
                         {batsmenScores[nonStriker.index] || 0} ({batsmenBalls[nonStriker.index] || 0})
                         <span className="text-yellow-300"> SR: {getStrikeRate(nonStriker.index)}</span>
-                      </div>
+                        </div>
                     </div>
                   )}
                 </div>
@@ -1689,13 +1865,19 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col items-end w-full md:w-[20%] mb-0 md:mb-4">
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
+              <div className="absolute right-0 md:right-4 lg:right-8 xl:right-12 2xl:right-20 top-0 md:top-4">
+                <div className="flex justify-center gap-2">
+                  <button onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
                     className="w-full md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
                   >
                     {showPastOvers ? 'Hide Overs' : 'Show Overs'}
+                  </button>
+                  <button
+                    onClick={handleUndoBall}
+                    disabled={currentOverBalls.length === 0 && pastOvers.length === 0}
+                    className="w-full md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white disabled:bg-gray-500"
+                  >
+                    Undo Ball
                   </button>
                 </div>
                 {showPastOvers && (
@@ -1769,7 +1951,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
               })}
             </div>
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
-              {['Wide', 'No-ball', 'OUT', 'Leg By', 'nb'].map((label) => {
+              {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
                 const isActive = activeLabel === label;
                 return (
                   <button
@@ -1788,16 +1970,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
               <h3 className="text-white text-lg md:text-xl font-bold mb-4 text-center">Pitch Analysis</h3>
               
             </div> */}
-       <div>
-       {isAICompanionOpen && (
-        <AIMatchCompanionModal
-          isOpen={isAICompanionOpen}
-          predictionData={predictionData}
-        />
-      )}
-    </div>
-
-            {showRunInfo && (
+                <div>
+                {isAICompanionOpen && (
+                  <AIMatchCompanionModal
+                    isOpen={isAICompanionOpen}
+                    predictionData={predictionData}
+                    tournamentId={tournamentId}
+                  />
+                )}
+              </div>
+              {showRunInfo && (
               <p className="text-yellow-400 text-sm mt-2 text-center font-medium">
                 {pendingOut ? 'Please select 0, 1, or 2 for runs on out' : 'Please select run, if not select 0'}
               </p>
@@ -1820,12 +2002,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                         onClick={() => handleBatsmanSelect(player)}
                         className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
                       >
-                        <img
-                          src={player.photoUrl}
-                          alt="Player"
-                          className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
-                          onError={(e) => (e.target.src = '')}
-                        />
+                        {player.photoUrl ? (
+                          <img
+                            src={player.photoUrl}
+                            alt="Player"
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
+                            onError={(e) => (e.target.src = '')}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center bg-gray-500 text-white text-xl font-bold">
+                            {player.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <span className="text-xs md:text-sm">{player.name}</span>
                         <span className="text-xs">{player.role}</span>
                       </div>
@@ -1833,9 +2021,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   </div>
                 </div>
               </div>
-            )}
-
-            {showBowlerDropdown && (
+            )}... {showBowlerDropdown && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
                   <button
@@ -1852,12 +2038,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                         onClick={() => handleBowlerSelect(player)}
                         className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
                       >
-                        <img
-                          src={player.photoUrl}
-                          alt="Player"
-                          className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
-                          onError={(e) => (e.target.src = '')}
-                        />
+                        {player.photoUrl ? (
+                          <img
+                            src={player.photoUrl}
+                            alt="Player"
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
+                            onError={(e) => (e.target.src = '')}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center bg-gray-500 text-white text-xl font-bold">
+                            {player.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <span className="text-xs md:text-sm">{player.name}</span>
                         <span className="text-xs">{player.role}</span>
                       </div>
@@ -1911,8 +2103,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     </button>
   </div>
 </div>
-
-
 )}
 
 
