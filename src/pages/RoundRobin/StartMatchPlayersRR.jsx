@@ -1894,191 +1894,281 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             )}
           </>
         )}
-        {showThirdButtonOnly && (
-          <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
-            <h2 className="gap-5 text-white font-bold text-center text-4xl md:text-3xl lg:text-5xl">
-              Score Board
-            </h2>
-            <div className="mt-4 flex w-full md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
-              <div className="flex items-center justify-center mb-4 md:mb-0">
-                {currentBattingTeam?.flagUrl ? (
-                  <img
-                    src={currentBattingTeam?.flagUrl}
-                    className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                    alt="Batting Team Flag"
-                    onError={(e) => (e.target.src = '')}
-                  />
-                ) : (
-                  <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
-                    {currentBattingTeam?.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="ml-4 md:ml-10">
-                  <h3 className="text-white font-bold text-center text-sm md:text-2xl sm:text-3xl lg:text-4xl">
-                    {playerScore} - {outCount}
-                    <h2 className="text-base md:text-lg lg:text-xl sm:text-sm">{overNumber > maxOvers ? maxOvers : overNumber - 1}.{validBalls}</h2>
-                  </h3>
-                </div>
-              </div>
-              <div className="flex items-center justify-center mb-4 md:mb-0">
-                <div className="mr-4 md:mr-10">
-                  <h3 className="text-white font-bold text-center text-lg md:text-2xl sm:text-3xl lg:text-4xl text-center text-yellow-300 underline">
-                    {isChasing ? `Target: ${targetScore}` : 'Not yet'}
-                  </h3>
-                </div>
-                {currentBowlingTeam?.flagUrl ? (
-                  <img
-                    src={currentBowlingTeam?.flagUrl}
-                    className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                    alt="Bowling Team Flag"
-                    onError={(e) => (e.target.src = '')}
-                  />
-                ) : (
-                  <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
-                    {currentBowlingTeam?.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+      {showThirdButtonOnly && (
+  <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
+    <h2 className="gap-5 text-white font-bold text-center text-4xl md:text-3xl lg:text-5xl">
+      Score Board
+    </h2>
+    <div className="mt-4 flex w-full md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
+      <div className="flex items-center justify-center mb-4 md:mb-0">
+        {currentBattingTeam?.flagUrl ? (
+          <img
+            src={currentBattingTeam?.flagUrl}
+            className="w-16 h-16 md:w-30 md:h-30 aspect-square"
+            alt="Batting Team Flag"
+            onError={(e) => (e.target.src = '')}
+          />
+        ) : (
+          <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+            {currentBattingTeam?.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="ml-4 md:ml-10">
+          <h3 className="text-white font-bold text-center text-sm md:text-2xl sm:text-3xl lg:text-4xl">
+            {playerScore} - {outCount}
+            <h2 className="text-base md:text-lg lg:text-xl sm:text-sm">{overNumber > maxOvers ? maxOvers : overNumber - 1}.{validBalls}</h2>
+          </h3>
+        </div>
+      </div>
+      <div className="flex items-center justify-center mb-4 md:mb-0">
+        <div className="mr-4 md:mr-10">
+          <h3 className="text-white font-bold text-center text-lg md:text-2xl sm:text-3xl lg:text-4xl text-center text-yellow-300 underline">
+            {isChasing ? `Target: ${targetScore}` : 'Not yet'}
+          </h3>
+        </div>
+        {currentBowlingTeam?.flagUrl ? (
+          <img
+            src={currentBowlingTeam?.flagUrl}
+            className="w-16 h-16 md:w-30 md:h-30 aspect-square"
+            alt="Bowling Team Flag"
+            onError={(e) => (e.target.src = '')}
+          />
+        ) : (
+          <div className="w-16 h-16 md:w-30 md:h-30 aspect-square rounded-full flex items-center justify-center bg-gray-500 text-white text-2xl font-bold">
+            {currentBowlingTeam?.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+    </div>
+    <div className="w-full flex flex-col md:flex-row md:w-[50%] justify-around items-center justify-between mt-12">
+      <div className="flex flex-row px-[4.8%] md:p-0 flex-row md:flex-row items-center justify-between gap-4 md:gap-8 mb-4 md:mb-0">
+        <div className="text-center text-white">
+          <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : ''}`}>Striker</h3>
+          {striker && (
+            <div className="flex flex-col items-center justify-center w-full">
+              <div className="font-bold text-sm md:text-base sm">{striker.name}</div>
+              <div className="text-xs md:text-sm">{striker.role}</div>
+              <div className="text-xs md:text-sm">
+                {batsmenScores[striker.index] || 0} ({batsmenBalls[striker.index] || 0})
+                <span className="text-yellow-300"> SR: {getStrikeRate(striker.index)}</span>
               </div>
             </div>
-            <div className="w-full flex flex-col md:flex-row md:w-[50%] justify-around items-center justify-between mt-12">
-              <div className="flex flex-row px-[4.8%] md:p-0 flex-row md:flex-row items-center justify-between gap-4 md:gap-8 mb-4 md:mb-0">
-                <div className="text-center text-white">
-                  <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : ''}`}>Striker</h3>
-                  {striker && (
-                    <div className="flex flex-col items-center justify-center w-full">
-                      <div className="font-bold text-sm md:text-base sm">{striker.name}</div>
-                      <div className="text-xs md:text-sm">{striker.role}</div>
-                      <div className="text-xs md:text-sm">
-                        {batsmenScores[striker.index] || 0} ({batsmenBalls[striker.index] || 0})
-                        <span className="text-yellow-300"> SR: {getStrikeRate(striker.index)}</span>
+          )}
+        </div>
+        <div className="hidden sm:block text-white text-center">
+          <h3 className={`text-lg md:text-xl font-bold ${!striker ? 'text-yellow-300' : ''}`}>Non-Striker</h3>
+          {nonStriker && (
+            <div className="flex flex-col items-center w-full">
+              <div className="font-bold text-sm md:text-base">{nonStriker.name}</div>
+              <div className="text-xs md:text-sm">{nonStriker.role}</div>
+              <div className="text-xs md:text-sm">
+                {batsmenScores[nonStriker.index] || 0} ({batsmenBalls[nonStriker.index] || 0})
+                <span className="text-yellow-300"> SR: {getStrikeRate(nonStriker.index)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="sm:hidden text-white text-center">
+          <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
+          {selectedBowler && (
+            <div className="flex flex-col items-center">
+              <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
+              <div className="text-xs md:text-sm">{selectedBowler.role}</div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Mobile layout for buttons */}
+      {/* Mobile layout for buttons */}
+
+      {/* Desktop layout for buttons with overs history below */}
+      <div className="hidden sm:flex flex-col items-end absolute right-0 md:right-4 lg:right-8 xl:right-12 2xl:right-20 top-0 md:top-4">
+        <div className="flex gap-2">
+          <button onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
+            className="w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
+          >
+            {showPastOvers ? 'Hide Overs' : 'Show Overs'}
+          </button>
+          <button
+            onClick={handleUndoBall}
+            disabled={currentOverBalls.length === 0 && pastOvers.length === 0}
+            className="w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white disabled:bg-gray-500"
+          >
+            Undo Ball
+          </button>
+        </div>
+        
+        {/* Overs history positioned directly below the buttons */}
+        {showPastOvers && (
+          <div className="mt-2 text-white w-full">
+            <div className="bg-[#4C0025] p-3 rounded-lg" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+              <h3 className="text-lg md:text-xl font-bold mb-2 text-center">Overs History</h3>
+              <div className="flex flex-col gap-3">
+                {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
+                  .filter(Boolean)
+                  .map((over, index) => (
+                    <div key={`over-${index}`} className="flex items-center gap-2">
+                      <span className="text-white font-bold text-sm">Over {index + 1}:</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {over.map((ball, ballIndex) => {
+                          let displayBall = ball;
+                          if (typeof ball === 'string' && ball.includes('+')) {
+                            const [type, rest] = ball.split('+');
+                            if (type.toLowerCase() === 'wd') displayBall = `Wd+${rest}`;
+                            else if (type.toLowerCase() === 'nb') displayBall = `Nb+${rest}`;
+                            else if (type.toLowerCase() === 'w') displayBall = `W+${rest}`;
+                            else if (type.toLowerCase() === 'o') displayBall = `O+${rest}`;
+                            else displayBall = `${type}+${rest}`;
+                          }
+                          const isWicket = typeof ball === 'string' && (ball.includes('W') || ball.includes('O'));
+                          return (
+                            <span
+                              key={`ball-${index}-${ballIndex}`}
+                              className={`w-6 h-6 flex items-center justify-center rounded-full px-1 text-xs md:text-sm whitespace-nowrap ${
+                                isWicket ? 'bg-red-600' : 'bg-[#FF62A1]'
+                              }`}
+                            >
+                              {displayBall}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                </div>
-                <div className="hidden sm:block text-white text-center">
-                  <h3 className={`text-lg md:text-xl font-bold ${!striker ? 'text-yellow-300' : ''}`}>Non-Striker</h3>
-                  {nonStriker && (
-                    <div className="flex flex-col items-center w-full">
-                      <div className="font-bold text-sm md:text-base">{nonStriker.name}</div>
-                      <div className="text-xs md:text-sm">{nonStriker.role}</div>
-                      <div className="text-xs md:text-sm">
-                        {batsmenScores[nonStriker.index] || 0} ({batsmenBalls[nonStriker.index] || 0})
-                        <span className="text-yellow-300"> SR: {getStrikeRate(nonStriker.index)}</span>
-                        </div>
-                    </div>
-                  )}
-                </div>
-                <div className="sm:hidden text-white text-center">
-                  <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
-                  {selectedBowler && (
-                    <div className="flex flex-col items-center">
-                      <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
-                      <div className="text-xs md:text-sm">{selectedBowler.role}</div>
-                    </div>
-                  )}
-                </div>
+                  ))}
               </div>
-              <div className="absolute right-0 md:right-4 lg:right-8 xl:right-12 2xl:right-20 top-0 md:top-4">
-                <div className="flex justify-center gap-2">
-                  <button onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
-                    className="w-full md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
-                  >
-                    {showPastOvers ? 'Hide Overs' : 'Show Overs'}
-                  </button>
-                  <button
-                    onClick={handleUndoBall}
-                    disabled={currentOverBalls.length === 0 && pastOvers.length === 0}
-                    className="w-full md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white disabled:bg-gray-500"
-                  >
-                    Undo Ball
-                  </button>
-                </div>
-                {showPastOvers && (
-                  <div className="mt-2 md:mt-4 text-white w-full">
-                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
-                    <div className="bg-[#4C0025] p-3 rounded-lg inline-block" style={{ minHeight: '100px' }}>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
-                          .filter(Boolean)
-                          .map((over, index) => (
-                            <div key={`over-${index}`} className="flex items-center gap-1">
-                              {over.map((ball, ballIndex) => {
-                                let displayBall = ball;
-                                if (typeof ball === 'string' && ball.includes('+')) {
-                                  const [type, rest] = ball.split('+');
-                                  if (type.toLowerCase() === 'wd') displayBall = `Wd+${rest}`;
-                                  else if (type.toLowerCase() === 'nb') displayBall = `Nb+${rest}`;
-                                  else if (type.toLowerCase() === 'w') displayBall = `W+${rest}`;
-                                  else if (type.toLowerCase() === 'o') displayBall = `O+${rest}`;
-                                  else displayBall = `${type}+${rest}`;
-                                }
-                                const isWicket = typeof ball === 'string' && (ball.includes('W') || ball.includes('O'));
-                                return (
-                                  <span
-                                    key={`ball-${index}-${ballIndex}`}
-                                    className={`w-6 h-6 flex items-center justify-center rounded-full px-1 text-xs md:text-sm whitespace-nowrap ${
-                                      isWicket ? 'bg-red-600' : 'bg-[#FF62A1]'
-                                    }`}
-                                  >
-                                    {displayBall}
-                                  </span>
-                                );
-                              })}
-                              {index !== pastOvers.length + (currentOverBalls.length > 0 ? 0 : -1) && (
-                                <span className="text-white font-bold text-lg px-1">|</span>
-                              )}
-                            </div>
-                          ))}
-                      </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden sm:block w-20 text-white text-center">
+        <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
+        {selectedBowler && (
+          <div className="flex flex-col items-center">
+            <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
+            <div className="text-xs md:text-sm">{selectedBowler.role}</div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Desktop layout for wide buttons */}
+    <div className="hidden sm:flex flex-wrap justify-center gap-2 md:gap-4 mt-2">
+      {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
+        const isActive = activeLabel === label;
+        return (
+          <button
+            key={label}
+            onClick={() => handleScoreButtonClick(label, true)}
+            className={`w-20 h-10 md:w-20 h-12 md:h-12
+              ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
+              text-white font-bold text-sm md:text-lg sm:text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+
+       <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
+      {[0, 1, 2, 3, 4, 6].map((num) => {
+        const isActive = activeNumber === num;
+        const isDisabled = pendingOut && num !== 0 && num !== 1 && num !== 2;
+        return (
+          <button
+            key={num}
+            onClick={() => handleScoreButtonClick(num)}
+            className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
+              ${isActive ? 'bg-green-500' : isDisabled ? 'bg-gray-500 cursor-not-allowed' : 'bg-[#4C0025] hover:bg-green-300'}
+              text-white font-bold text-lg md:text-xl rounded-full border-2 border-white
+              flex items-center justify-center transition-colors duration-300`}
+            disabled={isDisabled}
+          >
+            {num}
+          </button>
+        )
+      })}
+    </div>
+
+    {/* Mobile layout for buttons - MOVED BELOW SCORING BUTTONS */}
+    <div className="flex flex-col sm:hidden justify-center gap-2 mt-4 w-full">
+      <div className="flex justify-center gap-2">
+        {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
+          const isActive = activeLabel === label;
+          return (
+            <button
+              key={label}
+              onClick={() => handleScoreButtonClick(label, true)}
+              className={`w-20 h-10
+                ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
+                text-white font-bold text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80`}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      
+      {/* Show Overs and Undo Ball buttons - MOVED HERE */}
+      <div className="flex justify-center gap-2 mt-2">
+        <button onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
+          className="w-32 h-10 bg-[#4C0025] text-white font-bold text-sm rounded-lg border-2 border-white"
+        >
+          {showPastOvers ? 'Hide Overs' : 'Show Overs'}
+        </button>
+        <button
+          onClick={handleUndoBall}
+          disabled={currentOverBalls.length === 0 && pastOvers.length === 0}
+          className="w-32 h-10 bg-[#4C0025] text-white font-bold text-sm rounded-lg border-2 border-white disabled:bg-gray-500"
+        >
+          Undo Ball
+        </button>
+      </div>
+      
+      {/* Mobile overs history */}
+      {showPastOvers && (
+        <div className="mt-2 text-white w-full">
+          <div className="bg-[#4C0025] p-3 rounded-lg" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+            <h3 className="text-lg font-bold mb-2 text-center">Overs History</h3>
+            <div className="flex flex-col gap-3">
+              {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
+                .filter(Boolean)
+                .map((over, index) => (
+                  <div key={`over-${index}`} className="flex items-center gap-2">
+                    <span className="text-white font-bold text-sm">Over {index + 1}:</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {over.map((ball, ballIndex) => {
+                        let displayBall = ball;
+                        if (typeof ball === 'string' && ball.includes('+')) {
+                          const [type, rest] = ball.split('+');
+                          if (type.toLowerCase() === 'wd') displayBall = `Wd+${rest}`;
+                          else if (type.toLowerCase() === 'nb') displayBall = `Nb+${rest}`;
+                          else if (type.toLowerCase() === 'w') displayBall = `W+${rest}`;
+                          else if (type.toLowerCase() === 'o') displayBall = `O+${rest}`;
+                          else displayBall = `${type}+${rest}`;
+                        }
+                        const isWicket = typeof ball === 'string' && (ball.includes('W') || ball.includes('O'));
+                        return (
+                          <span
+                            key={`ball-${index}-${ballIndex}`}
+                            className={`w-6 h-6 flex items-center justify-center rounded-full px-1 text-xs whitespace-nowrap ${
+                              isWicket ? 'bg-red-600' : 'bg-[#FF62A1]'
+                            }`}
+                          >
+                            {displayBall}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-              </div>
-              <div className="hidden sm:block w-20 text-white text-center">
-                <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
-                {selectedBowler && (
-                  <div className="flex flex-col items-center">
-                    <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
-                    <div className="text-xs md:text-sm">{selectedBowler.role}</div>
-                  </div>
-                )}
-              </div>
+                ))}
             </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
-              {[0, 1, 2, 3, 4, 6].map((num) => {
-                const isActive = activeNumber === num;
-                const isDisabled = pendingOut && num !== 0 && num !== 1 && num !== 2;
-                return (
-                  <button
-                    key={num}
-                    onClick={() => handleScoreButtonClick(num)}
-                    className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
-                      ${isActive ? 'bg-green-500' : isDisabled ? 'bg-gray-500 cursor-not-allowed' : 'bg-[#4C0025] hover:bg-green-300'}
-                      text-white font-bold text-lg md:text-xl rounded-full border-2 border-white
-                      flex items-center justify-center transition-colors duration-300`}
-                    disabled={isDisabled}
-                  >
-                    {num}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
-              {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
-                const isActive = activeLabel === label;
-                return (
-                  <button
-                    key={label}
-                    onClick={() => handleScoreButtonClick(label, true)}
-                    className={`w-20 h-10 md:w-20 h-12 md:h-12
-                      ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
-                      text-white font-bold text-sm md:text-lg sm:text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
             {/* <div className="mt-6 w-full md:w-[50%] bg-[#4C0025] p-4 md:p-6 rounded-lg shadow-lg">
               <h3 className="text-white text-lg md:text-xl font-bold mb-4 text-center">Pitch Analysis</h3>
               
