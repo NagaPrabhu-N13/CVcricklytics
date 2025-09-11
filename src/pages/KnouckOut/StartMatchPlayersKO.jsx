@@ -176,7 +176,7 @@ async function updatePlayerBowlingDetails(playerName, newStats) {
             innings: updatedBalls > 0 ? 1 : 0,
             strikeRate: updatedWickets > 0 ? updatedBalls / updatedWickets : 0,
             wickets: updatedWickets,
-            conceded: updatedRunsConceded,
+            runsConceded: updatedRunsConceded,
           },
           // Other nested fields
         },

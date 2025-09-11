@@ -4,31 +4,45 @@ import { Trophy, TrendingUp, HelpCircle, X } from "lucide-react";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase"; // Adjust this import to match your Firebase config file
 
+
 // 🔢 Win Probability Calculation Logic
-function calculateWinProbability(battingScore, bowlingScore) {
-  if (battingScore === 0 && bowlingScore === 0) {
-    return { winA: 50, winB: 50 };
+function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOvers) {
+  const totalBalls = maxOvers * 6;
+  const ballsLeft = Math.max(totalBalls - battingBalls, 0);
+  const runsToWin = Math.max(bowlingRuns + 1 - battingRuns, 0);
+
+  if (runsToWin === 0) return { winA: 100, winB: 0 };
+  if (ballsLeft === 0) return { winA: 0, winB: 100 };
+
+  // Special handling for ballsLeft <= 6 (1 over or less)
+  if (ballsLeft <= 6) {
+    const maxRunsPossible = ballsLeft * 6;
+    if (runsToWin > maxRunsPossible) {
+      return { winA: 0, winB: 100 };
+    } else {
+      // Linear formula: probability higher if runsToWin is less
+      const prob = (maxRunsPossible - runsToWin + 1) / maxRunsPossible;
+      const winA = Math.round(Math.max(prob, 0.02) * 100); // minimum 2% nonzero if possible
+      return { winA, winB: 100 - winA };
+    }
   }
 
-  if (battingScore > 0 && bowlingScore === 0) {
-    return { winA: 100, winB: 0 };
-  }
-
-  if (bowlingScore > 0 && battingScore === 0) {
-    return { winA: 0, winB: 100 };
-  }
-
-  const total = battingScore + bowlingScore;
-  const winA = Math.round((battingScore / total) * 100);
-  const winB = 100 - winA;
-
-  return { winA, winB };
+  // For regular cases, use run rate model
+  const currRR = battingBalls > 0 ? battingRuns / (battingBalls / 6) : 0;
+  const reqRR = runsToWin / (ballsLeft / 6);
+  const rrDiff = currRR - reqRR;
+  const probBat = 1 / (1 + Math.exp(-3 * rrDiff));
+  const winA = Math.round(probBat * 100);
+  return { winA, winB: 100 - winA };
 }
 
-export default function AIMatchCompanionModal({ isOpen, onClose, predictionData, tournamentId }) {
+
+
+export default function AIMatchCompanionModal({ isOpen, onClose, predictionData, tournamentId , maxOvers, battingBalls}) {
   const [displayData, setDisplayData] = useState(predictionData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
 
   // Extract the actual document ID if tournamentId is an object
   let safeTournamentId = null;
@@ -37,6 +51,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
   } else if (typeof tournamentId === 'string') {
     safeTournamentId = tournamentId;
   }
+
 
   // Function to update Firestore with predictionData
   const updateFirestore = async (data) => {
@@ -51,6 +66,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     }
   };
 
+
   // Update Firestore whenever predictionData changes
   useEffect(() => {
     if (predictionData && safeTournamentId) {
@@ -59,12 +75,15 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     }
   }, [predictionData, safeTournamentId]);
 
+
   // Real-time listener for fetching from Firestore if no predictionData is provided
   useEffect(() => {
     if (!isOpen || predictionData || !safeTournamentId) return;
 
+
     setLoading(true);
     setError(null);
+
 
     const docRef = doc(db, "AIMatchCompanion", safeTournamentId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -81,11 +100,14 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
       setLoading(false);
     });
 
+
     // Cleanup listener on unmount or when dependencies change
     return () => unsubscribe();
   }, [isOpen, predictionData, safeTournamentId]);
 
+
   if (!isOpen) return null;
+
 
   const data = displayData || {};
   const {
@@ -98,18 +120,26 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     alternateOutcome,
   } = data;
 
-  const { winA, winB } = calculateWinProbability(battingScore, bowlingScore);
+
+const { winA, winB } = calculateWinProbability(
+  battingScore,           // current runs for batting team
+  battingBalls,           // balls faced by batting team, e.g. over*6 + balls
+  bowlingScore,           // target (first innings total)
+  maxOvers,               // max overs for the match
+);
+
 
   let probableWinner = null;
   if (typeof battingScore === "number" && typeof bowlingScore === "number") {
-    if (battingScore > bowlingScore) {
+    if (winA > winB) {
       probableWinner = battingTeam;
-    } else if (bowlingScore > battingScore) {
+    } else if (winB > winA) {
       probableWinner = bowlingTeam;
     } else {
       probableWinner = "It's a tie";
     }
   }
+
 
   return (
     <AnimatePresence>
@@ -128,11 +158,13 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
           {/* Close Button (add your onClose logic here if needed) */}
           {/* <button onClick={onClose} className="absolute top-4 right-4"><X className="w-5 h-5 text-gray-400" /></button> */}
 
+
           {/* Header */}
           <div className="flex items-center gap-2 mb-6">
             <Trophy className="w-5 h-5 text-yellow-400" />
             <h2 className="text-xl font-semibold">AI Match Companion</h2>
           </div>
+
 
           {loading ? (
             <p className="text-sm text-gray-500 italic">Loading match insights…</p>
@@ -156,6 +188,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
                 </div>
               </div>
 
+
               {/* Probable Winner */}
               <div className="text-sm font-medium text-gray-300 mb-2">
                 Probable Winner:{" "}
@@ -163,6 +196,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
                   {probableWinner || "Insufficient data"}
                 </span>
               </div>
+
 
               {/* Win Probability */}
               <div>
@@ -182,6 +216,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
                   </span>
                 </div>
 
+
                 {/* Probability Bar */}
                 <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
                   <div
@@ -197,6 +232,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
                 </div>
               </div>
 
+
               {/* Next Over Impact */}
               {nextOverProjection && (
                 <div>
@@ -207,6 +243,7 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
                   <p className="text-sm text-gray-400">{nextOverProjection}</p>
                 </div>
               )}
+
 
               {/* What If Scenario */}
               {alternateOutcome && (
