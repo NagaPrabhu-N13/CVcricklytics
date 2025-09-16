@@ -15,6 +15,87 @@ import { db, storage, auth } from '../../firebase';
 import { collection, addDoc, getDocs, serverTimestamp, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
+// Live Comments Component
+const LiveComments = ({ matchData }) => {
+  const [comments, setComments] = useState([]);
+  const [currentBall, setCurrentBall] = useState(0);
+  const commentsEndRef = useRef(null);
+
+  const dummyComments = [
+    "Sachin hits a beautiful cover drive for FOUR!",
+    "Dhoni defends solidly.",
+    "Kohli flicks it off his pads for a single.",
+    "Rohit Sharma smashes it over long-on for SIX!",
+    "Bumrah bowls a perfect yorker.",
+    "Jadeja dives and saves a certain boundary.",
+    "Rahul edges it but it falls short of slips.",
+    "Pant reverse sweeps for an innovative boundary!",
+    "Ashwin bowls a dot ball building pressure.",
+    "Hardik Pandya clears the ropes with ease!",
+    "Shami bowls a bouncer, well ducked by the batsman.",
+    "Chahal deceives the batsman with his googly.",
+    "Iyer drives through the covers for three runs.",
+    "Bowler appeals for LBW but umpire says not out.",
+    "Sky hits a magnificent six into the stands!",
+    "Excellent fielding effort saves two runs.",
+    "Batsman takes a quick single, good running between wickets.",
+    "Spinner flights the ball, batsman comes down the track.",
+    "Edge! But it goes between keeper and first slip.",
+    "Perfect timing! Ball races to the boundary."
+  ];
+
+  useEffect(() => {
+    if (!matchData) return;
+
+    // Simulate ball-by-ball commentary
+    const interval = setInterval(() => {
+      if (currentBall < 20) { // Simulate 20 balls
+        const newComment = {
+          id: Date.now() + currentBall,
+          text: dummyComments[currentBall],
+          ball: `${Math.floor(currentBall / 6)}.${currentBall % 6 + 1}`,
+          timestamp: new Date().toLocaleTimeString()
+        };
+        
+        setComments(prev => [...prev, newComment]);
+        setCurrentBall(prev => prev + 1);
+      }
+    }, 3000); // Add a comment every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [matchData, currentBall]);
+
+  useEffect(() => {
+    // Scroll to bottom when new comment is added
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [comments]);
+
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 h-96 overflow-hidden flex flex-col">
+      <h3 className="text-lg font-semibold mb-4 text-white">Live Commentary</h3>
+      <div className="flex-1 overflow-y-auto">
+        {comments.length === 0 ? (
+          <p className="text-gray-400 text-center">No commentary yet. Match will begin shortly...</p>
+        ) : (
+          <div className="space-y-3">
+            {comments.map(comment => (
+              <div key={comment.id} className="bg-gray-700 p-3 rounded-lg">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-yellow-400 font-semibold">Ball {comment.ball}</span>
+                  <span className="text-gray-400 text-sm">{comment.timestamp}</span>
+                </div>
+                <p className="text-white">{comment.text}</p>
+              </div>
+            ))}
+            <div ref={commentsEndRef} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 const IPLCards = ({ setActiveTab }) => {
   const [highlights, setHighlights] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -639,6 +720,9 @@ const FixtureGenerator = () => {
       case 'Match Analytics':
         setActiveTab('Highlights');
         break;
+        case 'Live Comments':
+        setActiveTab('Match Analytics');
+        break;
       default:
         navigate(-1);
         break;
@@ -927,9 +1011,25 @@ const FixtureGenerator = () => {
             </div>
             </>
               )}
+              {activeAnalyticsTab === 'liveComments' && (
+                  <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                    <LiveComments matchData={matchData} />
+                  </div>
+                )}
+
             </div>
             </div>
             )}
+            {activeTab === 'Live Comments' && (
+                                  <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.5 }}
+                                    className="w-full"
+                                  >
+                                    <LiveComments matchData={matchData} />
+                                  </motion.div>
+                                )}
         </main>
       )}
     </div>
