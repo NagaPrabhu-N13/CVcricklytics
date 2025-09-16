@@ -142,8 +142,9 @@ const MatchDetails = () => {
         </h2>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
-        {/* Left Column - Match Details */}
+      {/* Top Section - Match Score and AI Companion */}
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 mb-4 md:mb-6">
+        {/* Match Details */}
         <div className="bg-gradient-to-br from-purple-800/20 to-indigo-800/20 p-4 md:p-6 rounded-xl shadow-lg flex-1 border border-purple-500/30">
           {/* Header Info */}
           <div className="flex justify-between items-center mb-2">
@@ -168,23 +169,23 @@ const MatchDetails = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-gray-400 text-left border-b border-purple-500/50">
-                  <th className="py-2 pr-2">Batter</th>
-                  <th className="text-center p-1">R</th>
-                  <th className="text-center p-1">B</th>
-                  <th className="text-center p-1">4s</th>
-                  <th className="text-center p-1">6s</th>
-                  <th className="text-center p-1">SR</th>
+                  <th className="py-1 pr-1">Batter</th>
+                  <th className="text-center p-0.5">R</th>
+                  <th className="text-center p-0.5">B</th>
+                  <th className="text-center p-0.5">4s</th>
+                  <th className="text-center p-0.5">6s</th>
+                  <th className="text-center p-0.5">SR</th>
                 </tr>
               </thead>
               <tbody>
                 {match.batting.map((batter, index) => (
                   <tr key={index} className="text-left border-b border-purple-500/20">
-                    <td className="py-2 pr-2 font-medium">{batter.name}</td>
-                    <td className="text-center p-1">{batter.runs}</td>
-                    <td className="text-center p-1">{batter.balls}</td>
-                    <td className="text-center p-1">{batter.fours}</td>
-                    <td className="text-center p-1">{batter.sixes}</td>
-                    <td className="text-center p-1">{batter.sr}</td>
+                    <td className="py-1 pr-1 font-medium">{batter.name}</td>
+                    <td className="text-center p-0.5">{batter.runs}</td>
+                    <td className="text-center p-0.5">{batter.balls}</td>
+                    <td className="text-center p-0.5">{batter.fours}</td>
+                    <td className="text-center p-0.5">{batter.sixes}</td>
+                    <td className="text-center p-0.5">{batter.sr}</td>
                   </tr>
                 ))}
               </tbody>
@@ -197,23 +198,23 @@ const MatchDetails = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-gray-400 text-left border-b border-purple-500/50">
-                  <th className="py-2 pr-2">Bowler</th>
-                  <th className="text-center p-1">O</th>
-                  <th className="text-center p-1">M</th>
-                  <th className="text-center p-1">R</th>
-                  <th className="text-center p-1">W</th>
-                  <th className="text-center p-1">Eco</th>
+                  <th className="py-1 pr-1">Bowler</th>
+                  <th className="text-center p-0.5">O</th>
+                  <th className="text-center p-0.5">M</th>
+                  <th className="text-center p-0.5">R</th>
+                  <th className="text-center p-0.5">W</th>
+                  <th className="text-center p-0.5">Eco</th>
                 </tr>
               </thead>
               <tbody>
                 {match.bowling.map((bowler, index) => (
                   <tr key={index} className="text-left border-b border-purple-500/20">
-                    <td className="py-2 pr-2 font-medium">{bowler.name}</td>
-                    <td className="text-center p-1">{bowler.overs}</td>
-                    <td className="text-center p-1">{bowler.maidens}</td>
-                    <td className="text-center p-1">{bowler.runs}</td>
-                    <td className="text-center p-1">{bowler.wickets}</td>
-                    <td className="text-center p-1">{bowler.eco}</td>
+                    <td className="py-1 pr-1 font-medium">{bowler.name}</td>
+                    <td className="text-center p-0.5">{bowler.overs}</td>
+                    <td className="text-center p-0.5">{bowler.maidens}</td>
+                    <td className="text-center p-0.5">{bowler.runs}</td>
+                    <td className="text-center p-0.5">{bowler.wickets}</td>
+                    <td className="text-center p-0.5">{bowler.eco}</td>
                   </tr>
                 ))}
               </tbody>
@@ -235,76 +236,102 @@ const MatchDetails = () => {
           )}
         </div>
 
-        {/* Right Column - Live Commentary */}
-        <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/60 p-4 md:p-6 rounded-xl shadow-lg lg:w-2/5 border border-gray-600/30">
+        {/* AI Match Companion - Right side on desktop, second on mobile */}
+        <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/60 p-4 md:p-6 rounded-xl shadow-lg lg:w-2/5 border border-gray-600/30 order-2 lg:order-1">
           <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-600">
             <h3 className="text-xl font-semibold flex items-center">
-              <span className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></span>
-              Live Commentary
+              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+              AI Match Companion
             </h3>
-            <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded">
-              Auto-updating
-            </span>
+            <button 
+              onClick={() => setIsModalOpen(!isModalOpen)}
+              className="text-xs bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded transition-colors"
+            >
+              {isModalOpen ? 'Minimize' : 'Expand'}
+            </button>
           </div>
           
-          <div className="h-[500px] overflow-y-auto pr-2 commentary-scroll">
-            {commentary.map((item) => (
-              <div 
-                key={item.id} 
-                className={`mb-3 pb-3 border-b border-gray-700/50 last:border-b-0 transition-all duration-300 ${item.highlight ? 'bg-gray-700/30 -mx-2 px-2 py-2 rounded' : ''}`}
-              >
-                <div className="flex">
-                  <div className={`min-w-[3rem] flex flex-col items-center justify-center h-8 w-8 rounded-full mr-3 ${
-                    item.runs === 0 ? 'bg-gray-700' : 
-                    item.runs === 4 ? 'bg-blue-700' : 
-                    item.runs === 6 ? 'bg-purple-700' : 'bg-green-700'
-                  }`}>
-                    <span className="text-xs font-bold">{item.over}</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm mb-1">{item.text}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-400">{item.timestamp}</span>
-                      {item.runs > 0 && (
-                        <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-700/50">
-                          {item.runs} run{item.runs > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
+          <div className="h-[400px] overflow-y-auto pr-2">
+            <AIMatchCompanionModal
+              isOpen={true}
+              onClose={handleClose}
+              tournamentId={tournamentId}
+              embedded={true}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Live Commentary */}
+      <div className="bg-gradient-to-br from-purple-800/20 to-indigo-800/20 p-4 md:p-6 rounded-xl shadow-lg border border-purple-500/30 order-3">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-purple-500/50">
+          <h3 className="text-xl font-semibold flex items-center">
+            <span className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+            Live Commentary
+          </h3>
+          <span className="text-xs text-gray-400 bg-purple-700/50 px-2 py-1 rounded">
+            Auto-updating
+          </span>
+        </div>
+        
+        <div className="h-[400px] overflow-y-auto pr-2 commentary-scroll">
+          {commentary.map((item) => (
+            <div 
+              key={item.id} 
+              className={`mb-3 pb-3 border-b border-purple-500/30 last:border-b-0 transition-all duration-300 ${item.highlight ? 'bg-purple-700/30 -mx-2 px-2 py-2 rounded' : ''}`}
+            >
+              <div className="flex">
+                <div className={`min-w-[3rem] flex flex-col items-center justify-center h-8 w-8 rounded-full mr-3 ${
+                  item.runs === 0 ? 'bg-gray-700' : 
+                  item.runs === 4 ? 'bg-blue-700' : 
+                  item.runs === 6 ? 'bg-purple-700' : 'bg-green-700'
+                }`}>
+                  <span className="text-xs font-bold">{item.over}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm mb-1">{item.text}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">{item.timestamp}</span>
+                    {item.runs > 0 && (
+                      <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-700/50">
+                        {item.runs} run{item.runs > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-          
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <div className="flex items-center text-xs text-gray-400">
-              <div className="flex items-center mr-4">
-                <div className="w-3 h-3 bg-gray-700 rounded-full mr-1"></div>
-                <span>Dot ball</span>
-              </div>
-              <div className="flex items-center mr-4">
-                <div className="w-3 h-3 bg-green-700 rounded-full mr-1"></div>
-                <span>1-3 runs</span>
-              </div>
-              <div className="flex items-center mr-4">
-                <div className="w-3 h-3 bg-blue-700 rounded-full mr-1"></div>
-                <span>Four</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-purple-700 rounded-full mr-1"></div>
-                <span>Six</span>
-              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-4 pt-3 border-t border-purple-500/30">
+          <div className="flex flex-wrap items-center text-xs text-gray-400 gap-2">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-gray-700 rounded-full mr-1"></div>
+              <span>Dot ball</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-700 rounded-full mr-1"></div>
+              <span>1-3 runs</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-blue-700 rounded-full mr-1"></div>
+              <span>Four</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-purple-700 rounded-full mr-1"></div>
+              <span>Six</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* AI Match Companion Modal */}
+      {/* AI Match Companion Modal (for expanded view) */}
       <AIMatchCompanionModal
         isOpen={isModalOpen}
         onClose={handleClose}
         tournamentId={tournamentId}
+        expanded={true}
       />
 
       <style jsx>{`
