@@ -95,6 +95,23 @@ const LiveComments = ({ matchData }) => {
   );
 };
 
+// Leader Stats Component
+const LeaderStats = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+   // Auto-navigate to TournamentStats on component mount
+  useEffect(() => {
+    navigate('/TournamentStats', { 
+      state: { 
+        tournamentName: location.state?.tournamentName, 
+      tournamentId: location.state?.tournamentId, 
+        information: location.state?.information,
+        selectedTeams: location.state?.selectedTeams || []
+      } 
+    });
+  }, [navigate, location.state]);
+  return null;
+};
 
 const IPLCards = ({ setActiveTab }) => {
   const [highlights, setHighlights] = useState([]);
@@ -723,6 +740,9 @@ const FixtureGenerator = () => {
         case 'Live Comments':
         setActiveTab('Match Analytics');
         break;
+        case 'Leader Stats':
+        setActiveTab('Live Comments');
+        break;
       default:
         navigate(-1);
         break;
@@ -738,7 +758,7 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
- const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics', 'Live Comments'];;
+   const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics', 'Live Comments', 'Leader Stats'];
 
   return (
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">
@@ -986,16 +1006,7 @@ const FixtureGenerator = () => {
       >
         Scorecard
       </button>
-      <button
-        className={`py-2 px-4 mr-2 ${
-          activeAnalyticsTab === 'liveComments'
-            ? 'border-b-2 border-blue-600 font-semibold'
-            : 'text-blue-400'
-        }`}
-        onClick={() => setActiveAnalyticsTab('liveComments')}
-      >
-        Live Comments
-      </button>
+      
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {activeAnalyticsTab === 'scorecard' && (
@@ -1018,6 +1029,12 @@ const FixtureGenerator = () => {
     </div>
   </div>
 )}
+
+{activeTab === 'Leader Stats' && (
+    <div className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
+      <LeaderStats />
+    </div>
+  )}
         </main>
       )}
     </div>

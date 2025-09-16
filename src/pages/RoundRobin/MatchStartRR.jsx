@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../../components/sophita/HomePage/FireworksCanvas';
-import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt, FaChartLine } from 'react-icons/fa';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Scatter } from 'recharts';
 import logo from '../../assets/sophita/HomePage/Picture3_2.png';
 import trophy from '../../assets/sophita/HomePage/trophy.png';
@@ -91,6 +91,27 @@ const LiveComments = ({ matchData }) => {
       </div>
     </div>
   );
+};
+
+// Leader Stats Component
+const LeaderStats = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+ 
+
+   // Auto-navigate to TournamentStats on component mount
+  useEffect(() => {
+    navigate('/TournamentStats', { 
+      state: { 
+        tournamentName: location.state?.tournamentName, 
+        tournamentId: location.state?.tournamentId, 
+        information: location.state?.information,
+        selectedTeams: location.state?.selectedTeams || []
+      } 
+    });
+  }, [navigate, location.state]);
+
+  return null;
 };
 
 const IPLCards = ({ setActiveTab }) => {
@@ -358,7 +379,7 @@ const WormGraph = ({ matchData }) => {
         />
         <YAxis
           stroke="#cbd5e0"
-          label={{ value: 'Runs', position: 'insideLeft', angle: -90, fill: '#fff' }}
+          label={{ value: 'Runs', position: 'insideLeft', angle: -90, fill: 'white' }}
         />
         <Tooltip
           contentStyle={{ backgroundColor: '#374151', color: '#fff' }}
@@ -711,8 +732,11 @@ const FixtureGenerator = () => {
       case 'Match Analytics':
         setActiveTab('Highlights');
         break;
-        case 'Live Comments':
+      case 'Live Comments':
         setActiveTab('Match Analytics');
+        break;
+      case 'Leader Stats':
+        setActiveTab('Live Comments');
         break;
       default:
         navigate(-1);
@@ -729,7 +753,7 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
-const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics', 'Live Comments'];
+  const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics', 'Live Comments', 'Leader Stats'];
 
   return (
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">
@@ -740,7 +764,7 @@ const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Ma
               <motion.img
                 src={logo}
                 alt="Cricklytics Logo"
-                   className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
+                className="w-20 h-20 sm:w-25 sm:h-25 object-cover select-none"
                 whileHover={{ scale: 1.05 }}
               />
               <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>
@@ -955,53 +979,50 @@ const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Ma
             </motion.div>
           )}
 
-         {activeTab === 'Match Analytics' && (
-  <div className="rounded-lg p-6 text-white">
-    <div className="flex border-b border-gray-700 mb-6">
-      <button
-        className={`py-2 px-4 mr-2 ${
-          activeAnalyticsTab === 'scorecard'
-            ? 'border-b-2 border-blue-600 font-semibold'
-            : 'text-blue-400'
-        }`}
-        onClick={() => setActiveAnalyticsTab('scorecard')}
-      >
-        Scorecard
-      </button>
-      <button
-        className={`py-2 px-4 mr-2 ${
-          activeAnalyticsTab === 'liveComments'
-            ? 'border-b-2 border-blue-600 font-semibold'
-            : 'text-blue-400'
-        }`}
-        onClick={() => setActiveAnalyticsTab('liveComments')}
-      >
-        Live Comments
-      </button>
+          {activeTab === 'Match Analytics' && (
+            <div className="rounded-lg p-6 text-white">
+              <div className="flex border-b border-gray-700 mb-6">
+                <button
+                  className={`py-2 px-4 mr-2 ${
+                    activeAnalyticsTab === 'scorecard'
+                      ? 'border-b-2 border-blue-600 font-semibold'
+                      : 'text-blue-400'
+                  }`}
+                  onClick={() => setActiveAnalyticsTab('scorecard')}
+                >
+                  Scorecard
+                </button>
+               
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {activeAnalyticsTab === 'scorecard' && (
+                  <>
+                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                      <h3 className="text-lg font-semibold mb-4">Worm Graph</h3>
+                      <WormGraph matchData={matchData} />
+                    </div>
+                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                      <h3 className="text-lg font-semibold mb-4">Scorecard</h3>
+                      <Scorecard matchData={matchData} />
+                    </div>
+                  </>
+                )}
+                {activeAnalyticsTab === 'liveComments' && (
+                  <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                    <LiveComments matchData={matchData} />
+                  </div>
+                )}
+                   
+
+              </div>
+            </div>
+          )}
+
+           {activeTab === 'Leader Stats' && (
+    <div className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
+      <LeaderStats />
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {activeAnalyticsTab === 'scorecard' && (
-        <>
-          <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-            <h3 className="text-lg font-semibold mb-4">Worm Graph</h3>
-            <WormGraph matchData={matchData} />
-          </div>
-          <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-            <h3 className="text-lg font-semibold mb-4">Scorecard</h3>
-            <Scorecard matchData={matchData} />
-          </div>
-        </>
-      )}
-      {activeAnalyticsTab === 'liveComments' && (
-        <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-          <LiveComments matchData={matchData} />
-        </div>
-      )}
-    </div>
-  </div>
-)}
-              
-                 
+  )}
         </main>
       )}
     </div>

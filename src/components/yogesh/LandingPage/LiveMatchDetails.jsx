@@ -326,13 +326,7 @@ const MatchDetails = () => {
         </div>
       </div>
 
-      {/* AI Match Companion Modal (for expanded view) */}
-      <AIMatchCompanionModal
-        isOpen={isModalOpen}
-        onClose={handleClose}
-        tournamentId={tournamentId}
-        expanded={true}
-      />
+      
 
       <style jsx>{`
         .pulse-animation {
