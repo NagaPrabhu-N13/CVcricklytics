@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 // import { LockKeyholeIcon } from "lucide-react";
 import { auth, db } from "../../../firebase";
-import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaPlus } from "react-icons/fa";
@@ -1647,6 +1647,70 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   const [playerId, setPlayerId] = useState('');
   const [displayedProfile, setDisplayedProfile] = useState(userProfile || {});
 
+  // Function to generate unique player ID (moved from AddPlayer)
+  const generateUniquePlayerId = async () => {
+    const playersCollectionRef = collection(db, 'PlayerDetails');
+    const snapshot = await getDocs(playersCollectionRef);
+    const existingIds = snapshot.docs.map(doc => doc.data().playerId).filter(id => id);
+
+    let newId;
+    do {
+      newId = Math.floor(100000 + Math.random() * 900000);
+    } while (existingIds.includes(newId));
+
+
+    return newId;
+  };
+
+// Replace both useEffect hooks with this single one
+useEffect(() => {
+  const checkAndGeneratePlayerId = async () => {
+    if (!userProfile?.uid) return;
+    
+    try {
+      const q = query(collection(db, 'PlayerDetails'), where('userId', '==', userProfile.uid));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // User already has a player ID
+        querySnapshot.forEach((doc) => {
+          if (doc.data().playerId) {
+            setHasPlayerId(true);
+            setPlayerId(doc.data().playerId);
+          }
+        });
+      } else {
+        // User doesn't have a player ID, generate one
+        const newPlayerId = await generateUniquePlayerId();
+        
+        // Create basic player document
+        await setDoc(doc(db, "PlayerDetails", newPlayerId.toString()), {
+          playerId: newPlayerId,
+          userId: userProfile.uid,
+          name: userProfile.firstName || userProfile.userName || "User",
+          createdAt: new Date(),
+          // Add other default fields as needed
+        });
+        
+        // Update user profile with player ID
+        await updateDoc(doc(db, "users", userProfile.uid), {
+          playerId: newPlayerId.toString()
+        });
+        
+        setHasPlayerId(true);
+        setPlayerId(newPlayerId.toString());
+      }
+    } catch (err) {
+      console.error("Error checking/generating player details:", err);
+      setHasPlayerId(false);
+      setPlayerId('');
+    }
+  };
+
+  checkAndGeneratePlayerId();
+}, [userProfile]);
+
+
   useEffect(() => {
     const checkPlayerDetails = async () => {
       if (userProfile?.uid) {
@@ -1805,7 +1869,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
             <FaTimes />
           </button>
 
-          {/* Profile Section */}
+                   {/* Profile Section */}
          <div className="text-center py-4 px-4 mt-6 text-black">
           <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
             {displayedProfile?.profileImageUrl ? (
@@ -1840,14 +1904,34 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   <p className="text-xs md:text-sm opacity-80">{displayedProfile?.whatsapp || "No phone"}</p>
   {/* Show player ID if exists, otherwise show plus icon */}
   {hasPlayerId ? (
-    <p className="text-xs md:text-sm opacity-80 mt-1">Player ID: {playerId}</p>
-  ) : (
-    <div className="flex items-center justify-center gap-1 mt-1">
-    <span className="text-xs md:text-sm opacity-80"  onClick={() => navigate('/addplayer')}>About</span>
-      <FaPencilAlt className="text-black text-sm cursor-pointer"  onClick={() => navigate('/addplayer')}/>
-    </div>
-  )}
+  <div className="flex items-center justify-center gap-1 mt-1">
+    <span className="text-xs md:text-sm opacity-80">Player ID: {playerId}</span>
+    <FaPencilAlt 
+      className="text-black text-sm cursor-pointer" 
+      onClick={() => navigate('/addplayer', { 
+        state: { 
+          playerId: playerId,
+          userProfile: displayedProfile 
+        } 
+      })}
+    />
+  </div>
+) : (
+  <div className="flex items-center justify-center gap-1 mt-1">
+    <span className="text-xs md:text-sm opacity-80">About</span>
+    <FaPencilAlt 
+      className="text-black text-sm cursor-pointer" 
+      onClick={() => navigate('/addplayer', { 
+        state: { 
+          playerId: playerId,
+          userProfile: displayedProfile 
+        } 
+      })}
+    />
+  </div>
+)}
 </div>
+
 
           {/* Menu Items */}
           <ul className="list-none p-0 mt-4 text-black">

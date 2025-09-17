@@ -120,20 +120,24 @@ const AddPlayer = ({ onClose }) => {
   }, []);
 
   // Generate playerId when the modal mounts
-  useEffect(() => {
-    const setPlayerId = async () => {
-      // If user already has a player ID, use that
-      if (userProfile?.playerId) {
-        setPlayerFormData(prev => ({ ...prev, playerId: userProfile.playerId }));
-      } else {
-        // Otherwise generate a new one
-        const newId = await generateUniquePlayerId();
-        setPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
-      }
-    };
-    setPlayerId();
-  }, [userProfile]);
-
+// In AddPlayer.jsx, update the useEffect to handle the passed playerId
+useEffect(() => {
+  const setPlayerId = async () => {
+    // Check if we received a playerId from navigation state
+    if (location.state?.playerId) {
+      setPlayerFormData(prev => ({ ...prev, playerId: location.state.playerId }));
+    } 
+    // If user already has a player ID, use that
+    else if (userProfile?.playerId) {
+      setPlayerFormData(prev => ({ ...prev, playerId: userProfile.playerId }));
+    } else {
+      // Otherwise generate a new one
+      const newId = await generateUniquePlayerId();
+      setPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
+    }
+  };
+  setPlayerId();
+}, [userProfile, location.state]);
   const handlePlayerChange = (e) => {
     const { name, value } = e.target;
     setPlayerFormData(prev => ({ ...prev, [name]: value }));
