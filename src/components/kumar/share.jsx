@@ -13,6 +13,7 @@ const TournamentPage = () => {
   const [step, setStep] = useState('menu');
   const [clubs, setClubs] = useState([]);
   const [clubsTeams, setClubsTeams] = useState({}); // Map: clubName -> array of teams
+  const [allTeams, setAllTeams] = useState([]); // Flat list of all teams with clubName
   const [sharedLink, setSharedLink] = useState('');
   const [showTeamCards, setShowTeamCards] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState([]);
@@ -27,6 +28,8 @@ const TournamentPage = () => {
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [noOfTeams, setNoOfTeams] = useState(location.state?.noOfTeams || 0);
   const [tournamentId, setTournamentId] = useState(null);  // New state to store the Firestore doc ID
+  const [searchTerm, setSearchTerm] = useState(''); // State for search term
+  const [showDropdown, setShowDropdown] = useState(false); // State to control dropdown visibility
 
   // Log tournamentName for debugging
   console.log('Received tournamentName:', tournamentName);
@@ -85,6 +88,15 @@ const TournamentPage = () => {
           })
         );
         setClubsTeams(teamsMap);
+
+        // Flatten teams for search
+        const teams = [];
+        Object.keys(teamsMap).forEach((clubName) => {
+          teamsMap[clubName].forEach((team) => {
+            teams.push({ teamName: team.teamName, clubName });
+          });
+        });
+        setAllTeams(teams);
       } catch (err) {
         console.error("Error fetching clubs and teams: ", err);
         setError("Failed to load clubs and teams. Please try again.");
@@ -98,7 +110,7 @@ const TournamentPage = () => {
     }
   }, [showTeamCards]);
 
-  // New function to update selectedTeams in Firestore
+  // New function to update selectedTeams and selectedClubs in Firestore
   const handleUpdateTeams = async () => {
     if (!tournamentId) {
       console.error('No tournament ID available for update.');
@@ -107,12 +119,16 @@ const TournamentPage = () => {
 
     try {
       const tournamentRef = doc(db, 'tournament', tournamentId);
+      const teams = selectedTeams.map(t => t.teamName);
+      const clubs = [...new Set(selectedTeams.map(t => t.clubName))];
       await updateDoc(tournamentRef, {
-        selectedTeams: selectedTeams,  // Store as an array in the tournament doc
+        selectedTeams: teams,  // Store as an array in the tournament doc
+        selectedClubs: clubs  // Store as a separate array in the tournament doc
       });
-      console.log('Selected teams updated in Firestore:', selectedTeams);
+      console.log('Selected teams updated in Firestore:', teams);
+      console.log('Selected clubs updated in Firestore:', clubs);
     } catch (err) {
-      console.error('Error updating selected teams:', err);
+      console.error('Error updating selected teams and clubs:', err);
       // Optionally, set an error state here to show in UI
     }
   };
@@ -121,10 +137,12 @@ const TournamentPage = () => {
     setShowTeamCards(true);
   };
 
-  const handleTeamSelect = (teamName) => {
-    if (!selectedTeams.includes(teamName)) {
+  const handleTeamSelect = (teamName, clubName) => {
+    if (!selectedTeams.some(team => team.teamName === teamName)) {
       if (selectedTeams.length < noOfTeams) {
-        setSelectedTeams([...selectedTeams, teamName]);
+        setSelectedTeams([...selectedTeams, { teamName, clubName }]);
+        setSearchTerm('');
+        setShowDropdown(false);
       } else {
         alert(`You cannot select more than ${noOfTeams} teams!`);
       }
@@ -133,7 +151,7 @@ const TournamentPage = () => {
 
   const handleDeleteTeam = (e, teamName) => {
     e.preventDefault();
-    setSelectedTeams(selectedTeams.filter((team) => team !== teamName));
+    setSelectedTeams(selectedTeams.filter((team) => team.teamName !== teamName));
   };
 
   const handleShare = () => {
@@ -150,7 +168,7 @@ const TournamentPage = () => {
     if (selectedTeams.length < noOfTeams) {
       setAcceptedTeams([...acceptedTeams, team]);
       setPendingTeams(pendingTeams.filter((t) => t.id !== team.id));
-      setSelectedTeams([...selectedTeams, team.name]);
+      setSelectedTeams([...selectedTeams, { teamName: team.name, clubName: 'Pending' }]); // Use a placeholder clubName for pending teams
     } else {
       alert(`You cannot accept more than ${noOfTeams} teams!`);
     }
@@ -164,6 +182,7 @@ const TournamentPage = () => {
     setSelectedTeams([]);
     setClubs([]);
     setClubsTeams({});
+    setAllTeams([]);
     setShowTeamCards(false);
   };
 
@@ -202,6 +221,10 @@ const TournamentPage = () => {
         navigate('/tournamentSuccess');
       }
     }
+  };
+
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
   };
 
   return (
@@ -291,12 +314,12 @@ const TournamentPage = () => {
               </button>
               <h2 className="text-xl md:text-2xl font-semibold mb-1 text-center">Team List</h2>
               <ul className="w-full space-y-2 mb-4">
-                {selectedTeams.map((teamName, index) => (
+                {selectedTeams.map((team, index) => (
                   <li key={index} className="flex justify-between items-center bg-white/10 px-4 py-2 rounded text-sm md:text-base">
-                    <span>{teamName}</span>
+                    <span>{team.teamName} ({team.clubName})</span>
                     <button
                       type="button"
-                      onClick={(e) => handleDeleteTeam(e, teamName)}
+                      onClick={(e) => handleDeleteTeam(e, team.teamName)}
                       className="bg-red-500 px-2 py-1 rounded hover:bg-red-600 text-xs md:text-sm"
                     >
                       Delete
@@ -320,35 +343,38 @@ const TournamentPage = () => {
                   {loadingClubs && <p>Loading clubs...</p>}
                   {error && <p className="text-red-500">{error}</p>}
                   {!loadingClubs && !error && (
-                    <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 mt-4">
-                      {clubs.map((club) => (
-                        <div
-                          key={club.id}
-                          className="flex flex-col items-center bg-blue-900 gap-3 md:gap-5 h-fit hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2"
+                    <div className="w-full mt-4 relative">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search for a team..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full p-2 rounded bg-gray-700 text-white text-sm md:text-base pr-8"
+                        />
+                        <span
+                          onClick={toggleDropdown}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer text-white"
                         >
-                          <img src={club.logo || frd1} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={club.name} />
-                          <div className="w-full h-fit">
-                            <h1 className="text-sm md:text-lg font-bold text-center">{club.name}</h1>
-                          </div>
-                          <select
-                            className="w-full p-2 rounded bg-gray-700 text-white text-sm md:text-base"
-                            onChange={(e) => {
-                              const selectedTeamName = e.target.value;
-                              if (selectedTeamName) {
-                                handleTeamSelect(selectedTeamName);
-                                e.target.value = ''; // Reset dropdown after selection
-                              }
-                            }}
-                          >
-                            <option value="">Select Team</option>
-                            {(clubsTeams[club.name] || []).map((team) => (
-                              <option key={team.id} value={team.teamName}>
-                                {team.teamName}
-                              </option>
+                          ▼
+                        </span>
+                      </div>
+                      {showDropdown && (
+                        <div className="absolute w-full max-h-60 overflow-y-auto bg-gray-800 rounded-lg z-10 mt-1">
+                          {allTeams
+                            .filter((team) => team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) && !selectedTeams.some(selected => selected.teamName === team.teamName))
+                            .map((team, index) => (
+                              <div
+                                key={index}
+                                onClick={() => handleTeamSelect(team.teamName, team.clubName)}
+                                className="p-2 hover:bg-gray-600 cursor-pointer flex justify-between items-center text-sm md:text-base"
+                              >
+                                <span>{team.teamName}</span>
+                                <span>{team.clubName}</span>
+                              </div>
                             ))}
-                          </select>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                   <div className="flex justify-center w-full gap-4 mt-20">

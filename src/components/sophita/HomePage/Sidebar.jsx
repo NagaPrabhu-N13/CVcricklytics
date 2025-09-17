@@ -10,12 +10,11 @@ import {
 } from "react-icons/fa";
 // import { LockKeyholeIcon } from "lucide-react";
 import { auth, db } from "../../../firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaPlus } from "react-icons/fa";
 import { collection, query, where, getDocs } from "firebase/firestore";
-
 
 const hexToRgb = (hex) => {
   hex = hex.replace('#', '');
@@ -643,7 +642,7 @@ const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
           </p>
         </div>
       )}
-
+      
       <div 
         className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
         onClick={() => setShowSecurityChecks(!showSecurityChecks)}
@@ -798,7 +797,6 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
           <button onClick={() => setIsEditingName(true)} className="ml-2 text-blue-600">Edit</button>
         )}
       </div>
-
       <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
         <FaEnvelope style={getIconStyle()} />
         <span>Email: {userProfile?.email || "No email"}</span>
@@ -1512,7 +1510,6 @@ const AccountSettingsContent = ({
           </div>
         </div>
       )}
-
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
         onClick={() => setActiveSection(activeSection === "passwordSecurity" ? "" : "passwordSecurity")}
@@ -1583,7 +1580,6 @@ const AccountSettingsContent = ({
       {activeSection === "hideStories" && (
         <HideStoriesContent selectedColor={selectedColor} isMobileView={isMobileView} />
       )}
-
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
         onClick={() => setActiveSection(activeSection === "restrictedAccounts" ? "" : "restrictedAccounts")}
@@ -1649,36 +1645,37 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   ];
   const [hasPlayerId, setHasPlayerId] = useState(false);
   const [playerId, setPlayerId] = useState('');
+  const [displayedProfile, setDisplayedProfile] = useState(userProfile || {});
 
   useEffect(() => {
-  const checkPlayerDetails = async () => {
-    if (userProfile?.uid) {
-      try {
-        const q = query(collection(db, 'PlayerDetails'), where('userId', '==', userProfile.uid));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          querySnapshot.forEach((doc) => {
-            if (doc.data().playerId) {
-              setHasPlayerId(true);
-              setPlayerId(doc.data().playerId);
-              return;
-            }
-          });
-        } else {
+    const checkPlayerDetails = async () => {
+      if (userProfile?.uid) {
+        try {
+          const q = query(collection(db, 'PlayerDetails'), where('userId', '==', userProfile.uid));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            querySnapshot.forEach((doc) => {
+              if (doc.data().playerId) {
+                setHasPlayerId(true);
+                setPlayerId(doc.data().playerId);
+                return;
+              }
+            });
+          } else {
+            setHasPlayerId(false);
+            setPlayerId('');
+          }
+        } catch (err) {
+          console.error("Error checking player details:", err);
           setHasPlayerId(false);
           setPlayerId('');
         }
-      } catch (err) {
-        console.error("Error checking player details:", err);
-        setHasPlayerId(false);
-        setPlayerId('');
       }
-    }
-  };
+    };
 
-  checkPlayerDetails();
-}, [userProfile]);
+    checkPlayerDetails();
+  }, [userProfile]);
 
   useEffect(() => {
     const checkMobileView = () => setIsMobileView(window.innerWidth < MD_BREAKPOINT);
@@ -1708,8 +1705,32 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
       setSelectedColor(userProfile.themeColor || "#5DE0E6");
       setAccountType(userProfile.accountType || "public");
       setAccountSettingsBg(`rgba(${hexToRgb(userProfile.themeColor || "#5DE0E6")}, 0.2)`);
+      setDisplayedProfile(userProfile);
     }
   }, [userProfile]);
+
+  // Real-time listener for user profile updates
+  useEffect(() => {
+    if (!auth.currentUser?.uid) return;
+
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setDisplayedProfile((prev) => ({
+          ...prev,
+          userName: data.firstName || data.userName || "User", // Assuming userName is alias for firstName
+          email: data.email,
+          whatsapp: data.whatsapp,
+          // Add other fields as needed
+        }));
+      }
+    }, (err) => {
+      console.error("Error in real-time profile listener:", err);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleColorChange = async (color) => {
     setSelectedColor(color);
@@ -1787,15 +1808,15 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
           {/* Profile Section */}
          <div className="text-center py-4 px-4 mt-6 text-black">
           <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
-            {userProfile?.profileImageUrl ? (
+            {displayedProfile?.profileImageUrl ? (
               <img
-                src={userProfile.profileImageUrl}
+                src={displayedProfile.profileImageUrl}
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover border-2 border-black"
               />
             ) : (
               <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-                {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
+                {displayedProfile?.userName ? displayedProfile.userName.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
 
@@ -1812,12 +1833,11 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
 
   <div className="flex items-center justify-center gap-2">
     <h6 className="text-base md:text-lg font-bold">
-      {userProfile?.userName || "User"}
+      {displayedProfile?.userName || "User"}
     </h6>
   </div>
-  <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
-  <p className="text-xs md:text-sm opacity-80">{userProfile?.whatsapp || "No phone"}</p>
-
+  <p className="text-xs md:text-sm opacity-80 mt-1">{displayedProfile?.email || "No email"}</p>
+  <p className="text-xs md:text-sm opacity-80">{displayedProfile?.whatsapp || "No phone"}</p>
   {/* Show player ID if exists, otherwise show plus icon */}
   {hasPlayerId ? (
     <p className="text-xs md:text-sm opacity-80 mt-1">Player ID: {playerId}</p>
@@ -1959,14 +1979,13 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
                     colors={colors}
                     handleColorChange={handleColorChange}
                     isMobileView={isMobileView}
-                    userProfile={userProfile}
-                    navigate={navigate} // Add this line
+                    userProfile={displayedProfile}
+                    navigate={navigate} // Updated to use displayedProfile
                   />
                 </div>
               </div>
             )}
           </ul>
-
           <button 
             className="w-[calc(100%-32px)] mx-4 my-4 py-2 md:py-3 bg-black text-white flex items-center justify-center gap-2 rounded-lg hover:bg-[#d32f2f] transition-all duration-300"
             onClick={handleSignOut}
@@ -2008,8 +2027,8 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
             colors={colors}
             handleColorChange={handleColorChange}
             isMobileView={isMobileView}
-            userProfile={userProfile}
-            navigate={navigate} // Add this line
+            userProfile={displayedProfile}
+            navigate={navigate} // Updated to use displayedProfile
           />
         </div>
       )}
@@ -2025,4 +2044,4 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

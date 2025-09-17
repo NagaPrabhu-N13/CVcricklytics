@@ -908,9 +908,9 @@ for (const mention of mentionsArray) {
                 {mediaPreview && (
                   <div className="relative w-full aspect-video overflow-hidden rounded-lg">
                     {mediaType === 'video' ? (
-                      <video src={mediaPreview} controls className="w-full h-full object-cover" />
+                      <video src={mediaPreview} controls className="w-full h-full object-contain" />
                     ) : (
-                      <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={mediaPreview} alt="Preview" className="w-full h-full object-contain" />
                     )}
                   </div>
                 )}
@@ -973,7 +973,7 @@ for (const mention of mentionsArray) {
                         <img
                           src={userStories[currentStoryIndex].mediaUrl}
                           alt="Story"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                       ) : (
                         <video
@@ -984,7 +984,7 @@ for (const mention of mentionsArray) {
                             setCurrentStoryIndex(nextIndex);
                             if (nextIndex === 0) setProfileStoryVisible(false); // Close after full cycle
                           }}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                       )}
                       {/* Navigation Arrows */}
@@ -1259,13 +1259,13 @@ for (const mention of mentionsArray) {
               <img
                 src={item.mediaUrl}
                 alt="Highlight"
-                className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+                className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
               />
               ) : (
                 <video
                   src={item.mediaUrl}
                   controls
-                  className="absolute top-0 left-0 w-full h-full object-cover brightness-125"
+                  className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
                 />
               )}
               </div>
@@ -1450,18 +1450,18 @@ for (const mention of mentionsArray) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {reelsData.map(reel => (
                     <div key={reel.id} className="bg-[#0D171E] rounded-xl overflow-hidden shadow-lg">
-                      <div className="relative pt-[177.78%]">
+                      <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl md:rounded-t-3xl">
                         {reel.type === 'image' ? (
                           <img
                             src={reel.mediaUrl}
                             alt="Reel"
-                            className="absolute top-0 left-0 w-full h-full object-cover"
+                            className="absolute top-0 left-0 w-full h-full object-contain"
                           />
                         ) : (
                           <video
                             src={reel.mediaUrl}
                             controls
-                            className="absolute top-0 left-0 w-full h-full object-cover"
+                            className="absolute top-0 left-0 w-full h-full object-contain"
                           />
                         )}
                       </div>

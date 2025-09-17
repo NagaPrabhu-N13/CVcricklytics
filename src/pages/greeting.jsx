@@ -24,11 +24,15 @@ function Greeting() {
 
     // Play coin sound on page load
     const playCoinSound = async () => {
+      try {
         await spinAudio.play();
         console.log("✅ Coin sound playing...");
+      } catch (err) {
+        console.warn("⚠️ Coin sound play interrupted:", err.message);
+      }
     };
 
-    // Play welcome audio after 6 seconds
+    // Play welcome audio after 3 seconds
     const playWelcomeAudio = async () => {
       try {
         const q = query(collection(db, "users"), where("firstName", "==", userName));
@@ -70,15 +74,21 @@ function Greeting() {
     // Sequence:
     playCoinSound();
 
+    // Set flip complete after 3s (assuming this triggers the 'flipped' class)
+    const flipTimer = setTimeout(() => {
+      setFlipComplete(true);
+    }, 3000);
+
     const welcomeDelay = setTimeout(() => {
       playWelcomeAudio();
-    }, 3000); // 2s delay
+    }, 3000); // 3s delay
 
     const redirectDelay = setTimeout(() => {
       navigate("/landingpage");
-    }, 9000); // Total ~13.5s = 6s + ~7s voice message
+    }, 9000); // Increased to 12s to allow ~7s welcome audio + buffer
 
     return () => {
+      clearTimeout(flipTimer);
       clearTimeout(welcomeDelay);
       clearTimeout(redirectDelay);
       spinAudio.pause();
