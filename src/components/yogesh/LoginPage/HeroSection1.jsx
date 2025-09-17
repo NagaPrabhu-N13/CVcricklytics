@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import banner from '../../../assets/yogesh/login/landing_img.png'; // Make sure this path is correct
 
 const HeroSection1 = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const HeroSection1 = () => {
       bgGradient: "bg-gradient-to-br from-blue-50 to-indigo-100",
       headerBg: "bg-gradient-to-r from-blue-500 to-indigo-600",
       textColor: "text-gray-800",
-      closeColor: "text-black hover:text-gray-800" // Changed to black
+      closeColor: "text-black hover:text-gray-800"
     },
     privacy: {
       title: "Privacy Policy",
@@ -21,7 +22,7 @@ const HeroSection1 = () => {
       bgGradient: "bg-gradient-to-br from-blue-50 to-indigo-100",
       headerBg: "bg-gradient-to-r from-blue-500 to-indigo-600",
       textColor: "text-gray-800",
-      closeColor: "text-black hover:text-gray-800" // Changed to black
+      closeColor: "text-black hover:text-gray-800"
     },
     refunds: {
       title: "Refund & Cancellation Policy",
@@ -29,7 +30,7 @@ const HeroSection1 = () => {
       bgGradient: "bg-gradient-to-br from-blue-50 to-indigo-100",
       headerBg: "bg-gradient-to-r from-blue-500 to-indigo-600",
       textColor: "text-gray-800",
-      closeColor: "text-black hover:text-gray-800" // Changed to black
+      closeColor: "text-black hover:text-gray-800"
     },
     contact: {
       title: "Contact Us",
@@ -37,7 +38,7 @@ const HeroSection1 = () => {
       bgGradient: "bg-gradient-to-br from-blue-50 to-indigo-100",
       headerBg: "bg-gradient-to-r from-blue-500 to-indigo-600",
       textColor: "text-gray-800",
-      closeColor: "text-black hover:text-gray-800" // Changed to black
+      closeColor: "text-black hover:text-gray-800"
     }
   };
 
@@ -99,7 +100,7 @@ const HeroSection1 = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
         >
-          <img src="https://via.placeholder.com/500x400/0a1f44/ffffff?text=Cricket+Image" alt="Cricket Theme" className="max-w-xs md:max-w-md drop-shadow-2xl" />
+          <img src={banner} alt="Cricket Theme" className="max-w-xs md:max-w-md drop-shadow-2xl" />
         </motion.div>
       </div>
 
@@ -139,9 +140,7 @@ const HeroSection1 = () => {
                   {policies[activePopup].content}
                 </div>
                 
-                <div className="mt-6 flex justify-end">
-                  
-                </div>
+                
               </div>
             </motion.div>
           </motion.div>
