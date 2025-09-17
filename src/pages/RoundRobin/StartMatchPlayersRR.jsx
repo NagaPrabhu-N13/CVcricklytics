@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Component } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { runTransaction } from "firebase/firestore";
 import HeaderComponent from '../../components/kumar/startMatchHeader';
 import backButton from '../../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -108,6 +109,174 @@ async function updatePlayerBowlingAverage(playerName, db) {
     console.error("Error updating bowling average:", error);
   }
 }
+
+async function initializeTournamentStats(tournamentId, matchId, allPlayers, db) {
+  try {
+    const matchStatsRef = doc(db, "tournamentStats", tournamentId, "matches", matchId);
+    const matchDoc = await getDoc(matchStatsRef); // Check if document exists
+
+    if (matchDoc.exists()) {
+      console.log(`Tournament stats for match ${matchId} already initialized. Skipping reset.`);
+      return; // Exit if already exists to avoid overwriting
+    }
+
+    // Proceed with initialization only if it doesn't exist
+    const defaultPlayerStats = allPlayers.map(player => ({
+      playerName: player.name,
+      playerIndex: player.index || "unknown", // Or unique ID
+      runs: 0,
+      wickets: 0,
+      catches: 0,
+      runOuts: 0,
+      stumpings: 0,
+      dismissals: 0,
+      ballsFaced: 0,
+      ballsBowled: 0,
+      runsConceded: 0,
+      battingAverage: 0,
+      bowlingAverage: 0,
+      strikeRate: 0,
+      // Add more if needed, e.g., fours: 0, sixes: 0
+    }));
+
+    await setDoc(matchStatsRef, { players: defaultPlayerStats });
+    console.log(`Initialized tournament stats for match ${matchId} in tournament ${tournamentId}`);
+  } catch (error) {
+    console.error("Error initializing tournament stats:", error);
+  }
+}
+
+async function updateTournamentBatting(tournamentId, matchId, playerName, rawUpdates, db) {
+  const matchStatsRef = doc(db, "tournamentStats", tournamentId, "matches", matchId);
+  
+  try {
+    await runTransaction(db, async (transaction) => {
+      const matchDoc = await transaction.get(matchStatsRef);
+      if (!matchDoc.exists()) {
+        throw new Error("Match stats not found for update.");
+      }
+      
+      const data = matchDoc.data();
+      const updatedPlayers = data.players.map(p => {
+        if (p.playerName === playerName) {
+          const incremented = { ...p };
+          // Increment raw stats
+          Object.entries(rawUpdates).forEach(([key, valueToAdd]) => {
+            incremented[key] = (incremented[key] || 0) + valueToAdd;
+          });
+          // Compute derived stats based on updated values
+          const battingAverage = incremented.dismissals > 0 ? (incremented.runs / incremented.dismissals).toFixed(2) : 0;
+          const strikeRate = incremented.ballsFaced > 0 ? ((incremented.runs / incremented.ballsFaced) * 100).toFixed(2) : 0;
+          return { ...incremented, battingAverage, strikeRate };
+        }
+        return p;
+      });
+      
+      transaction.update(matchStatsRef, { players: updatedPlayers });
+    });
+    console.log(`Atomically updated batting stats for ${playerName} in match ${matchId}`);
+  } catch (error) {
+    console.error("Transaction failed:", error);
+  }
+}
+
+async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpdates, db) {
+  const matchStatsRef = doc(db, 'tournamentStats', tournamentId, 'matches', matchId);
+  
+  try {
+    await runTransaction(db, async (transaction) => {
+      const matchDoc = await transaction.get(matchStatsRef);
+      
+      let updatedPlayers = [];
+      
+      if (!matchDoc.exists()) {
+        // If document doesn't exist, initialize it with default players (adapt from your initialize function)
+        const allPlayers = []; // Fetch or pass allPlayers here (e.g., from component state or a query)
+        // Replace with actual allPlayers data; this is a placeholder
+        const defaultPlayerStats = allPlayers.map(player => ({
+          playerName: player.name,
+          playerIndex: player.index || "unknown", // Or unique ID
+          runs: 0,
+          wickets: 0,
+          catches: 0,
+          runOuts: 0,
+          stumpings: 0,
+          dismissals: 0,
+          ballsFaced: 0,
+          ballsBowled: 0,
+          runsConceded: 0,
+          battingAverage: 0,
+          bowlingAverage: 0,
+          strikeRate: 0,
+          // Add more if needed, e.g., fours: 0, sixes: 0
+        }));
+        
+        // Create the document in the transaction
+        transaction.set(matchStatsRef, { players: defaultPlayerStats });
+        updatedPlayers = defaultPlayerStats;
+        console.log(`Initialized match stats for ${matchId} during update.`);
+      } else {
+        const data = matchDoc.data();
+        updatedPlayers = data.players;
+      }
+      
+      // Now proceed with the update logic
+      updatedPlayers = updatedPlayers.map(p => {
+        if (p.playerName === playerName) {
+          const incremented = { ...p };
+          // Increment raw stats
+          Object.entries(rawUpdates).forEach(([key, valueToAdd]) => {
+            incremented[key] = (incremented[key] || 0) + valueToAdd;
+          });
+          
+          // Compute derived stats based on updated values
+          const bowlingAverage = incremented.wickets > 0 ? (incremented.runsConceded / incremented.wickets).toFixed(2) : 0;
+          
+          return { ...incremented, bowlingAverage };
+        }
+        return p;
+      });
+      
+      transaction.set(matchStatsRef, { players: updatedPlayers }, { merge: true }); // Use set with merge to update
+    });
+    
+    console.log(`Atomically updated bowling stats for ${playerName} in match ${matchId}`);
+  } catch (error) {
+    console.error("Transaction failed:", error);
+  }
+}
+
+
+async function updateTournamentFielding(tournamentId, matchId, playerName, rawUpdates, db) {
+  // Simple update for fielding (no computations needed)
+  try {
+    const matchStatsRef = doc(db, "tournamentStats", tournamentId, "matches", matchId);
+    const matchDoc = await getDoc(matchStatsRef);
+    if (matchDoc.exists()) {
+      const data = matchDoc.data();
+      const updatedPlayers = data.players.map(p => {
+        if (p.playerName === playerName) {
+          const incremented = { ...p };
+          Object.entries(rawUpdates).forEach(([key, valueToAdd]) => {
+            incremented[key] = (incremented[key] || 0) + valueToAdd;
+          });
+          return incremented;
+        }
+        return p;
+      });
+      await updateDoc(matchStatsRef, { players: updatedPlayers });
+      console.log(`Updated fielding stats for ${playerName} in match ${matchId}`);
+    } else {
+      console.error("Match stats not found for update.");
+    }
+  } catch (error) {
+    console.error("Error updating fielding stats:", error);
+  }
+}
+
+
+
+
 function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -305,6 +474,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setBowlerStats({});
     setWicketOvers([]);
     setRetiredHurtPlayers([]);
+
+    const allPlayers = [...selectedPlayersFromProps.left, ...selectedPlayersFromProps.right];
+    initializeTournamentStats(tournamentId, matchId, allPlayers, db);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase, tossWinner, tossDecision]);
 
   const displayModal = (title, message) => {
@@ -369,6 +541,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.batting.runs": runs
       };
       await updatePlayerCareerStats(player.name, statUpdates, db);
+      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, { runs: runs }, db); // Incremental add
     }
   };
 
@@ -439,6 +612,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.batting.notOuts": 0, // Based on logic
         "careerStats.batting.wickets": 0 // If applicable
       };
+      const tournamentUpdates = {
+      runs: runs, // Or accumulate as needed
+      ballsFaced: 1,
+      // e.g., fours: runs === 4 ? 1 : 0,
+      // sixes: runs === 6 ? 1 : 0,
+      };
+      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, tournamentUpdates, db);
+      await updateTournamentBatting(tournamentId, matchId, player.name, tournamentUpdates, db); // Single call now
+ 
+ 
       await updatePlayerCareerStats(player.name, statUpdates, db);
       await updatePlayerBattingAverage(player.name, db); // Update batting average
     }
@@ -470,6 +653,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.bowling.economy": 0, // Recalculate
         "careerStats.bowling.strikeRate": 0 // Recalculate
       };
+      const tournamentUpdates = {
+          wickets: isWicket ? 1 : 0,
+          ballsBowled: isValidBall ? 1 : 0,
+          runsConceded: runsConceded,
+        // runsConceded: runsConceded, // If tracking per match
+      };
+      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, tournamentUpdates, db);
+      await updateTournamentBowling(tournamentId, matchId, player.name, tournamentUpdates, db); // Single call now
+ 
+  
       await updatePlayerCareerStats(player.name, statUpdates, db);
       await updatePlayerBowlingAverage(player.name, db); // Update bowling average
     }
@@ -490,9 +683,24 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       const statUpdates = {
         "careerStats.batting.dismissals": 1 // Increment dismissed count
       };
+      
+      // await updateTournamentPlayerStats(tournamentId, matchId, batsman.name, { dismissals: 1 }, db);
+      await updateTournamentBatting(tournamentId, matchId, batsman.name, { dismissals: 1 }, db); // Handles dismissal and recomputes average/strike
+
       await updatePlayerCareerStats(batsman.name, statUpdates, db);
       await updatePlayerBattingAverage(batsman.name, db); // Update batting average
     }
+    if (involvedPlayer) {
+    let fieldingUpdate = {};
+    if (['Caught', 'Caught Behind', 'Caught Bowled'].includes(dismissalType)) {
+      fieldingUpdate = { catches: 1 };
+    } else if (dismissalType === 'Stumped') {
+      fieldingUpdate = { stumpings: 1 };
+    } else if (dismissalType === 'Run Out') {
+      fieldingUpdate = { runOuts: 1 };
+    }
+    await updateTournamentFielding(tournamentId, matchId, involvedPlayer.name, fieldingUpdate, db); // Separate for fielding
+  }
 
     // Update involved player and bowler stats based on dismissal type
     let isBowlerWicket = false;
