@@ -92,11 +92,9 @@ async function updatePlayerBowlingAverage(playerName, db) {
   try {
     const q = query(collection(db, "PlayerDetails"), where("name", "==", playerName));
     const querySnapshot = await getDocs(q);
-
     if (!querySnapshot.empty) {
       const docRef = querySnapshot.docs[0].ref;
       const playerData = querySnapshot.docs[0].data();
-
       const runsConceded = playerData?.careerStats?.bowling?.runsConceded || 0;
       const wickets = playerData?.careerStats?.bowling?.wickets || 0;
       let bowlingAverage = 0;
@@ -178,6 +176,18 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [selectedCatchType, setSelectedCatchType] = useState('');
   const [selectedInvolvedPlayer, setSelectedInvolvedPlayer] = useState(null);
   const [outRuns, setOutRuns] = useState(null);
+  const [outBatsmanType, setOutBatsmanType] = useState('striker'); // New state for which batsman is out in runout
+  const [nextBatsmanEnd, setNextBatsmanEnd] = useState(null); // New state for which end the new batsman comes to
+
+  // New states for leg by selection
+  const [showLegByModal, setShowLegByModal] = useState(false);
+  const [legByBatsmanType, setLegByBatsmanType] = useState('striker');
+
+  // New states for retired hurt
+  const [retiredHurtPlayers, setRetiredHurtPlayers] = useState([]);
+  const [showRetiredHurtModal, setShowRetiredHurtModal] = useState(false);
+  const [retiredHurtBatsmanType, setRetiredHurtBatsmanType] = useState('striker');
+  const [pendingRetiredHurt, setPendingRetiredHurt] = useState(false);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -198,8 +208,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       const winA = Math.max(0, 100 - (playerScore + outCount * 5));
       const winB = 100 - winA;
       const generatedPrediction = {
-        battingTeam: isChasing ? teamA.name : teamB.name,
-        bowlingTeam: isChasing ? teamB.name : teamA.name,
+        battingTeam: isChasing ? teamB.name : teamA.name,
+        bowlingTeam: isChasing ? teamA.name : teamB.name,
         battingScore: playerScore,
         bowlingScore: targetScore,
         winA,
@@ -216,7 +226,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
 
   const dismissalTypes = ['Caught', 'Bowled', 'LBW', 'Run Out', 'Stumped', 'Caught & Bowled', 'Caught Behind'];
   const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
-
   useEffect(() => {
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
@@ -226,8 +235,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       navigate('/');
       return;
     }
-
-    // Determine initial batting and bowling teams based on toss
+     // Determine initial batting and bowling teams based on toss
     let initialBattingTeam = teamA;
     let initialBowlingTeam = teamB;
     let initialBattingPlayers = selectedPlayersFromProps.left;
@@ -296,6 +304,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
+    setRetiredHurtPlayers([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase, tossWinner, tossDecision]);
 
   const displayModal = (title, message) => {
@@ -414,7 +423,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         }
       };
     });
-
     const player = battingTeamPlayers.find(p => p.index === batsmanIndex);
     if (player) {
       const statUpdates = {
@@ -435,7 +443,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       await updatePlayerBattingAverage(player.name, db); // Update batting average
     }
   };
-
   const updateBowlerStats = async (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0) => {
     let currentBowler = {};
     setBowlerStats(prev => {
@@ -548,14 +555,12 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       setShowAnimation(false);
     }, 3000);
   };
-
   const saveMatchData = async (isFinal = false) => {
     try {
       if (!auth.currentUser) {
         console.error('No authenticated user found.');
         return;
       }
-
       const overs = `${overNumber - 1}.${validBalls}`;
       const battingTeam = isChasing ? teamB : teamA;
       const bowlingTeam = isChasing ? teamA : teamB;
@@ -632,7 +637,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
         },
         firstInnings: firstInningsData || {
-          teamName: teamA?.name || 'Team A',
+          teamName: currentBattingTeam?.name || 'Team A',
           totalScore: playerScore,
           wickets: outCount,
           overs,
@@ -640,7 +645,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           bowlerStats: bowlerStatsArray
         },
         secondInnings: isChasing ? {
-          teamName: teamB?.name || 'Team B',
+          teamName: currentBattingTeam?.name || 'Team B',
           totalScore: playerScore,
           wickets: outCount,
           overs,
@@ -685,7 +690,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       saveMatchData();
       return;
     }
-
     if (pendingNoBall && !isLabel && typeof value === 'number') {
       runsToAdd = value + 1;
       setPlayerScore(prev => prev + runsToAdd);
@@ -707,7 +711,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
       setValidBalls(prev => prev + 1);
       isValidBall = true;
-      if (striker) updateBatsmanBalls(striker.index);
+      const legByBatsmanIndex = legByBatsmanType === 'striker' ? striker.index : nonStriker.index;
+      updateBatsmanBalls(legByBatsmanIndex);
       if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
       if (value % 2 !== 0) {
         const temp = striker;
@@ -715,6 +720,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setNonStriker(temp);
       }
       setPendingLegBy(false);
+      setLegByBatsmanType('striker'); // Reset
       saveMatchData();
       return;
     }
@@ -729,10 +735,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }, 3000);
       return;
     }
+    if (pendingRetiredHurt && !isLabel && typeof value === 'number') {
+      // For retired hurt, perhaps no runs, or handle separately
+      // Assuming retired hurt not associated with runs, but since button is like out, perhaps allow 0 runs or something.
+      // For simplicity, ignore runs for retired hurt or adjust.
+      return; // Placeholder
+    }
     const extraBalls = ['No-ball', 'Wide', 'No ball'];
     const playValue = typeof value === 'string' ? value.charAt(0) : value;
     if (isLabel) {
-      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT') {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT' || value === 'Retired Hurt') {
         setShowRunInfo(true);
       } else {
         setShowRunInfo(false);
@@ -773,10 +785,13 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setPendingNoBall(true);
         return;
       } else if (value === 'Leg By') {
-        setPendingLegBy(true);
+        setShowLegByModal(true); // Open modal for leg by selection
         return;
       } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
         setPendingOut(true);
+        return;
+      } else if (value === 'Retired Hurt') {
+        setShowRetiredHurtModal(true);
         return;
       }
       if (!extraBalls.includes(value)) {
@@ -820,6 +835,34 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     }
   };
 
+  const handleLegByModalSubmit = () => {
+    if (!legByBatsmanType) return;
+    setPendingLegBy(true);
+    setShowLegByModal(false);
+    setShowRunInfo(true);
+  };
+
+  const handleRetiredHurtModalSubmit = () => {
+    if (!retiredHurtBatsmanType) return;
+    const retiredBatsman = retiredHurtBatsmanType === 'striker' ? striker : nonStriker;
+    setRetiredHurtPlayers(prev => [...prev, retiredBatsman]);
+    if (retiredHurtBatsmanType === 'striker') {
+      setStriker(null);
+      setNextBatsmanEnd('striker');
+    } else {
+      setNonStriker(null);
+      setNextBatsmanEnd('non-striker');
+    }
+    setShowRetiredHurtModal(false);
+    setShowBatsmanDropdown(true); // Show dropdown to select replacement
+    // Do NOT increment outCount
+    // Add to over balls something like 'RH'
+    setCurrentOverBalls(prev => [...prev, 'RH']);
+    setTopPlays(prev => [...prev, 'RH']);
+    setValidBalls(prev => prev + 1); // Count as valid ball
+    saveMatchData();
+  };
+
   const handleDismissalModalSubmit = () => {
     if (!selectedDismissalType) {
       return;
@@ -829,6 +872,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     if (['Caught', 'Caught Behind'].includes(selectedDismissalType) && (!selectedCatchType || !selectedInvolvedPlayer)) {
       isValid = false;
     } else if (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType) && !selectedInvolvedPlayer) {
+      isValid = false;
+    } else if (selectedDismissalType === 'Run Out' && !outBatsmanType) {
       isValid = false;
     }
 
@@ -844,17 +889,40 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       displayText += ')';
       setTopPlays(prev => [...prev, displayText]);
       setCurrentOverBalls(prev => [...prev, displayText]);
-      if (striker) {
-        updateBatsmanScore(striker.index, outRuns);
-        updateBatsmanStats(striker.index, outRuns, outRuns === 0);
-        updateBatsmanBalls(striker.index);
-        recordDismissal(striker.index, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
-      }
+
+      // Determine the out batsman based on selection
+      let outBatsman = outBatsmanType === 'striker' ? striker : nonStriker;
+      const batsmanIndex = outBatsman.index;
+
+      updateBatsmanScore(batsmanIndex, outRuns);
+      updateBatsmanStats(batsmanIndex, outRuns, outRuns === 0);
+      updateBatsmanBalls(batsmanIndex);
+      recordDismissal(batsmanIndex, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
       setValidBalls(prev => prev + 1);
 
       // Increment outCount here
       setOutCount(prev => prev + 1);
 
+      let positionToRemove = outBatsmanType;
+
+      // Handle strike change if odd runs on out
+      if (outRuns % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+        // After swap, flip the position to remove
+        positionToRemove = positionToRemove === 'striker' ? 'non-striker' : 'striker';
+      }
+
+      // Remove the out batsman from the correct position
+      if (positionToRemove === 'striker') {
+        setStriker(null);
+      } else {
+        setNonStriker(null);
+      }
+
+      // Set the end for the new batsman
+      setNextBatsmanEnd(positionToRemove);
       // Check if this was the last wicket
       const availableBatsmen = getAvailableBatsmen();
       if (availableBatsmen.length === 0) {
@@ -865,6 +933,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setSelectedCatchType('');
         setSelectedInvolvedPlayer(null);
         setOutRuns(null);
+        setOutBatsmanType('striker');
         // Trigger innings end logic (handled in useEffect)
       } else {
         setShowBatsmanDropdown(true);
@@ -874,6 +943,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setSelectedCatchType('');
         setSelectedInvolvedPlayer(null);
         setOutRuns(null);
+        setOutBatsmanType('striker');
       }
       saveMatchData();
     }, 1000);
@@ -897,7 +967,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     const lastBall = currentOverBalls.pop();
     setCurrentOverBalls([...currentOverBalls]);
     setTopPlays(prev => prev.slice(0, -1));
-
     let runs = 0;
     let isValid = false;
     let isWicket = false;
@@ -1071,20 +1140,17 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
           ctx.fill();
         });
-
         firework.particles = firework.particles.filter(p => p.alpha > 0);
       });
       fireworks = fireworks.filter(f => f.particles.length > 0);
       ctx.globalAlpha = 1;
       requestAnimationFrame(update);
     }
-
     const resize = () => {
       width = canvas.width = canvas.offsetWidth;
       height = canvas.height = canvas.offsetHeight;
     };
     window.addEventListener('resize', resize);
-
     return () => {
       clearInterval(interval);
       window.removeEventListener('resize', resize);
@@ -1217,6 +1283,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setPendingNoBall(false);
     setPendingOut(false);
     setPendingLegBy(false);
+    setPendingRetiredHurt(false);
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
@@ -1225,6 +1292,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setSelectedCatchType('');
     setSelectedInvolvedPlayer(null);
     setOutRuns(null);
+    setRetiredHurtPlayers([]);
   };
   const resetGame = () => {
     resetInnings();
@@ -1296,9 +1364,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setShowBowlerDropdown(false);
     saveMatchData();
   };
-
   const handleBatsmanSelect = (player) => {
-    setStriker(player);
+    // If player is returning from retired hurt, remove from retiredHurtPlayers
+    if (retiredHurtPlayers.some(p => p.index === player.index)) {
+      setRetiredHurtPlayers(prev => prev.filter(p => p.index !== player.index));
+    }
+    if (nextBatsmanEnd === 'striker') {
+      setStriker(player);
+    } else {
+      setNonStriker(player);
+    }
     setSelectedBatsmenIndices(prev => [...prev, player.index]);
     setShowBatsmanDropdown(false);
     setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
@@ -1317,14 +1392,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         milestone: null
       }
     }));
-    // OutCount is now incremented in handleDismissalModalSubmit
+    setNextBatsmanEnd(null);
     saveMatchData();
   };
-
   const getAvailableBatsmen = () => {
-    return battingTeamPlayers.filter(player =>
+    // Include players not yet batted and retired hurt players (if wickets left)
+    const notBatted = battingTeamPlayers.filter(player =>
       !selectedBatsmenIndices.includes(player.index)
     );
+    const availableRetired = (outCount < 9) ? retiredHurtPlayers : [];
+    return [...notBatted, ...availableRetired];
   };
   const cancelStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== striker?.index));
@@ -1477,9 +1554,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         winnerTeamName = teamB.name;
         winningDifference = `${10 - outCount} wickets`;
       }
-
       updateWinnerInFirebase(winnerTeamName);
-
       if (originPage) {
         navigate(originPage, { 
           state: { 
@@ -1603,8 +1678,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     height: '100%',
                     zIndex: 0,
                     pointerEvents: 'none',
-                  }}
-                  loop
+                  }}loop
                   autoplay
                 />
               )}
@@ -1651,6 +1725,20 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   ))}
                 </select>
               </div>
+              {selectedDismissalType === 'Run Out' && (
+                <div className="mb-4">
+                  <label className="text-white block mb-2">Which batsman is out?</label>
+                  <select
+                    value={outBatsmanType}
+                    onChange={(e) => setOutBatsmanType(e.target.value)}
+                    className="w-full p-2 rounded bg-gray-700 text-white"
+                  >
+                    <option value="">Select Batsman</option>
+                    <option value="striker">{striker?.name} (Striker)</option>
+                    <option value="non-striker">{nonStriker?.name} (Non-Striker)</option>
+                  </select>
+                </div>
+              )}
               {['Caught', 'Caught Behind'].includes(selectedDismissalType) && (
                 <div className="mb-4">
                   <label className="text-white block mb-2">Catch Type</label>
@@ -1698,13 +1786,87 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 <button
                   onClick={handleDismissalModalSubmit}
                   disabled={!selectedDismissalType || 
+                    (selectedDismissalType === 'Run Out' && !outBatsmanType) ||
                     (['Caught', 'Caught Behind'].includes(selectedDismissalType) && (!selectedCatchType || !selectedInvolvedPlayer)) ||
                     (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType) && !selectedInvolvedPlayer)}
                   className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
                     selectedDismissalType && 
+                    (selectedDismissalType !== 'Run Out' || outBatsmanType) &&
                     (!['Caught', 'Caught Behind'].includes(selectedDismissalType) || (selectedCatchType && selectedInvolvedPlayer)) &&
                     (!['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType) || selectedInvolvedPlayer)
                       ? 'bg-[#FF62A1] hover:bg-[#FF62A1]/80' : 'bg-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showLegByModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
+              <button
+                onClick={() => setShowLegByModal(false)}
+                className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+              >
+                ×
+              </button>
+              <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Leg By Details</h3>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Leg By off which batsman?</label>
+                <select
+                  value={legByBatsmanType}
+                  onChange={(e) => setLegByBatsmanType(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Batsman</option>
+                  <option value="striker">{striker?.name} (Striker)</option>
+                  <option value="non-striker">{nonStriker?.name} (Non-Striker)</option>
+                </select>
+              </div>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleLegByModalSubmit}
+                  disabled={!legByBatsmanType}
+                  className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
+                    legByBatsmanType ? 'bg-[#FF62A1] hover:bg-[#FF62A1]/80' : 'bg-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showRetiredHurtModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
+              <button
+                onClick={() => setShowRetiredHurtModal(false)}
+                className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+              >
+                ×
+              </button>
+              <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Retired Hurt Details</h3>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Which batsman is retired hurt?</label>
+                <select
+                  value={retiredHurtBatsmanType}
+                  onChange={(e) => setRetiredHurtBatsmanType(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Batsman</option>
+                  <option value="striker">{striker?.name} (Striker)</option>
+                  <option value="non-striker">{nonStriker?.name} (Non-Striker)</option>
+                </select>
+              </div>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleRetiredHurtModalSubmit}
+                  disabled={!retiredHurtBatsmanType}
+                  className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
+                    retiredHurtBatsmanType ? 'bg-[#FF62A1] hover:bg-[#FF62A1]/80' : 'bg-gray-500 cursor-not-allowed'
                   }`}
                 >
                   Confirm
@@ -2041,7 +2203,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
       </div>
-
       <div className="hidden sm:block w-20 text-white text-center">
         <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
         {selectedBowler && (
@@ -2055,21 +2216,22 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
 
     {/* Desktop layout for wide buttons */}
     <div className="hidden sm:flex flex-wrap justify-center gap-2 md:gap-4 mt-2">
-      {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
-        const isActive = activeLabel === label;
-        return (
-          <button
-            key={label}
-            onClick={() => handleScoreButtonClick(label, true)}
-            className={`w-20 h-10 md:w-20 h-12 md:h-12
-              ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
-              text-white font-bold text-sm md:text-lg sm:text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80`}
-          >
-            {label}
-          </button>
-        )
-      })}
-    </div>
+  {['Wide', 'No-ball', 'OUT', 'Leg By', 'Retired Hurt'].map((label) => {
+    const isActive = activeLabel === label;
+    return (
+      <button
+        key={label}
+        onClick={() => handleScoreButtonClick(label, true)}
+        className={`min-w-[80px] md:min-w-[100px] h-10 md:h-12
+          ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
+          text-white font-bold text-sm md:text-lg sm:text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80 px-3`}
+      >
+        {label}
+      </button>
+    );
+  })}
+</div>
+
 
        <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
       {[0, 1, 2, 3, 4, 6].map((num) => {
@@ -2094,7 +2256,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     {/* Mobile layout for buttons - MOVED BELOW SCORING BUTTONS */}
     <div className="flex flex-col sm:hidden justify-center gap-2 mt-4 w-full">
       <div className="flex justify-center gap-2">
-        {['Wide', 'No-ball', 'OUT', 'Leg By'].map((label) => {
+        {['Wide', 'No-ball', 'OUT', 'Leg By', 'Retired Hurt'].map((label) => {
           const isActive = activeLabel === label;
           return (
             <button
@@ -2168,8 +2330,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         </div>
       )}
     </div>
-
-            {/* <div className="mt-6 w-full md:w-[50%] bg-[#4C0025] p-4 md:p-6 rounded-lg shadow-lg">
+    {/* <div className="mt-6 w-full md:w-[50%] bg-[#4C0025] p-4 md:p-6 rounded-lg shadow-lg">
               <h3 className="text-white text-lg md:text-xl font-bold mb-4 text-center">Pitch Analysis</h3>
               
             </div> */}
@@ -2291,24 +2452,24 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         )}
 
         {showMainWheel && (
-<div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center overflow-y-auto">
-  <div className="my-2 bg-white rounded-xl w-[95%] max-w-4xl mx-auto flex flex-col items-center shadow-lg h-[95vh]">
-    {/* MainWheel */}
-    <MainWheel
-      run={selectedRun}
-      setShowMainWheel={setShowMainWheel}
-    />
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center overflow-y-auto">
+            <div className="my-2 bg-white rounded-xl w-[95%] max-w-4xl mx-auto flex flex-col items-center shadow-lg h-[95vh]">
+              {/* MainWheel */}
+              <MainWheel
+                run={selectedRun}
+                setShowMainWheel={setShowMainWheel}
+              />
 
-    {/* Continue Button */}
-    <button
-      onClick={() => setShowMainWheel(false)}
-      className="mt-5 bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition"
-    >
-      Continue
-    </button>
-  </div>
-</div>
-)}
+              {/* Continue Button */}
+              <button
+                onClick={() => setShowMainWheel(false)}
+                className="mt-5 bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+          )}
 
 
       </section>

@@ -33,7 +33,6 @@ const Login = () => {
   //     window.speechSynthesis.speak(utterance);
   //   }
   // }, [showWelcome, userName]);
-  
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -54,11 +53,7 @@ const Login = () => {
 
       // ✅ Fetch first name from Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        setUserName(userDoc.data().firstName || "User");
-      } else {
-        setUserName("User");
-      }
+      const firstName = userDoc.exists() ? userDoc.data().firstName || "User" : "User";
 
       // setShowWelcome(true); //  Show modal popup
       // setEmail("");
@@ -69,7 +64,7 @@ const Login = () => {
       //   setShowWelcome(false);
       //   navigate("/landingpage");
       // }, 6000);
-      navigate("/welcome", { state: { userName: userDoc.data().firstName || "User" } });
+      navigate("/welcome", { state: { userId: user.uid, userName: firstName } });
     } catch (error) {
       toast.error("Invalid credentials or user does not exist.");
       console.error("Login error:", error.message);
@@ -84,29 +79,34 @@ const Login = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Store user info in Firestore if not already present
+      // Fetch or store user info in Firestore
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      if (!userSnap.exists()) {
+      let firstName;
+      if (userSnap.exists()) {
+        // Use the existing firstName from Firestore (which may have been updated)
+        firstName = userSnap.data().firstName || user.displayName || "User";
+      } else {
+        firstName = user.displayName || "User";
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
-          firstName: user.displayName || "User",
+          firstName,
           createdAt: new Date().toISOString(),
           signupMethod: "google",
+          accountType: "public",
         });
       }
 
-      // setUserName(user.displayName || "User");
+      // setUserName(firstName);
       // setShowWelcome(true);
 
       // setTimeout(() => {
       //   setShowWelcome(false);
       //   navigate("/landingpage");
       // }, 3000);
-      navigate("/welcome", { state: { userName: user.displayName || "User" } });
-
+      navigate("/welcome", { state: { userId: user.uid, userName: firstName } });
 
       toast.success("Signed in with Google!");
     } catch (error) {

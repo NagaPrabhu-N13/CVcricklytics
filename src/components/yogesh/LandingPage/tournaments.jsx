@@ -144,7 +144,7 @@ const Tournament = () => {
     return () => unsubscribe();
   }, [currentUserId, clubName]);
 
-  // Fetch all tournaments for the club
+  // Fetch all matching tournaments from the tournament collection
   useEffect(() => {
     if (!clubName) {
       setLoadingTournament(false);
@@ -159,8 +159,8 @@ const Tournament = () => {
     setTournamentError(null);
 
     const q = query(
-      collection(db, "tournaments"),
-      where("clubName", "==", clubName)
+      collection(db, "tournament"),
+      where("selectedClubs", "array-contains", clubName)
     );
 
     const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
@@ -456,17 +456,16 @@ const Tournament = () => {
                   No tournaments found. {userRole === 'admin' ? 'Add one below.' : 'Check back later.'}
                 </div>
               )}
-             {/*
-{userRole === 'admin' && currentUserId && isClubCreator && (
-  <button
-    onClick={() => setShowAddTournamentModal(true)}
-    className="mt-6 md:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start md:self-center"
-  >
-    Add Tournament
-  </button>
-)}
-*/}
-
+              {/*
+              {userRole === 'admin' && currentUserId && isClubCreator && (
+                <button
+                  onClick={() => setShowAddTournamentModal(true)}
+                  className="mt-6 md:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start md:self-center"
+                >
+                  Add Tournament
+                </button>
+              )}
+              */}
             </div>
           </div>
 

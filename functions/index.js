@@ -239,6 +239,72 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
     }
 });
 
+
+exports.generateWelcomeAudioOnUpdate = onDocumentUpdated("users/{userId}", async (event) => {
+    const beforeSnap = event.data.before;
+    const afterSnap = event.data.after;
+
+    if (!afterSnap) {
+        log("❌ No updated user snapshot data.");
+        return;
+    }
+
+    const beforeData = beforeSnap.data();
+    const afterData = afterSnap.data();
+    const userId = event.params.userId;
+
+    // Check if firstName actually changed
+    const oldName = beforeData.firstName || "User";
+    const newName = afterData.firstName || "User";
+    if (oldName === newName) {
+        log("ℹ️ firstName did not change, skipping audio regeneration.", userId);
+        return;
+    }
+
+    const welcomeText = `Welcome to Cricklytics! ${newName}`;
+
+    log("📌 User updated", userId);
+    log("📝 New welcome text", welcomeText);
+
+    const request = {
+        input: { text: welcomeText },
+        voice: {
+            languageCode: "en-IN",
+            ssmlGender: "MALE",
+            name: "en-IN-Wavenet-C",
+        },
+        audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            volumeGainDb: 0.0,
+            effectsProfileId: ["handset-class-device"],
+        },
+    };
+
+    try {
+        const [response] = await client.synthesizeSpeech(request);
+        const fileName = `welcome_audio/${userId}.mp3`;
+        const tempFilePath = path.join("/tmp", `${userId}_welcome.mp3`);
+
+        await util.promisify(fs.writeFile)(tempFilePath, response.audioContent, "binary");
+        log("💾 Welcome audio saved locally", tempFilePath);
+
+        await storage.bucket().upload(tempFilePath, {
+            destination: fileName,
+            metadata: { contentType: "audio/mpeg" },
+        });
+        log("🚀 Welcome audio uploaded to Firebase Storage", fileName);
+
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(fileName)}?alt=media`;
+
+        await db.collection("users").doc(userId).update({ welcomeAudio: fileUrl });
+        log("✅ Welcome audio URL updated in Firestore", fileUrl);
+    } catch (err) {
+        log("❌ Failed to generate welcome audio", err.message);
+    }
+});
+
 // ✅ 3. Generate AI Assistance Audio
 exports.generateAiAssistanceAudio = onDocumentCreated("ai_assistance/{aiId}", async (event) => {
     const snap = event.data;

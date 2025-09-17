@@ -23,6 +23,7 @@ const Selection2 = () => {
   const [teams, setTeams] = useState([]);
   const [currentStartDate, setCurrentStartDate] = useState(null); // No default
   const [currentEndDate, setCurrentEndDate] = useState(null); // No default
+  const [timing, setTiming] = useState('morning');
   const [editingIndex, setEditingIndex] = useState(null); // Track editing row
   const [editForm, setEditForm] = useState({ date: '', time: '' }); // Temp state for editing
   const hasStoredSchedule = useRef(false);
@@ -84,25 +85,42 @@ const Selection2 = () => {
     return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
+  // Generate time slots based on timing period
+  const generateTimeSlots = (period, interval = 1.5) => {
+    const slots = [];
+    for (let h = period.start; h + interval <= period.end; h += interval) {
+      const hour = Math.floor(h);
+      const min = Math.round((h - hour) * 60);
+      const time24 = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+      slots.push(to12Hour(time24));
+    }
+    return slots;
+  };
+
+  const periods = {
+    morning: { start: 1, end: 11 },
+    noon: { start: 11, end: 17 },
+    night: { start: 17, end: 24 },
+  };
+
   // Generate match schedule with dates and times
-  const generateMatchSchedule = (groupStageMatches, startDate, endDate) => {
+  const generateMatchSchedule = (groupStageMatches, semiFinalsList, finalsList, startDate, endDate, tournamentTiming) => {
     if (!startDate || !endDate) {
       console.error('Cannot generate match schedule without start and end dates.');
       return [];
     }
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    const groupStageDays = totalDays - 2; // Reserve last 2 days for semi-finals and finals
-    const matches = groupStageMatches.flat();
+    const totalDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const allMatches = [...groupStageMatches.flat(), ...semiFinalsList, ...finalsList];
     const matchSchedule = [];
-    const times = ['10:00 AM', '1:00 PM', '3:00 PM', '6:00 PM'];
+    const times = generateTimeSlots(periods[tournamentTiming.toLowerCase()]);
 
     // Calculate matches per day
-    const matchesPerDay = Math.ceil(matches.length / groupStageDays);
+    const matchesPerDay = Math.ceil(allMatches.length / totalDays);
     let matchIndex = 0;
 
-    for (let day = 0; day < groupStageDays && matchIndex < matches.length; day++) {
+    for (let day = 0; day < totalDays && matchIndex < allMatches.length; day++) {
       const currentDate = new Date(start);
       currentDate.setDate(start.getDate() + day);
       const formattedDate = currentDate.toLocaleDateString('en-GB', {
@@ -112,8 +130,8 @@ const Selection2 = () => {
       });
 
       // Assign matches to the current day
-      for (let i = 0; i < matchesPerDay && matchIndex < matches.length; i++) {
-        const match = matches[matchIndex];
+      for (let i = 0; i < matchesPerDay && matchIndex < allMatches.length; i++) {
+        const match = allMatches[matchIndex];
         if (match.team1 !== 'BYE' && match.team2 !== 'BYE') {
           const time = times[i % times.length]; // Cycle through available times
           matchSchedule.push({
@@ -143,6 +161,7 @@ const Selection2 = () => {
         const currentUserId = auth.currentUser?.uid;
         let fetchedStartDate = null;
         let fetchedEndDate = null;
+        let fetchedTiming = 'morning';
 
         // Case 1: Fetch by passedTournamentId
         if (passedTournamentId) {
@@ -176,8 +195,10 @@ const Selection2 = () => {
               const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
               fetchedStartDate = docData.startDate;
               fetchedEndDate = docData.endDate;
+              fetchedTiming = docData.timing || 'morning';
               setCurrentStartDate(fetchedStartDate);
               setCurrentEndDate(fetchedEndDate);
+              setTiming(fetchedTiming);
             } else {
               setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
               setLoading(false);
@@ -198,7 +219,7 @@ const Selection2 = () => {
               setMatchSchedule(tournamentData.matchSchedule);
             } else if (roundRobin.length > 0) {
               // Generate and store match schedule using fetched dates
-              const generatedMatchSchedule = generateMatchSchedule(roundRobin, fetchedStartDate, fetchedEndDate);
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, semiFinalMatches, finalMatches, fetchedStartDate, fetchedEndDate, fetchedTiming);
               if (generatedMatchSchedule.length === 0) {
                 setError('Failed to generate match schedule due to missing dates.');
                 setLoading(false);
@@ -230,15 +251,17 @@ const Selection2 = () => {
                 const docData = tournamentsSnapshot.docs[0].data();
                 fetchedStartDate = docData.startDate;
                 fetchedEndDate = docData.endDate;
+                fetchedTiming = docData.timing || 'morning';
                 setCurrentStartDate(fetchedStartDate);
                 setCurrentEndDate(fetchedEndDate);
+                setTiming(fetchedTiming);
               } else {
                 setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
                 setLoading(false);
                 return;
               }
 
-              await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate);
+              await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate, fetchedTiming);
             } else {
               setError('No tournament data found and no teams provided.');
             }
@@ -276,8 +299,10 @@ const Selection2 = () => {
               const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
               fetchedStartDate = docData.startDate;
               fetchedEndDate = docData.endDate;
+              fetchedTiming = docData.timing || 'morning';
               setCurrentStartDate(fetchedStartDate);
               setCurrentEndDate(fetchedEndDate);
+              setTiming(fetchedTiming);
             } else {
               setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
               setLoading(false);
@@ -298,7 +323,7 @@ const Selection2 = () => {
               setMatchSchedule(tournamentData.matchSchedule);
             } else if (roundRobin.length > 0) {
               // Generate and store match schedule using fetched dates
-              const generatedMatchSchedule = generateMatchSchedule(roundRobin, fetchedStartDate, fetchedEndDate);
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, semiFinalMatches, finalMatches, fetchedStartDate, fetchedEndDate, fetchedTiming);
               if (generatedMatchSchedule.length === 0) {
                 setError('Failed to generate match schedule due to missing dates.');
                 setLoading(false);
@@ -333,15 +358,17 @@ const Selection2 = () => {
             const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
             fetchedStartDate = docData.startDate;
             fetchedEndDate = docData.endDate;
+            fetchedTiming = docData.timing || 'morning';
             setCurrentStartDate(fetchedStartDate);
             setCurrentEndDate(fetchedEndDate);
+            setTiming(fetchedTiming);
           } else {
             setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
             setLoading(false);
             return;
           }
 
-          await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate);
+          await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate, fetchedTiming);
         }
       } catch (err) {
         console.error('Error fetching tournament data:', err);
@@ -353,6 +380,7 @@ const Selection2 = () => {
           // Attempt to fetch dates again for fallback
           let fallbackStartDate = null;
           let fallbackEndDate = null;
+          let fallbackTiming = 'morning';
           const tournamentsQuery = query(
             collection(db, 'tournament'),
             where('name', '==', tournamentName)
@@ -362,9 +390,11 @@ const Selection2 = () => {
             const docData = tournamentsSnapshot.docs[0].data();
             fallbackStartDate = docData.startDate;
             fallbackEndDate = docData.endDate;
+            fallbackTiming = docData.timing || 'morning';
             setCurrentStartDate(fallbackStartDate);
             setCurrentEndDate(fallbackEndDate);
-            await generateAndStoreSchedule(newTeams, fallbackStartDate, fallbackEndDate);
+            setTiming(fallbackTiming);
+            await generateAndStoreSchedule(newTeams, fallbackStartDate, fallbackEndDate, fallbackTiming);
           } else {
             setError('Failed to fetch dates in fallback. Cannot generate schedule.');
           }
@@ -406,6 +436,13 @@ const Selection2 = () => {
 
     // Convert edited time back to 12-hour with AM/PM
     const formattedNewTime = to12Hour(editForm.time);
+
+    // Check for time conflict on the same day
+    const hasConflict = matchSchedule.some((m, i) => i !== index && m.date === formattedNewDate && m.time === formattedNewTime);
+    if (hasConflict) {
+      alert('This time is already booked on the selected date. Please choose a different time.');
+      return;
+    }
 
     const newSchedule = [...matchSchedule];
     newSchedule[index] = { ...newSchedule[index], date: formattedNewDate, time: formattedNewTime };
@@ -513,7 +550,7 @@ const Selection2 = () => {
     return { semiFinals: semiFinalMatches, finals: finalMatch };
   };
 
-  const generateAndStoreSchedule = async (teamsToUse, startDate, endDate) => {
+  const generateAndStoreSchedule = async (teamsToUse, startDate, endDate, tournamentTiming) => {
     if (teamsToUse.length > 0 && !hasStoredSchedule.current && startDate && endDate) {
       hasStoredSchedule.current = true;
 
@@ -524,7 +561,7 @@ const Selection2 = () => {
       setSemiFinals(semiFinals);
       setFinals(finals);
 
-      const generatedMatchSchedule = generateMatchSchedule(generatedSchedule, startDate, endDate);
+      const generatedMatchSchedule = generateMatchSchedule(generatedSchedule, semiFinals, finals, startDate, endDate, tournamentTiming);
       if (generatedMatchSchedule.length === 0) {
         setError('Failed to generate match schedule due to invalid dates.');
         hasStoredSchedule.current = false;
