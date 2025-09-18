@@ -32,11 +32,11 @@ function Landingpage1() {
   ];
 
   return (
-    <div className={`min-h-screen w-full transition-all duration-500 ${bgColor}`}>
+    <div className={`w-full transition-all duration-500 ${bgColor}`}>
       {/* ✅ Navbar */}
       <Navbar bgColor={bgColor} />
 
-      {/* ✅ Swiper with keyboard support */}
+      {/* ✅ Swiper with keyboard support and autoHeight */}
       <Swiper
         modules={[Navigation, Pagination, EffectFade, Autoplay, Keyboard]} // ✅ Added Keyboard module
         spaceBetween={0}
@@ -46,19 +46,20 @@ function Landingpage1() {
         effect="fade"
         autoplay={{ delay: 15000, disableOnInteraction: false }}
         keyboard={{ enabled: true }} // ✅ Enable keyboard navigation
+        autoHeight={true} // ✅ Enable auto height to adjust to active slide's height
         className="w-full"
         onSlideChange={(swiper) => setBgColor(backgrounds[swiper.activeIndex])}
       >
-        <SwiperSlide>
+        <SwiperSlide className="min-h-screen">
           <HeroSection1 />
         </SwiperSlide>
-        <SwiperSlide>
+        <SwiperSlide className="min-h-screen">
           <HeroSection2 />
         </SwiperSlide>
-        <SwiperSlide>
+        <SwiperSlide className="min-h-screen">
           <HeroSection3 />
         </SwiperSlide>
-        <SwiperSlide>
+        <SwiperSlide className="overflow-y-auto">
           <HeroSection4 />
         </SwiperSlide>
       </Swiper>
