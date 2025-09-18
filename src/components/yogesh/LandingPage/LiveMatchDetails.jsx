@@ -16,6 +16,9 @@ const MatchDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+   const [isBattersExpanded, setIsBattersExpanded] = useState(true);
+  const [isBowlersExpanded, setIsBowlersExpanded] = useState(true);
+
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
   const [commentary, setCommentary] = useState([]);
@@ -206,69 +209,101 @@ const MatchDetails = () => {
             </p>
           )}
 
-          {/* Batters Table */}
+           {/* Batters Dropdown */}
           <div className="mb-6">
-            <h4 className="text-lg font-semibold mb-1">Batters</h4>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400 text-left border-b border-purple-500/50">
-                  <th className="py-1 pr-1">Batter</th>
-                  <th className="text-center p-0.5">R</th>
-                  <th className="text-center p-0.5">B</th>
-                  <th className="text-center p-0.5">4s</th>
-                  <th className="text-center p-0.5">6s</th>
-                  <th className="text-center p-0.5">SR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {derivedMatch.batting.map((batter, index) => (
-                  <tr key={index} className="text-left border-b border-purple-500/20">
-                    <td className="py-1 pr-1 font-medium">{batter.name}</td>
-                    <td className="text-center p-0.5">{batter.runs}</td>
-                    <td className="text-center p-0.5">{batter.balls}</td>
-                    <td className="text-center p-0.5">{batter.fours}</td>
-                    <td className="text-center p-0.5">{batter.sixes}</td>
-                    <td className="text-center p-0.5">{batter.sr}</td>
+            <div 
+              className="flex items-center justify-between cursor-pointer mb-2"
+              onClick={() => setIsBattersExpanded(!isBattersExpanded)}
+            >
+              <h4 className="text-lg font-semibold">Batters</h4>
+              <svg 
+                className={`w-5 h-5 transform transition-transform ${isBattersExpanded ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            
+            {isBattersExpanded && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-400 text-left border-b border-purple-500/50">
+                    <th className="py-1 pr-1">Batter</th>
+                    <th className="text-center p-0.5">R</th>
+                    <th className="text-center p-0.5">B</th>
+                    <th className="text-center p-0.5">4s</th>
+                    <th className="text-center p-0.5">6s</th>
+                    <th className="text-center p-0.5">SR</th>
                   </tr>
-                ))}
-                {derivedMatch.batting.length === 0 && (
-                  <tr><td colSpan="6" className="text-center py-2">No batting data available yet.</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {derivedMatch.batting.map((batter, index) => (
+                    <tr key={index} className="text-left border-b border-purple-500/20">
+                      <td className="py-1 pr-1 font-medium">{batter.name}</td>
+                      <td className="text-center p-0.5">{batter.runs}</td>
+                      <td className="text-center p-0.5">{batter.balls}</td>
+                      <td className="text-center p-0.5">{batter.fours}</td>
+                      <td className="text-center p-0.5">{batter.sixes}</td>
+                      <td className="text-center p-0.5">{batter.sr}</td>
+                    </tr>
+                  ))}
+                  {derivedMatch.batting.length === 0 && (
+                    <tr><td colSpan="6" className="text-center py-2">No batting data available yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          {/* Bowlers Table */}
+          {/* Bowlers Dropdown */}
           <div className="mb-6">
-            <h4 className="text-lg font-semibold mb-1">Bowlers</h4>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400 text-left border-b border-purple-500/50">
-                  <th className="py-1 pr-1">Bowler</th>
-                  <th className="text-center p-0.5">O</th>
-                  <th className="text-center p-0.5">M</th>
-                  <th className="text-center p-0.5">R</th>
-                  <th className="text-center p-0.5">W</th>
-                  <th className="text-center p-0.5">Eco</th>
-                </tr>
-              </thead>
-              <tbody>
-                {derivedMatch.bowling.map((bowler, index) => (
-                  <tr key={index} className="text-left border-b border-purple-500/20">
-                    <td className="py-1 pr-1 font-medium">{bowler.name}</td>
-                    <td className="text-center p-0.5">{bowler.overs}</td>
-                    <td className="text-center p-0.5">{bowler.maidens}</td>
-                    <td className="text-center p-0.5">{bowler.runs}</td>
-                    <td className="text-center p-0.5">{bowler.wickets}</td>
-                    <td className="text-center p-0.5">{bowler.eco}</td>
+            <div 
+              className="flex items-center justify-between cursor-pointer mb-2"
+              onClick={() => setIsBowlersExpanded(!isBowlersExpanded)}
+            >
+              <h4 className="text-lg font-semibold">Bowlers</h4>
+              <svg 
+                className={`w-5 h-5 transform transition-transform ${isBowlersExpanded ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            
+            {isBowlersExpanded && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-400 text-left border-b border-purple-500/50">
+                    <th className="py-1 pr-1">Bowler</th>
+                    <th className="text-center p-0.5">O</th>
+                    <th className="text-center p-0.5">M</th>
+                    <th className="text-center p-0.5">R</th>
+                    <th className="text-center p-0.5">W</th>
+                    <th className="text-center p-0.5">Eco</th>
                   </tr>
-                ))}
-                {derivedMatch.bowling.length === 0 && (
-                  <tr><td colSpan="6" className="text-center py-2">No bowling data available yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {derivedMatch.bowling.map((bowler, index) => (
+                    <tr key={index} className="text-left border-b border-purple-500/20">
+                      <td className="py-1 pr-1 font-medium">{bowler.name}</td>
+                      <td className="text-center p-0.5">{bowler.overs}</td>
+                      <td className="text-center p-0.5">{bowler.maidens}</td>
+                      <td className="text-center p-0.5">{bowler.runs}</td>
+                      <td className="text-center p-0.5">{bowler.wickets}</td>
+                      <td className="text-center p-0.5">{bowler.eco}</td>
+                    </tr>
+                  ))}
+                  {derivedMatch.bowling.length === 0 && (
+                    <tr><td colSpan="6" className="text-center py-2">No bowling data available yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+             </div>
 
           {/* Recent Balls */}
           {derivedMatch.recentBalls?.length > 0 && (
