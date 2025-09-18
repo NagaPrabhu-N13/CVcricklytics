@@ -98,8 +98,36 @@ function Tournamentseries() {
             setSelectedImage(file);
             setFormData(prev => ({ ...prev, imageUrl: '' }));
             setShowValidationError(false);
+            
+            // Create a preview URL for the selected image
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setImagePreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
         }
     };
+
+    // Add a new state for image preview
+    const [imagePreview, setImagePreview] = useState(null);
+
+    // Update the useEffect that loads saved data to also set the image preview
+    useEffect(() => {
+        if (user) {
+            async function fetchData() {
+                const docRef = doc(db, `users/${user.uid}/forms/tournamentseries`);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setFormData(docSnap.data());
+                    if (docSnap.data().imageUrl) {
+                        setSelectedImage(docSnap.data().imageUrl);
+                        setImagePreview(docSnap.data().imageUrl); // Set preview for saved image
+                    }
+                }
+            }
+            fetchData();
+        }
+    }, [user]);
 
     const handleNavigation = async (e) => {
         e.preventDefault();
@@ -309,20 +337,36 @@ function Tournamentseries() {
                     <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
                         <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
-                        <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
-                            <div className="flex items-center justify-center w-full">
-                                <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
-                                        <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
-                                    </div>
-                                    <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
-                                </label>
+                            <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
+                                <div className="flex items-center justify-center w-full">
+                                    <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
+                                            <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                                        </div>
+                                        <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        </div>
-                    </div>
-
+                            
+                            {/* Show image preview if available */}
+        {imagePreview && (
+            <div className="ml-4 flex flex-col items-center">
+                <img 
+                    src={imagePreview} 
+                    alt="Tournament preview" 
+                    className="w-20 h-20 object-cover rounded-lg border border-white"
+                />
+                <div className="flex items-center mt-1">
+                    <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-xs text-green-500 font-medium">Image uploaded</p>
+                </div>
+            </div>
+        )}
+    </div>
+</div>
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Venue*</label>
                         <input 
