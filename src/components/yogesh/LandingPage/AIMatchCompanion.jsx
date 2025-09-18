@@ -6,13 +6,28 @@ import { db } from "../../../firebase"; // Adjust this import to match your Fire
 
 
 // 🔢 Win Probability Calculation Logic
-function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOvers) {
+function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOvers, wickets = 0) {
+  if (Number.isNaN(battingRuns) || Number.isNaN(battingBalls) || Number.isNaN(bowlingRuns) || Number.isNaN(maxOvers) ||
+      battingRuns < 0 || battingBalls < 0 || maxOvers <= 0) {
+    return { winA: null, winB: null };
+  }
+
+  if (bowlingRuns <= 0) {
+    return { winA: null, winB: null };
+  }
+
   const totalBalls = maxOvers * 6;
   const ballsLeft = Math.max(totalBalls - battingBalls, 0);
   const runsToWin = Math.max(bowlingRuns + 1 - battingRuns, 0);
+  const wicketsLeft = 10 - wickets;
+
+  if (wicketsLeft <= 0) {
+    return runsToWin > 0 ? { winA: 0, winB: 100 } : { winA: 100, winB: 0 };
+  }
 
   if (runsToWin === 0) return { winA: 100, winB: 0 };
   if (ballsLeft === 0) return { winA: 0, winB: 100 };
+  if (battingBalls === 0) return { winA: 50, winB: 50 };
 
   // Special handling for ballsLeft <= 6 (1 over or less)
   if (ballsLeft <= 6) {
@@ -21,17 +36,42 @@ function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOver
       return { winA: 0, winB: 100 };
     } else {
       // Linear formula: probability higher if runsToWin is less
-      const prob = (maxRunsPossible - runsToWin + 1) / maxRunsPossible;
-      const winA = Math.round(Math.max(prob, 0.02) * 100); // minimum 2% nonzero if possible
+      let prob = (maxRunsPossible - runsToWin + 1) / (maxRunsPossible + 1);
+      // Adjust for wickets: lower prob if few wickets left
+      const wicketAdj = Math.min(1, wicketsLeft / 3);
+      prob *= wicketAdj;
+      const winA = Math.round(Math.max(prob, 0.01) * 100); // minimum 1% nonzero if possible
       return { winA, winB: 100 - winA };
     }
   }
 
-  // For regular cases, use run rate model
-  const currRR = battingBalls > 0 ? battingRuns / (battingBalls / 6) : 0;
+  // Determine average run rate based on match format
+  const avgRR = maxOvers <= 20 ? 8.3 : maxOvers === 50 ? 5.5 : 6;
+
+  // Bayesian smoothing for current run rate with reduced prior for more responsiveness
+  const priorOvers = 3;
+  const priorBalls = priorOvers * 6;
+  const priorRuns = avgRR * priorOvers;
+  const effectiveRuns = battingRuns + priorRuns;
+  const effectiveBalls = battingBalls + priorBalls;
+  const effectiveRR = effectiveRuns / (effectiveBalls / 6);
+
+  // Required run rate
   const reqRR = runsToWin / (ballsLeft / 6);
-  const rrDiff = currRR - reqRR;
-  const probBat = 1 / (1 + Math.exp(-3 * rrDiff));
+
+  // Ratio R = effectiveRR / reqRR
+  let R = effectiveRR / reqRR;
+
+  // Adjust R based on wickets left (removed wicketPenalty, incorporated here)
+  R *= Math.pow(wicketsLeft / 10, 1.2);
+
+  // Power law probability (more reliable model based on expected vs required)
+  const power = 5.6; // Fitted value for smoother curve
+  let probBat = Math.pow(R, power) / (1 + Math.pow(R, power));
+
+  // Clamp probability between 0 and 1
+  probBat = Math.max(0, Math.min(1, probBat));
+
   const winA = Math.round(probBat * 100);
   return { winA, winB: 100 - winA };
 }
@@ -126,6 +166,7 @@ const { winA, winB } = calculateWinProbability(
   battingBalls,           // balls faced by batting team, e.g. over*6 + balls
   bowlingScore,           // target (first innings total)
   maxOvers,               // max overs for the match
+  data.wickets || 0
 );
 
 
@@ -199,38 +240,42 @@ const { winA, winB } = calculateWinProbability(
 
 
               {/* Win Probability */}
-              <div>
-                <div className="text-sm font-medium text-gray-300 mb-2">Win Probability</div>
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>
-                    {battingTeam}:{" "}
-                    <span className={`${winA === 0 ? "text-gray-500" : "text-green-400"} font-semibold`}>
-                      {winA}%
+              {winA !== null ? (
+                <div>
+                  <div className="text-sm font-medium text-gray-300 mb-2">Win Probability</div>
+                  <div className="flex justify-between text-sm text-gray-400 mb-2">
+                    <span>
+                      {battingTeam}:{" "}
+                      <span className={`${winA === 0 ? "text-gray-500" : "text-green-400"} font-semibold`}>
+                        {winA}%
+                      </span>
                     </span>
-                  </span>
-                  <span>
-                    {bowlingTeam}:{" "}
-                    <span className={`${winB === 0 ? "text-gray-500" : "text-red-400"} font-semibold`}>
-                      {winB}%
+                    <span>
+                      {bowlingTeam}:{" "}
+                      <span className={`${winB === 0 ? "text-gray-500" : "text-red-400"} font-semibold`}>
+                        {winB}%
+                      </span>
                     </span>
-                  </span>
-                </div>
+                  </div>
 
 
-                {/* Probability Bar */}
-                <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
-                  <div
-                    className="h-full bg-green-500 transition-all duration-500"
-                    style={{ width: `${winA}%` }}
-                    title={`${battingTeam}: ${winA}%`}
-                  />
-                  <div
-                    className="h-full bg-red-500 transition-all duration-500"
-                    style={{ width: `${winB}%` }}
-                    title={`${bowlingTeam}: ${winB}%`}
-                  />
+                  {/* Probability Bar */}
+                  <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
+                    <div
+                      className="h-full bg-green-500 transition-all duration-500"
+                      style={{ width: `${winA}%` }}
+                      title={`${battingTeam}: ${winA}%`}
+                    />
+                    <div
+                      className="h-full bg-red-500 transition-all duration-500"
+                      style={{ width: `${winB}%` }}
+                      title={`${bowlingTeam}: ${winB}%`}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500">Win probability available only during chasing innings.</p>
+              )}
 
 
               {/* Next Over Impact */}

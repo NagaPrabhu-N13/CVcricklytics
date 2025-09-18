@@ -393,6 +393,13 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     }
   }, [playerScore, outCount, overNumber]);
 
+  useEffect(() => {
+  if (!gameFinished && matchId) {  // Avoid saving if game is over or no matchId
+    saveMatchData();
+  }
+}, [playerScore, currentOverBalls, outCount, validBalls, overNumber, isChasing, striker, nonStriker, selectedBowler, batsmenStats, bowlerStats, wicketOvers]);
+
+
   const dismissalTypes = ['Caught', 'Bowled', 'LBW', 'Run Out', 'Stumped', 'Caught & Bowled', 'Caught Behind'];
   const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
   useEffect(() => {
@@ -870,72 +877,92 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     }
   };
 
-  const handleScoreButtonClick = (value, isLabel) => {
-    if (gameFinished) return;
+// Modified handleScoreButtonClick (remove all saveMatchData calls)
+const handleScoreButtonClick = (value, isLabel) => {
+  if (gameFinished) return;
 
-    let runsToAdd = 0;
-    let isValidBall = false;
+  let runsToAdd = 0;
+  let isValidBall = false;
 
-    if (isLabel) {
-      setActiveNumber(null);
-      setActiveLabel(value);
-    } else {
-      setActiveLabel(null);
-      setActiveNumber(value);
-    }
+  if (isLabel) {
+    setActiveNumber(null);
+    setActiveLabel(value);
+  } else {
+    setActiveLabel(null);
+    setActiveNumber(value);
+  }
 
-    if (pendingWide && !isLabel && typeof value === 'number') {
+  if (pendingWide) {
+    if (!isLabel && typeof value === 'number') {
       runsToAdd = value + 1;
       setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `W+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `W+${value}`]);
+      setTopPlays(prev => [...prev, `W${value}`]);
+      setCurrentOverBalls(prev => [...prev, `W${value}`]);
+
       if (striker) {
         updateBatsmanScore(striker.index, value + 1);
         updateBatsmanStats(striker.index, value + 1);
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      }
+
       setPendingWide(false);
-      saveMatchData();
       return;
     }
-    if (pendingNoBall && !isLabel && typeof value === 'number') {
+  }
+
+  if (pendingNoBall) {
+    if (!isLabel && typeof value === 'number') {
       runsToAdd = value + 1;
       setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `NB+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
+      setTopPlays(prev => [...prev, `NB${value}`]);
+      setCurrentOverBalls(prev => [...prev, `NB${value}`]);
+
       if (striker) {
         updateBatsmanScore(striker.index, value + 1);
         updateBatsmanStats(striker.index, value + 1);
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      }
+
       setPendingNoBall(false);
-      saveMatchData();
       return;
     }
-    if (pendingLegBy && !isLabel && typeof value === 'number') {
+  }
+
+  if (pendingLegBy) {
+    if (!isLabel && typeof value === 'number') {
       runsToAdd = value;
       setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `L+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `L+${value}`]);
+      setTopPlays(prev => [...prev, `L${value}`]);
+      setCurrentOverBalls(prev => [...prev, `L${value}`]);
       setValidBalls(prev => prev + 1);
       isValidBall = true;
+
       const legByBatsmanIndex = legByBatsmanType === 'striker' ? striker.index : nonStriker.index;
       updateBatsmanBalls(legByBatsmanIndex);
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      }
+
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+
       setPendingLegBy(false);
       setLegByBatsmanType('striker'); // Reset
-      saveMatchData();
       return;
     }
-    if (pendingOut && !isLabel && typeof value === 'number') {
-      if (value !== 0 && value !== 1 && value !== 2) {
-        return;
-      }
+  }
+
+  if (pendingOut) {
+    if (!isLabel && typeof value === 'number') {
+      if (value !== 0 && value !== 1 && value !== 2) return;
       setOutRuns(value);
       playAnimation('out');
       setTimeout(() => {
@@ -943,106 +970,123 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }, 3000);
       return;
     }
-    if (pendingRetiredHurt && !isLabel && typeof value === 'number') {
-      // For retired hurt, perhaps no runs, or handle separately
-      // Assuming retired hurt not associated with runs, but since button is like out, perhaps allow 0 runs or something.
-      // For simplicity, ignore runs for retired hurt or adjust.
-      return; // Placeholder
+  }
+
+  if (pendingRetiredHurt) {
+    // For retired hurt, perhaps no runs, or handle separately
+    // Assuming retired hurt not associated with runs, but since button is like out, perhaps allow 0 runs or something.
+    // For simplicity, ignore runs for retired hurt or adjust.
+    return; // Placeholder
+  }
+
+  const extraBalls = ['No-ball', 'Wide', 'No ball'];
+  const playValue = typeof value === 'string' ? value.charAt(0) : value;
+
+  if (isLabel) {
+    if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT' || value === 'Retired Hurt') {
+      setShowRunInfo(true);
+    } else {
+      setShowRunInfo(false);
     }
-    const extraBalls = ['No-ball', 'Wide', 'No ball'];
-    const playValue = typeof value === 'string' ? value.charAt(0) : value;
-    if (isLabel) {
-      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT' || value === 'Retired Hurt') {
-        setShowRunInfo(true);
-      } else {
-        setShowRunInfo(false);
-      }if (value === 'Six') {
-        playAnimation('six');
-        runsToAdd = 6;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, 6]);
-        setCurrentOverBalls(prev => [...prev, 6]);
-        if (striker) {
-          updateBatsmanScore(striker.index, 6);
-          updateBatsmanStats(striker.index, 6);
-          updateBatsmanBalls(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-        saveMatchData();
-      } else if (value === 'Four') {
-        playAnimation('four');
-        runsToAdd = 4;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, 4]);
-        setCurrentOverBalls(prev => [...prev, 4]);
-        if (striker) {
-          updateBatsmanScore(striker.index, 4);
-          updateBatsmanStats(striker.index, 4);
-          updateBatsmanBalls(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-        saveMatchData();
-      } else if (value === 'Wide') {
-        setPendingWide(true);
-        return;
-      } else if (value === 'No-ball') {
-        setPendingNoBall(true);
-        return;
-      } else if (value === 'Leg By') {
-        setShowLegByModal(true); // Open modal for leg by selection
-        return;
-      } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
-        setPendingOut(true);
-        return;
-      } else if (value === 'Retired Hurt') {
-        setShowRetiredHurtModal(true);
-        return;
+
+    if (value === 'Six') {
+      playAnimation('six');
+      runsToAdd = 6;
+      setPlayerScore(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, '6']);
+      setCurrentOverBalls(prev => [...prev, '6']);
+
+      if (striker) {
+        updateBatsmanScore(striker.index, 6);
+        updateBatsmanStats(striker.index, 6);
+        updateBatsmanBalls(striker.index);
       }
-      if (!extraBalls.includes(value)) {
-        setValidBalls(prev => prev + 1);
-        if (striker && value !== 'Wide' && value !== 'No-ball') {
-          updateBatsmanBalls(striker.index);
-        }
-        saveMatchData();
+      setValidBalls(prev => prev + 1);
+      isValidBall = true;
+
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      }
+    } else if (value === 'Four') {
+      playAnimation('four');
+      runsToAdd = 4;
+      setPlayerScore(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, '4']);
+      setCurrentOverBalls(prev => [...prev, '4']);
+
+      if (striker) {
+        updateBatsmanScore(striker.index, 4);
+        updateBatsmanStats(striker.index, 4);
+        updateBatsmanBalls(striker.index);
+      }
+      setValidBalls(prev => prev + 1);
+      isValidBall = true;
+
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      }
+    } else if (value === 'Wide') {
+      setPendingWide(true);
+      return;
+    } else if (value === 'No-ball') {
+      setPendingNoBall(true);
+      return;
+    } else if (value === 'Leg By') {
+      setShowLegByModal(true); // Open modal for leg by selection
+      return;
+    } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
+      setPendingOut(true);
+      return;
+    } else if (value === 'Retired Hurt') {
+      setShowRetiredHurtModal(true);
+      return;
+    }
+
+    if (!extraBalls.includes(value)) {
+      setValidBalls(prev => prev + 1);
+
+      if (striker && value !== 'Wide' && value !== 'No-ball') {
+        updateBatsmanBalls(striker.index);
       }
     } else {
       setShowRunInfo(false);
-      runsToAdd = value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, value]);
-      setCurrentOverBalls(prev => [...prev, value]);
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-      if (striker) {
-        updateBatsmanScore(striker.index, value);
-        updateBatsmanStats(striker.index, value, value === 0);
-        updateBatsmanBalls(striker.index);
-      }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      if (value === 6) {
-        playAnimation('six');
-      } else if (value === 4) {
-        playAnimation('four');
-      }
-
-      if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number' && value !==0) {
-        setSelectedRun(value);
-        setShowMainWheel(true);
-      }
-
-      saveMatchData();
     }
-  };
+  } else {
+    runsToAdd = value;
+    setPlayerScore(prev => prev + runsToAdd);
+    setTopPlays(prev => [...prev, value]);
+    setCurrentOverBalls(prev => [...prev, value]);
+    setValidBalls(prev => prev + 1);
+    isValidBall = true;
 
+    if (striker) {
+      updateBatsmanScore(striker.index, value);
+      updateBatsmanStats(striker.index, value, value === 0);
+      updateBatsmanBalls(striker.index);
+    }
+
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+    }
+
+    if (value % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+
+    if (value === 6) {
+      playAnimation('six');
+    } else if (value === 4) {
+      playAnimation('four');
+    }
+
+    if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number' && value !== 0) {
+      setSelectedRun(value);
+      setShowMainWheel(true);
+    }
+  }
+};
   const handleLegByModalSubmit = () => {
     if (!legByBatsmanType) return;
     setPendingLegBy(true);
@@ -1050,112 +1094,123 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setShowRunInfo(true);
   };
 
-  const handleRetiredHurtModalSubmit = () => {
-    if (!retiredHurtBatsmanType) return;
-    const retiredBatsman = retiredHurtBatsmanType === 'striker' ? striker : nonStriker;
-    setRetiredHurtPlayers(prev => [...prev, retiredBatsman]);
-    if (retiredHurtBatsmanType === 'striker') {
+// Modified handleRetiredHurtModalSubmit (remove saveMatchData call)
+const handleRetiredHurtModalSubmit = () => {
+  if (!retiredHurtBatsmanType) return;
+
+  const retiredBatsman = retiredHurtBatsmanType === 'striker' ? striker : nonStriker;
+
+  setRetiredHurtPlayers(prev => [...prev, retiredBatsman]);
+
+  if (retiredHurtBatsmanType === 'striker') {
+    setStriker(null);
+    setNextBatsmanEnd('striker');
+  } else {
+    setNonStriker(null);
+    setNextBatsmanEnd('non-striker');
+  }
+
+  setShowRetiredHurtModal(false);
+  setShowBatsmanDropdown(true); // Show dropdown to select replacement
+
+  // Do NOT increment outCount
+
+  // Add to over balls something like "RH"
+  setCurrentOverBalls(prev => [...prev, 'RH']);
+  setTopPlays(prev => [...prev, 'RH']);
+  setValidBalls(prev => prev + 1); // Count as valid ball
+};
+
+// Modified handleDismissalModalSubmit (remove saveMatchData call)
+const handleDismissalModalSubmit = () => {
+  if (!selectedDismissalType) return;
+
+  let isValid = true;
+  if (['Caught', 'Caught Behind'].includes(selectedDismissalType)) {
+    if (!selectedCatchType || !selectedInvolvedPlayer) isValid = false;
+  } else if (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType)) {
+    if (!selectedInvolvedPlayer) isValid = false;
+  } else if (selectedDismissalType === 'Run Out') {
+    if (!outBatsmanType) isValid = false;
+  }
+
+  if (!isValid) return;
+
+  playAnimation('out');
+
+  setTimeout(() => {
+    setPlayerScore(prev => prev + outRuns);
+
+    let displayText = `O${outRuns} ${selectedDismissalType}`;
+    if (selectedCatchType) displayText += ` - ${selectedCatchType}`;
+    displayText;
+
+    setTopPlays(prev => [...prev, displayText]);
+    setCurrentOverBalls(prev => [...prev, displayText]);
+
+    // Determine the out batsman based on selection
+    let outBatsman = outBatsmanType === 'striker' ? striker : nonStriker;
+    const batsmanIndex = outBatsman.index;
+
+    updateBatsmanScore(batsmanIndex, outRuns);
+    updateBatsmanStats(batsmanIndex, outRuns, outRuns === 0);
+    updateBatsmanBalls(batsmanIndex);
+
+    recordDismissal(batsmanIndex, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
+
+    setValidBalls(prev => prev + 1);
+
+    // Increment outCount here
+    setOutCount(prev => prev + 1);
+
+    let positionToRemove = outBatsmanType;
+
+    // Handle strike change if odd runs on out
+    if (outRuns % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+
+      // After swap, flip the position to remove
+      positionToRemove = positionToRemove === 'striker' ? 'non-striker' : 'striker';
+    }
+
+    // Remove the out batsman from the correct position
+    if (positionToRemove === 'striker') {
       setStriker(null);
-      setNextBatsmanEnd('striker');
     } else {
       setNonStriker(null);
-      setNextBatsmanEnd('non-striker');
-    }
-    setShowRetiredHurtModal(false);
-    setShowBatsmanDropdown(true); // Show dropdown to select replacement
-    // Do NOT increment outCount
-    // Add to over balls something like 'RH'
-    setCurrentOverBalls(prev => [...prev, 'RH']);
-    setTopPlays(prev => [...prev, 'RH']);
-    setValidBalls(prev => prev + 1); // Count as valid ball
-    saveMatchData();
-  };
-
-  const handleDismissalModalSubmit = () => {
-    if (!selectedDismissalType) {
-      return;
     }
 
-    let isValid = true;
-    if (['Caught', 'Caught Behind'].includes(selectedDismissalType) && (!selectedCatchType || !selectedInvolvedPlayer)) {
-      isValid = false;
-    } else if (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType) && !selectedInvolvedPlayer) {
-      isValid = false;
-    } else if (selectedDismissalType === 'Run Out' && !outBatsmanType) {
-      isValid = false;
+    // Set the end for the new batsman
+    setNextBatsmanEnd(positionToRemove);
+
+    // Check if this was the last wicket
+    const availableBatsmen = getAvailableBatsmen();
+
+    if (availableBatsmen.length === 0) {
+      // All out, end innings without showing dropdown
+      setShowDismissalModal(false);
+      setPendingOut(false);
+      setSelectedDismissalType('');
+      setSelectedCatchType('');
+      setSelectedInvolvedPlayer(null);
+      setOutRuns(null);
+      setOutBatsmanType('striker');
+
+      // Trigger innings end logic (handled in useEffect)
+    } else {
+      setShowBatsmanDropdown(true);
+      setShowDismissalModal(false);
+      setPendingOut(false);
+      setSelectedDismissalType('');
+      setSelectedCatchType('');
+      setSelectedInvolvedPlayer(null);
+      setOutRuns(null);
+      setOutBatsmanType('striker');
     }
-
-    if (!isValid) {
-      return;
-    }
-
-    playAnimation('out');
-    setTimeout(() => {
-      setPlayerScore(prev => prev + outRuns);
-      let displayText = `O+${outRuns} (${selectedDismissalType}`;
-      if (selectedCatchType) displayText += ` - ${selectedCatchType}`;
-      displayText += ')';
-      setTopPlays(prev => [...prev, displayText]);
-      setCurrentOverBalls(prev => [...prev, displayText]);
-
-      // Determine the out batsman based on selection
-      let outBatsman = outBatsmanType === 'striker' ? striker : nonStriker;
-      const batsmanIndex = outBatsman.index;
-
-      updateBatsmanScore(batsmanIndex, outRuns);
-      updateBatsmanStats(batsmanIndex, outRuns, outRuns === 0);
-      updateBatsmanBalls(batsmanIndex);
-      recordDismissal(batsmanIndex, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
-      setValidBalls(prev => prev + 1);
-
-      // Increment outCount here
-      setOutCount(prev => prev + 1);
-
-      let positionToRemove = outBatsmanType;
-
-      // Handle strike change if odd runs on out
-      if (outRuns % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-        // After swap, flip the position to remove
-        positionToRemove = positionToRemove === 'striker' ? 'non-striker' : 'striker';
-      }
-
-      // Remove the out batsman from the correct position
-      if (positionToRemove === 'striker') {
-        setStriker(null);
-      } else {
-        setNonStriker(null);
-      }
-
-      // Set the end for the new batsman
-      setNextBatsmanEnd(positionToRemove);
-      // Check if this was the last wicket
-      const availableBatsmen = getAvailableBatsmen();
-      if (availableBatsmen.length === 0) {
-        // All out, end innings without showing dropdown
-        setShowDismissalModal(false);
-        setPendingOut(false);
-        setSelectedDismissalType('');
-        setSelectedCatchType('');
-        setSelectedInvolvedPlayer(null);
-        setOutRuns(null);
-        setOutBatsmanType('striker');
-        // Trigger innings end logic (handled in useEffect)
-      } else {
-        setShowBatsmanDropdown(true);
-        setShowDismissalModal(false);
-        setPendingOut(false);
-        setSelectedDismissalType('');
-        setSelectedCatchType('');
-        setSelectedInvolvedPlayer(null);
-        setOutRuns(null);
-        setOutBatsmanType('striker');
-      }
-      saveMatchData();
-    }, 1000);
-  };
+  }, 1000);
+};
 
   const handleUndoBall = async () => {
     if (currentOverBalls.length === 0) {
@@ -1283,7 +1338,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setActiveNumber(null);
     setShowRunInfo(false);
 
-    saveMatchData();
   };
 
   useEffect(() => {
@@ -1555,7 +1609,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         }
       }));
     }
-    saveMatchData();
   };
 
   const handleBowlerSelect = (player) => {
@@ -1570,7 +1623,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }
     }));
     setShowBowlerDropdown(false);
-    saveMatchData();
   };
   const handleBatsmanSelect = (player) => {
     // If player is returning from retired hurt, remove from retiredHurtPlayers
@@ -1601,7 +1653,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       }
     }));
     setNextBatsmanEnd(null);
-    saveMatchData();
   };
   const getAvailableBatsmen = () => {
     // Include players not yet batted and retired hurt players (if wickets left)
@@ -1623,7 +1674,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     delete newStats[striker?.index];
     setBatsmenStats(newStats);
     setStriker(null);
-    saveMatchData();
   };
   const cancelNonStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== nonStriker?.index));
@@ -1637,7 +1687,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     delete newStats[nonStriker?.index];
     setBatsmenStats(newStats);
     setNonStriker(null);
-    saveMatchData();
   };
 
   const cancelBatsmanDropdown = () => {
@@ -1647,7 +1696,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setCurrentOverBalls(prev => prev.slice(0, -1));
     setValidBalls(prev => Math.max(0, prev - 1));
     setWicketOvers(prev => prev.filter(w => w.batsmanIndex !== striker?.index));
-    saveMatchData();
   };
 
   const updateWinnerInFirebase = async (winnerTeamName) => {
@@ -2665,7 +2713,12 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
               {/* MainWheel */}
               <MainWheel
                 run={selectedRun}
+                player={striker}
                 setShowMainWheel={setShowMainWheel}
+                tournamentId={tournamentId}
+                currentOver={overNumber}  // Pass current over
+                wickets={outCount}        // Pass wickets
+                totalRuns={playerScore}   // Pass total runs
               />
 
               {/* Continue Button */}

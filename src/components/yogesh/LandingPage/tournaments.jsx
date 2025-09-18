@@ -36,13 +36,8 @@ const Tournament = () => {
   const { clubName } = useClub();
   const [isClubCreator, setIsClubCreator] = useState(false);
 
-  const [showRoleModal, setShowRoleModal] = useState(() => {
-    const storedRole = sessionStorage.getItem('userRole');
-    return !storedRole; // Show modal if no role is stored
-  });
-  const [userRole, setUserRole] = useState(() => {
-    return sessionStorage.getItem('userRole') || null;
-  });
+const [userRole, setUserRole] = useState('user'); // or 'admin' depending on your need
+
   const [showAddTournamentModal, setShowAddTournamentModal] = useState(false);
 
   const [tournamentData, setTournamentData] = useState(null);
@@ -73,11 +68,6 @@ const Tournament = () => {
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState(null);
 
-  const handleSelectRole = (role) => {
-    setUserRole(role);
-    sessionStorage.setItem('userRole', role);
-    setShowRoleModal(false);
-  };
 
   const handleTournamentAdded = (newTournament) => {
     setTournaments((prevTournaments) => {
@@ -392,18 +382,6 @@ const Tournament = () => {
 
   return (
     <div className="bg-gray-900 min-h-screen p-6 text-gray-100">
-      <AnimatePresence>
-        {showRoleModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <RoleSelectionModal onSelectRole={handleSelectRole} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {userRole && (
         <>

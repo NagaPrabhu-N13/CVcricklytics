@@ -11,11 +11,16 @@ const regionCoordinates = {
   'Straight': { x: 200, y: 110 },
 };
 
-export default function WagonWheelResult({ data }) {
+export default function WagonWheelResult({  data, run, player, tournamentId }) {
   if (!data?.shotDirection) return null;
 
   const { shotDirection, shotType } = data;
   const coord = regionCoordinates[shotDirection];
+  // Generate commentary (already saved in parent, but display it here)
+  const commentary = `${player?.name || 'Player'} scored ${run} runs with a ${shotType} shot towards ${shotDirection}.`;
+  // Optional: Log tournamentId for debugging
+  console.log('WagonWheelResult received:', { run, player, tournamentId });
+  console.log(commentary)
 
   return (
     <div className="mt-5 flex flex-col items-center px-3 sm:px-6">

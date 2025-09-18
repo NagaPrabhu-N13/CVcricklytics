@@ -5,7 +5,6 @@ import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
-
 const Match = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,7 +15,6 @@ const Match = () => {
   const { tournamentId } = location.state || {};
   console.log(tournamentId, tournamentName);
 
-
   const tabs = [
     { id: "my-matches", label: "My Matches (Live + Past)" },
     { id: "following", label: "Following (Live + Past)" },
@@ -25,7 +23,6 @@ const Match = () => {
     { id: "upcoming", label: "Upcoming" },
     { id: "past", label: "Past" }
   ];
-
 
   const subOptions = [
     { id: "info", label: "Info" },
@@ -36,10 +33,8 @@ const Match = () => {
     { id: "mvp", label: "MVP" },
   ];
 
-
   useEffect(() => {
     if (!auth.currentUser) return;
-
 
     // Fetch all scoringpage documents (no userId filter in query for flexibility)
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
@@ -53,10 +48,8 @@ const Match = () => {
       console.error("Error fetching matches:", error);
     });
 
-
     return () => unsubscribe();
   }, []);
-
 
   useEffect(() => {
     if (tournamentId) {
@@ -68,15 +61,12 @@ const Match = () => {
     setActiveSubOption("info");
   }, [location.state, tournamentId]);  // Added tournamentId dependency
 
-
   const getFilteredMatches = (tab) => {
     const today = new Date().toISOString().split('T')[0];
-
 
     return matches.filter(match => {
       const matchDate = match.createdAt ? match.createdAt.toDate().toISOString().split('T')[0] : null;
       const hasResult = !!match.matchResult;
-
 
       if (tab === "my-matches") {
         return match.userId === auth.currentUser.uid;  // Only user's matches
@@ -99,7 +89,6 @@ const Match = () => {
     });
   };
 
-
   const getMatchData = (match, subOption) => {
     const {
       teamA = { name: "N/A", totalScore: 0, wickets: 0, overs: 0, result: null },
@@ -113,7 +102,6 @@ const Match = () => {
       umpire = "Not Available",
       matchId,
     } = match;
-
 
     switch (subOption) {
       case "info":
@@ -208,12 +196,10 @@ const Match = () => {
     }
   };
 
-
   // New function to transform match data into live layout format
   const transformToLiveFormat = (match) => {
     const matchData = getMatchData(match, "info");
     const scorecard = getMatchData(match, "scorecard");
-
 
     return {
       id: match.id,
@@ -247,11 +233,9 @@ const Match = () => {
     };
   };
 
-
   // New function to transform match data into upcoming layout format
   const transformToUpcomingFormat = (match) => {
     const matchData = getMatchData(match, "info");
-
 
     return {
       id: match.id,
@@ -262,12 +246,10 @@ const Match = () => {
     };
   };
 
-
   // New function to transform match data into past layout format
   const transformToPastFormat = (match) => {
     const matchData = getMatchData(match, "info");
     const summary = getMatchData(match, "summary");
-
 
     return {
       id: match.id,
@@ -281,7 +263,6 @@ const Match = () => {
       result: summary.score,
     };
   };
-
 
   const getStatusBadgeStyle = (status) => {
     switch (status.toUpperCase()) {
@@ -297,7 +278,6 @@ const Match = () => {
     }
   };
 
-
   const getBackgroundStyle = (tab) => {
     switch(tab) {
       case "live":
@@ -312,7 +292,6 @@ const Match = () => {
         };
     }
   };
-
 
   return (
     <div 
@@ -350,7 +329,6 @@ const Match = () => {
         />
       </div>
 
-
       {/* Horizontal Navigation Bar */}
       <div className="max-w-6xl mx-auto mt-4">
         <div className="flex overflow-x-auto scrollbar-hide pb-2 mb-4">
@@ -370,7 +348,6 @@ const Match = () => {
             ))}
           </div>
         </div>
-
 
         {/* Content Area */}
         <div className="p-4 md:p-8 rounded-xl border border-white/20 shadow-lg bg-white/5 backdrop-blur">
@@ -462,7 +439,6 @@ const Match = () => {
             </div>
           )}
 
-
           {activeTab === "following" && (
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6">Following (Live + Past)</h2>
@@ -475,8 +451,8 @@ const Match = () => {
                     return (
                       <div
                         key={match.id}
-                        className="bg-[rgba(0,0,0,0.3)] p-4 rounded-md shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
-                        onClick={() => navigate(`/match/${match.id}`)}
+                        className="bg-[rgba(0,0,0,0.3)] p-4 rounded-md shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer relative"
+                        // onClick={() => navigate(`/match/${match.id}`)}
                       >
                         <p className="text-sm"><strong>Match ID:</strong> {matchData.matchId}</p>
                         <h3 className="text-lg font-semibold mt-1">{matchData.teams}</h3>
@@ -484,6 +460,24 @@ const Match = () => {
                         <p className="text-blue-400 text-sm">{matchData.status}</p>
                         <p className="mt-2 text-sm">{matchData.score}</p>
                         <p className="text-gray-400 text-xs">{matchData.venue}</p>
+
+                        {/* Live Button for Live Matches */}
+                        {matchData.status === "Live" && (
+                          <button
+                            className="absolute bottom-2 right-2 px-3 py-1 bg-gradient-to-r from-red-500 to-yellow-500 text-white text-xs rounded-full font-semibold hover:brightness-90 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/match-details", { 
+                                state: { 
+                                  matchId: match.id, 
+                                  tournamentId: match.tournamentId 
+                                } 
+                              });
+                            }}
+                          >
+                            Live
+                          </button>
+                        )}
                       </div>
                     );
                   })
@@ -491,7 +485,6 @@ const Match = () => {
               </div>
             </div>
           )}
-
 
           {activeTab === "all" && (
             <div>
@@ -506,7 +499,7 @@ const Match = () => {
                       <div
                         key={match.id}
                         className="bg-[rgba(0,0,0,0.3)] p-4 rounded-lg shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
-                        onClick={() => navigate(`/match/${match.id}`)}
+                        // onClick={() => navigate(`/match/${match.id}`)}
                       >
                         <p className="text-sm"><strong>Match ID:</strong> {matchData.matchId}</p>
                         <h3 className="text-lg font-semibold mt-1">{matchData.teams}</h3>
@@ -524,11 +517,9 @@ const Match = () => {
             </div>
           )}
 
-
           {activeTab === "live" && (
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6">Live Matches</h2>
-
 
               <div className="space-y-4 md:space-y-6">
                 {getFilteredMatches(activeTab).length === 0 ? (
@@ -540,7 +531,11 @@ const Match = () => {
                       <div
                         key={transformedMatch.id}
                         className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
-                        onClick={() => navigate("/match-details", { state: transformedMatch, tournamentId })}
+                        onClick={() => navigate("/match-details", { state: { 
+                                  matchId: match.id, 
+                                  tournamentId: match.tournamentId 
+                                }  
+                              })}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="text-lg md:text-xl font-semibold">{transformedMatch.tournament}</h3>
@@ -575,7 +570,6 @@ const Match = () => {
                 </button>
               </div>
 
-
               <div className="space-y-4 md:space-y-6">
                 {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 py-4">No upcoming matches available.</p>
@@ -603,7 +597,6 @@ const Match = () => {
             <div className="px-4 md:px-8 py-4 md:py-6">
               <h2 className="text-2xl md:text-4xl font-bold text-center mb-6 md:mb-10 text-white">Past Matches</h2>
 
-
               <div className="space-y-4 md:space-y-6">
                 {getFilteredMatches(activeTab).length === 0 ? (
                   <p className="text-center text-gray-300 py-4">No past matches available.</p>
@@ -622,10 +615,8 @@ const Match = () => {
                           </span>
                         </div>
 
-
                         <p className="text-xs md:text-sm text-gray-300 mb-1">{transformedMatch.location} | {transformedMatch.date}</p>
                         <p className="text-xs uppercase text-cyan-300 font-semibold mb-2">{transformedMatch.match}</p>
-
 
                         <div className="space-y-1 text-white text-sm md:text-base">
                           <div className="flex justify-between items-center">
@@ -636,7 +627,6 @@ const Match = () => {
                             </span>
                           </div>
 
-
                           <div className="flex justify-between items-center">
                             <span className="font-medium">{transformedMatch.team2.name}</span>
                             <span className="text-right">
@@ -645,7 +635,6 @@ const Match = () => {
                             </span>
                           </div>
                         </div>
-
 
                         <p className="text-xs md:text-sm text-white mt-2 md:mt-4">{transformedMatch.result}</p>
                       </div>
@@ -660,6 +649,5 @@ const Match = () => {
     </div>
   );
 };
-
 
 export default Match;

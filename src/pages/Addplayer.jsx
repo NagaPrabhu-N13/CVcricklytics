@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { db, auth } from '../firebase';
-import { doc, setDoc, getDocs, collection, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,7 +52,7 @@ const AddPlayer = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const userProfile = location.state?.userProfile || null;
-  
+
   const [playerFormData, setPlayerFormData] = useState({
     playerId: '',
     name: '',
@@ -103,6 +103,8 @@ const AddPlayer = ({ onClose }) => {
   const [success, setSuccess] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalTeamName, setOriginalTeamName] = useState('');
 
   // Handle authentication state
   useEffect(() => {
@@ -119,25 +121,103 @@ const AddPlayer = ({ onClose }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Generate playerId when the modal mounts
-// In AddPlayer.jsx, update the useEffect to handle the passed playerId
-useEffect(() => {
-  const setPlayerId = async () => {
-    // Check if we received a playerId from navigation state
-    if (location.state?.playerId) {
-      setPlayerFormData(prev => ({ ...prev, playerId: location.state.playerId }));
-    } 
-    // If user already has a player ID, use that
-    else if (userProfile?.playerId) {
-      setPlayerFormData(prev => ({ ...prev, playerId: userProfile.playerId }));
-    } else {
-      // Otherwise generate a new one
-      const newId = await generateUniquePlayerId();
-      setPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
-    }
-  };
-  setPlayerId();
-}, [userProfile, location.state]);
+  // Set playerId and fetch data if editing
+  useEffect(() => {
+    const initializePlayer = async () => {
+      let initialPlayerId = '';
+
+      // Check if we received a playerId from navigation state
+      if (location.state?.playerId) {
+        initialPlayerId = location.state.playerId;
+        setIsEditing(true);
+      } 
+      // If user already has a player ID, use that
+      else if (userProfile?.playerId) {
+        initialPlayerId = userProfile.playerId;
+        setIsEditing(true);
+      } else {
+        // Otherwise generate a new one
+        const newId = await generateUniquePlayerId();
+        initialPlayerId = newId.toString();
+        setIsEditing(false);
+      }
+
+      setPlayerFormData(prev => ({ ...prev, playerId: initialPlayerId }));
+
+      // If editing, fetch existing player data
+      if (initialPlayerId && isEditing) {
+        try {
+          // Query PlayerDetails collection for matching playerId field
+          const playerQuery = query(
+            collection(db, 'PlayerDetails'),
+            where('playerId', '==', parseInt(initialPlayerId))
+          );
+          const playerSnapshot = await getDocs(playerQuery);
+
+          if (!playerSnapshot.empty) {
+            const playerDoc = playerSnapshot.docs[0];
+            const data = playerDoc.data();
+
+            // Flatten careerStats for form
+            const flattenedData = {
+              playerId: data.playerId?.toString() || '',
+              name: data.name || '',
+              image: data.image || '',
+              teamName: data.teamName || '',
+              role: data.role || '',
+              age: data.age?.toString() || '',
+              battingStyle: data.battingStyle || '',
+              bowlingStyle: data.bowlingStyle || '',
+              matches: data.matches?.toString() || '0',
+              runs: data.runs?.toString() || '0',
+              highestScore: data.highestScore?.toString() || '0',
+              average: data.average?.toString() || '0',
+              strikeRate: data.strikeRate?.toString() || '0',
+              centuries: data.centuries?.toString() || '0',
+              fifties: data.fifties?.toString() || '0',
+              wickets: data.wickets?.toString() || '0',
+              bestBowling: data.bestBowling || '0',
+              bio: data.bio || '',
+              recentMatches: data.recentMatches?.map(match => `${match.opponent}, ${match.runs}, ${match.wickets}, ${match.result}`).join('\n') || '',
+              careerStatsBattingMatches: data.careerStats?.batting?.matches?.toString() || '0',
+              careerStatsBattingInnings: data.careerStats?.batting?.innings?.toString() || '0',
+              careerStatsBattingNotOuts: data.careerStats?.batting?.notOuts?.toString() || '0',
+              careerStatsBattingRuns: data.careerStats?.batting?.runs?.toString() || '0',
+              careerStatsBattingHighest: data.careerStats?.batting?.highest?.toString() || '0',
+              careerStatsBattingAverage: data.careerStats?.batting?.average?.toString() || '0',
+              careerStatsBattingStrikeRate: data.careerStats?.batting?.strikeRate?.toString() || '0',
+              careerStatsBattingCenturies: data.careerStats?.batting?.centuries?.toString() || '0',
+              careerStatsBattingFifties: data.careerStats?.batting?.fifties?.toString() || '0',
+              careerStatsBattingFours: data.careerStats?.batting?.fours?.toString() || '0',
+              careerStatsBattingSixes: data.careerStats?.batting?.sixes?.toString() || '0',
+              careerStatsBowlingInnings: data.careerStats?.bowling?.innings?.toString() || '0',
+              careerStatsBowlingWickets: data.careerStats?.bowling?.wickets?.toString() || '0',
+              careerStatsBowlingBest: data.careerStats?.bowling?.best || '0',
+              careerStatsBowlingAverage: data.careerStats?.bowling?.average?.toString() || '0',
+              careerStatsBowlingEconomy: data.careerStats?.bowling?.economy?.toString() || '0',
+              careerStatsBowlingStrikeRate: data.careerStats?.bowling?.strikeRate?.toString() || '0',
+              careerStatsFieldingCatches: data.careerStats?.fielding?.catches?.toString() || '0',
+              careerStatsFieldingStumpings: data.careerStats?.fielding?.stumpings?.toString() || '0',
+              careerStatsFieldingRunOuts: data.careerStats?.fielding?.runOuts?.toString() || '0',
+              user: data.user || 'yes',
+              audioUrl: data.audioUrl || '',
+            };
+
+            setPlayerFormData(flattenedData);
+            setOriginalTeamName(data.teamName || '');
+          } else {
+            setError("No player found with the provided playerId.");
+          }
+        } catch (err) {
+          console.error("Error fetching player:", err);
+          setError("Failed to fetch player data: " + err.message);
+        }
+      }
+    };
+
+    initializePlayer();
+  }, [userProfile, location.state, isEditing]);
+
   const handlePlayerChange = (e) => {
     const { name, value } = e.target;
     setPlayerFormData(prev => ({ ...prev, [name]: value }));
@@ -258,11 +338,33 @@ useEffect(() => {
       };
 
       const playerId = playerFormData.playerId;
-      
-      // Save player to PlayerDetails collection
-      await setDoc(doc(db, "PlayerDetails", playerId), playerData);
 
-      // Add player to clubTeams collection
+      // Handle team updates if editing and team changed
+      if (isEditing && originalTeamName && originalTeamName !== playerFormData.teamName) {
+        // Remove player from old team
+        const oldTeamQuery = query(
+          collection(db, 'clubTeams'),
+          where('teamName', '==', originalTeamName),
+          where('createdBy', '==', currentUserId)
+        );
+        const oldTeamSnapshot = await getDocs(oldTeamQuery);
+        if (!oldTeamSnapshot.empty) {
+          const oldTeamDoc = oldTeamSnapshot.docs[0];
+          await updateDoc(doc(db, 'clubTeams', oldTeamDoc.id), {
+            players: arrayRemove(playerData)  // Note: This assumes playerData matches exactly; may need adjustment if IDs are used
+          });
+        }
+      }
+
+      // Save or update player to PlayerDetails collection
+      const playerDocRef = doc(db, "PlayerDetails", playerId);
+      if (isEditing) {
+        await updateDoc(playerDocRef, playerData);
+      } else {
+        await setDoc(playerDocRef, playerData);
+      }
+
+      // Add or update player in clubTeams collection
       const teamQuery = query(
         collection(db, 'clubTeams'),
         where('teamName', '==', playerFormData.teamName),
@@ -271,8 +373,11 @@ useEffect(() => {
       const teamSnapshot = await getDocs(teamQuery);
 
       if (!teamSnapshot.empty) {
-        // Team exists, append player to players array
+        // Team exists, update players array (remove old if exists, add new)
         const teamDoc = teamSnapshot.docs[0];
+        await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
+          players: arrayRemove(playerData),  // Remove any existing version
+        });
         await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
           players: arrayUnion(playerData)
         });
@@ -292,8 +397,8 @@ useEffect(() => {
         });
       }
 
-      // If user didn't have a player ID, update their profile
-      if (!userProfile?.playerId) {
+      // If user didn't have a player ID (only for add), update their profile
+      if (!isEditing && !userProfile?.playerId) {
         await updateDoc(doc(db, "users", currentUserId), {
           playerId: playerFormData.playerId
         });
@@ -301,51 +406,54 @@ useEffect(() => {
 
       setSuccess(true);
 
-      const newId = await generateUniquePlayerId();
-      setPlayerFormData({
-        playerId: newId.toString(),
-        name: '',
-        image: '',
-        teamName: '',
-        role: 'player',
-        age: '',
-        battingStyle: '',
-        bowlingStyle: '',
-        matches: '0',
-        runs: '0',
-        highestScore: '0',
-        average: '0',
-        strikeRate: '0',
-        centuries: '0',
-        fifties: '0',
-        wickets: '0',
-        bestBowling: '0',
-        bio: '',
-        recentMatches: '',
-        careerStatsBattingMatches: '0',
-        careerStatsBattingInnings: '0',
-        careerStatsBattingNotOuts: '0',
-        careerStatsBattingRuns: '0',
-        careerStatsBattingHighest: '0',
-        careerStatsBattingAverage: '0',
-        careerStatsBattingStrikeRate: '0',
-        careerStatsBattingCenturies: '0',
-        careerStatsBattingFifties: '0',
-        careerStatsBattingFours: '0',
-        careerStatsBattingSixes: '0',
-        careerStatsBowlingInnings: '0',
-        careerStatsBowlingWickets: '0',
-        careerStatsBowlingBest: '0',
-        careerStatsBowlingAverage: '0',
-        careerStatsBowlingEconomy: '0',
-        careerStatsBowlingStrikeRate: '0',
-        careerStatsFieldingCatches: '0',
-        careerStatsFieldingStumpings: '0',
-        careerStatsFieldingRunOuts: '0',
-        user: 'yes',
-        audioUrl: '',
-      });
-      setPlayerImageFile(null);
+      // Reset form only if adding new
+      if (!isEditing) {
+        const newId = await generateUniquePlayerId();
+        setPlayerFormData({
+          playerId: newId.toString(),
+          name: '',
+          image: '',
+          teamName: '',
+          role: 'player',
+          age: '',
+          battingStyle: '',
+          bowlingStyle: '',
+          matches: '0',
+          runs: '0',
+          highestScore: '0',
+          average: '0',
+          strikeRate: '0',
+          centuries: '0',
+          fifties: '0',
+          wickets: '0',
+          bestBowling: '0',
+          bio: '',
+          recentMatches: '',
+          careerStatsBattingMatches: '0',
+          careerStatsBattingInnings: '0',
+          careerStatsBattingNotOuts: '0',
+          careerStatsBattingRuns: '0',
+          careerStatsBattingHighest: '0',
+          careerStatsBattingAverage: '0',
+          careerStatsBattingStrikeRate: '0',
+          careerStatsBattingCenturies: '0',
+          careerStatsBattingFifties: '0',
+          careerStatsBattingFours: '0',
+          careerStatsBattingSixes: '0',
+          careerStatsBowlingInnings: '0',
+          careerStatsBowlingWickets: '0',
+          careerStatsBowlingBest: '0',
+          careerStatsBowlingAverage: '0',
+          careerStatsBowlingEconomy: '0',
+          careerStatsBowlingStrikeRate: '0',
+          careerStatsFieldingCatches: '0',
+          careerStatsFieldingStumpings: '0',
+          careerStatsFieldingRunOuts: '0',
+          user: 'yes',
+          audioUrl: '',
+        });
+        setPlayerImageFile(null);
+      }
 
       // Navigate to previous route after success
       setTimeout(() => {
@@ -357,8 +465,8 @@ useEffect(() => {
         navigate(-1);
       }, 1500);
     } catch (err) {
-      console.error("Error adding player:", err);
-      setError("Failed to add player: " + err.message);
+      console.error("Error handling player:", err);
+      setError("Failed to handle player: " + err.message);
       setLoading(false);
     } finally {
       setLoading(false);
@@ -406,9 +514,9 @@ useEffect(() => {
             exit={{ scale: 0.9, y: 50 }}
             className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-gray-700 overflow-y-auto max-h-[90vh]"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">Add New Player</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">{isEditing ? 'Edit Player' : 'Add New Player'}</h2>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            {success && <p className="text-green-500 text-sm mb-4">Player added successfully!</p>}
+            {success && <p className="text-green-500 text-sm mb-4">Player {isEditing ? 'updated' : 'added'} successfully!</p>}
 
             <form onSubmit={handlePlayerSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -568,8 +676,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingMatches"
                     value={playerFormData.careerStatsBattingMatches}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -578,8 +686,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingInnings"
                     value={playerFormData.careerStatsBattingInnings}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -588,8 +696,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingNotOuts"
                     value={playerFormData.careerStatsBattingNotOuts}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -598,8 +706,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingRuns"
                     value={playerFormData.careerStatsBattingRuns}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -608,8 +716,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingHighest"
                     value={playerFormData.careerStatsBattingHighest}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -619,8 +727,8 @@ useEffect(() => {
                     step="0.01"
                     name="careerStatsBattingAverage"
                     value={playerFormData.careerStatsBattingAverage}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -630,8 +738,8 @@ useEffect(() => {
                     step="0.01"
                     name="careerStatsBattingStrikeRate"
                     value={playerFormData.careerStatsBattingStrikeRate}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -640,8 +748,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingCenturies"
                     value={playerFormData.careerStatsBattingCenturies}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -650,8 +758,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingFifties"
                     value={playerFormData.careerStatsBattingFifties}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -660,8 +768,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingFours"
                     value={playerFormData.careerStatsBattingFours}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -670,8 +778,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBattingSixes"
                     value={playerFormData.careerStatsBattingSixes}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -684,8 +792,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBowlingInnings"
                     value={playerFormData.careerStatsBowlingInnings}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -694,8 +802,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsBowlingWickets"
                     value={playerFormData.careerStatsBowlingWickets}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -704,8 +812,8 @@ useEffect(() => {
                     type="text"
                     name="careerStatsBowlingBest"
                     value={playerFormData.careerStatsBowlingBest}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -715,8 +823,8 @@ useEffect(() => {
                     step="0.01"
                     name="careerStatsBowlingAverage"
                     value={playerFormData.careerStatsBowlingAverage}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -726,8 +834,8 @@ useEffect(() => {
                     step="0.01"
                     name="careerStatsBowlingEconomy"
                     value={playerFormData.careerStatsBowlingEconomy}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -737,8 +845,8 @@ useEffect(() => {
                     step="0.01"
                     name="careerStatsBowlingStrikeRate"
                     value={playerFormData.careerStatsBowlingStrikeRate}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -751,8 +859,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsFieldingCatches"
                     value={playerFormData.careerStatsFieldingCatches}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -761,8 +869,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsFieldingStumpings"
                     value={playerFormData.careerStatsFieldingStumpings}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -771,8 +879,8 @@ useEffect(() => {
                     type="number"
                     name="careerStatsFieldingRunOuts"
                     value={playerFormData.careerStatsFieldingRunOuts}
-                    readOnly
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none opacity-75"
+                    onChange={handlePlayerChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -794,7 +902,7 @@ useEffect(() => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   disabled={loading || !currentUserId}
                 >
-                  {loading ? 'Adding Player...' : 'Add Player'}
+                  {loading ? (isEditing ? 'Updating Player...' : 'Adding Player...') : (isEditing ? 'Update Player' : 'Add Player')}
                 </motion.button>
               </div>
             </form>

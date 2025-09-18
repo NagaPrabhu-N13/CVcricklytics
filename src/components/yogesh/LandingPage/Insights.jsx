@@ -82,48 +82,23 @@ const Insights = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch player data from clubTeams collection
+  // Fetch player data from PlayerDetails collection by matching name with user's firstName
   useEffect(() => {
-    if (!auth.currentUser) {
-      console.log("No authenticated user found.");
-      return;
-    }
+    if (!userProfile?.firstName) return;
 
-    const q = query(collection(db, 'clubTeams'));
+    const playerQuery = query(
+      collection(db, 'PlayerDetails'),
+      where('name', '==', userProfile.firstName)
+    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let playerFound = false;
+    const unsubscribe = onSnapshot(playerQuery, (snapshot) => {
       let playerData = null;
-      let teamWins = 0;
-      let teamLosses = 0;
 
-      snapshot.docs.forEach((doc) => {
-        const teamData = doc.data();
-        const players = teamData.players || [];
-        
-        // Find player with current user ID and user="yes"
-        const player = players.find(
-          (p) => p.userId === auth.currentUser.uid && p.user?.toLowerCase() === "yes"
-        );
-        
-        if (player) {
-          playerData = {
-            ...player,
-            teamId: doc.id, // Store team ID for reference
-            teamData: { // Include relevant team data
-              wins: teamData.wins,
-              losses: teamData.losses,
-              matches: teamData.matches
-            }
-          };
-          playerFound = true;
-          
-          // Calculate team wins and losses
-          teamWins = teamData.wins !== undefined ? teamData.wins : 
-                    (teamData.matches || 0) - (teamData.losses || 0);
-          teamLosses = teamData.losses || 0;
-        }
-      });
+      if (!snapshot.empty) {
+        // Assuming the first matching document is the correct one
+        const playerDoc = snapshot.docs[0];
+        playerData = playerDoc.data();
+      }
 
       const data = {
         batting: {},
@@ -131,48 +106,46 @@ const Insights = () => {
         fielding: {},
       };
 
-      if (playerFound && playerData) {
+      if (playerData) {
         const careerStats = playerData.careerStats || {
           batting: {},
           bowling: {},
           fielding: {},
         };
 
-        // Batting stats calculations
+        // Batting stats from careerStats.batting
         const battingStats = careerStats.batting || {};
         const battingRuns = battingStats.runs || 0;
         const battingInnings = battingStats.innings || 0;
         const battingNotOuts = battingStats.notOuts || 0;
-        const battingAverage = battingInnings - battingNotOuts > 0
-          ? (battingRuns / (battingInnings - battingNotOuts)).toFixed(2)
-          : 0;
-        const battingBalls = battingStats.balls || 0;
-        const battingStrikeRate = battingBalls > 0
-          ? ((battingRuns / battingBalls) * 100).toFixed(2)
-          : 0;
+        const battingAverage = battingStats.average || (battingInnings - battingNotOuts > 0 ? (battingRuns / (battingInnings - battingNotOuts)).toFixed(2) : 0);
+        const battingStrikeRate = battingStats.strikeRate || 0;
 
-        // Bowling stats calculations
+        // Bowling stats from careerStats.bowling
         const bowlingStats = careerStats.bowling || {};
-        const overs = bowlingStats.overs || 0;
-        const bowlingBalls = Math.floor(overs) * 6 + Math.round((overs % 1) * 10);
-        const runsConceded = bowlingStats.runsConceded || 0;
         const wickets = bowlingStats.wickets || 0;
-        const bowlingAverage = wickets > 0 ? (runsConceded / wickets).toFixed(2) : 0;
-        const bowlingEconomy = overs > 0 ? (runsConceded / overs).toFixed(2) : 0;
+        const bowlingAverage = bowlingStats.average || 0;
+        const bowlingEconomy = bowlingStats.economy || 0;
+        const bowlingStrikeRate = bowlingStats.strikeRate || 0;
 
-        // Fielding stats
+        // Assuming overs, balls, runsConceded, etc., are not directly available; set to 0 or derive if possible
+        const overs = 0; // Not in structure
+        const bowlingBalls = 0; // Not in structure
+        const runsConceded = 0; // Not in structure
+
+        // Fielding stats from careerStats.fielding
         const fieldingStats = careerStats.fielding || {};
 
         // Set batting data
         data.batting = {
           runs: [{ value: battingRuns }],
           "high-score": [{ value: battingStats.highest || 0 }],
-          win: [{ value: teamWins }],
-          lose: [{ value: teamLosses }],
-          matches: [{ value: battingStats.matches || 0 }],
+          win: [{ value: 0 }], // No team data
+          lose: [{ value: 0 }], // No team data
+          matches: [{ value: battingStats.matches || playerData.matches || 0 }],
           innings: [{ value: battingInnings }],
           "strike-rate": [{ value: battingStrikeRate }],
-          "30s": [{ value: battingStats.thirties || 0 }],
+          "30s": [{ value: 0 }], // Not available
           "50s": [{ value: battingStats.fifties || 0 }],
           "100s": [{ value: battingStats.centuries || 0 }],
           "4s": [{ value: battingStats.fours || 0 }],
@@ -182,32 +155,32 @@ const Insights = () => {
 
         // Set bowling data
         data.bowling = {
-          "best-bowl": [{ value: bowlingStats.bestBowling || "0/0" }],
-          match: [{ value: battingStats.matches || 0 }],
+          "best-bowl": [{ value: bowlingStats.best || playerData.bestBowling || "0/0" }],
+          match: [{ value: battingStats.matches || playerData.matches || 0 }],
           innings: [{ value: bowlingStats.innings || 0 }],
           overs: [{ value: overs }],
           balls: [{ value: bowlingBalls }],
-          maiden: [{ value: bowlingStats.maidens || 0 }],
+          maiden: [{ value: 0 }], // Not available
           runs: [{ value: runsConceded }],
           wickets: [{ value: wickets }],
-          "3-wickets": [{ value: bowlingStats.threeWickets || 0 }],
-          "5-wickets": [{ value: bowlingStats.fiveWickets || 0 }],
+          "3-wickets": [{ value: 0 }], // Not available
+          "5-wickets": [{ value: 0 }], // Not available
           economy: [{ value: bowlingEconomy }],
           average: [{ value: bowlingAverage }],
-          wide: [{ value: bowlingStats.wides || 0 }],
-          "no-balls": [{ value: bowlingStats.noBalls || 0 }],
-          dots: [{ value: bowlingStats.dotBalls || 0 }],
-          "4s": [{ value: bowlingStats.foursConceded || 0 }],
-          "6s": [{ value: bowlingStats.sixesConceded || 0 }],
+          wide: [{ value: 0 }], // Not available
+          "no-balls": [{ value: 0 }], // Not available
+          dots: [{ value: 0 }], // Not available
+          "4s": [{ value: 0 }], // Not available
+          "6s": [{ value: 0 }], // Not available
         };
 
         // Set fielding data
         data.fielding = {
-          matches: [{ value: battingStats.matches || 0 }],
+          matches: [{ value: battingStats.matches || playerData.matches || 0 }],
           catch: [{ value: fieldingStats.catches || 0 }],
           stumping: [{ value: fieldingStats.stumpings || 0 }],
           "run-out": [{ value: fieldingStats.runOuts || 0 }],
-          "catch-and-bowl": [{ value: fieldingStats.catchAndBowl || 0 }],
+          "catch-and-bowl": [{ value: 0 }], // Not available
         };
 
         setPrevStats(careerStats);
@@ -223,7 +196,7 @@ const Insights = () => {
 
       setInsightsData(data);
     }, (error) => {
-      console.error("Error fetching clubTeams data:", error);
+      console.error("Error fetching PlayerDetails data:", error);
       // Set empty data on error
       setInsightsData({
         batting: Object.fromEntries(subOptions.batting.map(opt => [opt.id, [{ value: 0 }]])),
@@ -234,7 +207,7 @@ const Insights = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [userProfile]);
 
   // Calculate overall stats
   const calculateOverallStats = () => {
@@ -267,7 +240,7 @@ const Insights = () => {
       }}
     >
       {/* Top Navigation Bar */}
-       <div className="md:absolute flex items-center gap-4">
+      <div className="md:absolute flex items-center gap-4">
         <img
           src={backButton}
           alt="Back"

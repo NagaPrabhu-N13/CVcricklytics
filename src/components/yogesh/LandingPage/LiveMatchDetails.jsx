@@ -2,102 +2,101 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import backButton from '../../../assets/kumar/right-chevron.png';
 import AIMatchCompanionModal from '../LandingPage/AIMatchCompanion';
+import { db } from '../../../firebase'; // Adjust path to your firebase config
+import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+
 
 const MatchDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const match = location.state;
-  const tournamentId = location.state;
+  const { matchId, tournamentId } = location.state || {};
+
+  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
-  const [commentary, setCommentary] = useState([
-    { 
-      id: 1, 
-      over: "12.3", 
-      text: "FOUR! Beautiful drive through the covers! Perfect timing and placement.", 
-      runs: 4,
-      timestamp: "2 mins ago",
-      highlight: true
-    },
-    { 
-      id: 2, 
-      over: "12.2", 
-      text: "Defended solidly back to the bowler. Good length delivery.", 
-      runs: 0,
-      timestamp: "3 mins ago"
-    },
-    { 
-      id: 3, 
-      over: "12.1", 
-      text: "Short and pulled away for a single. Good aggressive batting.", 
-      runs: 1,
-      timestamp: "4 mins ago"
-    },
-    { 
-      id: 4, 
-      over: "11.6", 
-      text: "Dot ball. Excellent line and length from the bowler.", 
-      runs: 0,
-      timestamp: "5 mins ago"
-    },
-    { 
-      id: 5, 
-      over: "11.5", 
-      text: "SIX! Massive hit over long-on! That went 95 meters!", 
-      runs: 6,
-      timestamp: "6 mins ago",
-      highlight: true
-    },
-    { 
-      id: 6, 
-      over: "11.4", 
-      text: "Edged but falls safe. Two runs taken.", 
-      runs: 2,
-      timestamp: "7 mins ago"
-    },
-    { 
-      id: 7, 
-      over: "11.3", 
-      text: "Play and miss outside off stump. Beaten by pace.", 
-      runs: 0,
-      timestamp: "8 mins ago"
-    },
-    { 
-      id: 8, 
-      over: "11.2", 
-      text: "Driven to deep cover for a single. Good rotation of strike.", 
-      runs: 1,
-      timestamp: "9 mins ago"
-    },
-    { 
-      id: 9, 
-      over: "11.1", 
-      text: "Length ball, defended towards mid-on. No run.", 
-      runs: 0,
-      timestamp: "10 mins ago"
-    }
-  ]);
+  const [commentary, setCommentary] = useState([]);
 
-  // Simulate live commentary updates
+
+  // Fetch match data in real-time
   useEffect(() => {
-    if (!match) navigate("/");
-    
-    const interval = setInterval(() => {
-      const newComment = {
-        id: commentary.length + 1,
-        over: `${Math.floor(Math.random() * 15)}.${Math.floor(Math.random() * 6)}`,
-        text: getRandomCommentary(),
-        runs: Math.floor(Math.random() * 7),
-        timestamp: "Just now",
-        highlight: Math.random() > 0.7
-      };
-      
-      setCommentary(prev => [newComment, ...prev.slice(0, 15)]);
-    }, 15000); // Add new commentary every 15 seconds
+    if (!matchId) {
+      setError("No match ID provided");
+      setLoading(false);
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, [match, navigate, commentary.length]);
+    const unsubscribe = onSnapshot(doc(db, 'scoringpage', matchId), (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        setMatch({ id: docSnapshot.id, ...docSnapshot.data() });
+        setLoading(false);
+      } else {
+        setError("Match not found");
+        setLoading(false);
+      }
+    }, (err) => {
+      console.error("Error fetching match:", err);
+      setError("Failed to load match details");
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [matchId]);
+  useEffect(() => {
+  if (!tournamentId) return;
+
+  const q = query(
+    collection(db, "liveCommentary"),
+    where("tournamentId", "==", tournamentId),
+    orderBy("timestamp", "desc") // Ensures most recent first; remove if not needed
+  );
+
+  // Listener will update commentary array on any change
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const comments = querySnapshot.docs.map((doc, idx) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        text: data.commentary,
+        runs: data.run,
+        playerName: data.playerName,
+        totalRuns: data.totalRuns || 0,      // <-- mapped
+        wickets: data.wickets || 0,    
+        timestamp: data.timestamp ? (
+          data.timestamp instanceof Date ? data.timestamp.toLocaleString() :
+          data.timestamp.toDate ? data.timestamp.toDate().toLocaleString() :
+          ""
+        ) : "",
+        highlight: data.run >= 4 // Example: highlight 4s and 6s
+      };
+    });
+    setCommentary(comments);
+  });
+
+  return () => unsubscribe();
+}, [tournamentId]);
+
+
+  // // Simulate live commentary updates
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const newComment = {
+  //       id: commentary.length + 1,
+  //       over: `${Math.floor(Math.random() * 15)}.${Math.floor(Math.random() * 6)}`,
+  //       text: getRandomCommentary(),
+  //       runs: Math.floor(Math.random() * 7),
+  //       timestamp: "Just now",
+  //       highlight: Math.random() > 0.7
+  //     };
+      
+  //     setCommentary(prev => [newComment, ...prev.slice(0, 15)]);
+  //   }, 15000); // Add new commentary every 15 seconds
+
+  //   return () => clearInterval(interval);
+  // }, [commentary.length]);
 
   const getRandomCommentary = () => {
     const commentaries = [
@@ -124,7 +123,45 @@ const MatchDetails = () => {
     setIsModalOpen(false);
   };
 
-  if (!match) return null;
+  if (loading) return <div className="p-4 md:p-6 text-white bg-gradient-to-br from-purple-900/30 to-indigo-800/30 min-h-screen"><p className="text-center">Loading match details...</p></div>;
+  if (error) return <div className="p-4 md:p-6 text-white bg-gradient-to-br from-purple-900/30 to-indigo-800/30 min-h-screen"><p className="text-center text-red-500">{error}</p></div>;
+  if (!match) return <div className="p-4 md:p-6 text-white bg-gradient-to-br from-purple-900/30 to-indigo-800/30 min-h-screen"><p className="text-center text-gray-300">No match data available.</p></div>;
+
+  // Derive dynamic match data
+  const isSecondInnings = (match.secondInnings?.playerStats?.length > 0) || (match.teamB?.overs > 0);
+  const battingTeam = isSecondInnings ? match.teamB : match.teamA;
+  const bowlingTeam = isSecondInnings ? match.teamA : match.teamB;
+  const currentInnings = isSecondInnings ? match.secondInnings : match.firstInnings;
+
+  const derivedMatch = {
+    tournament: match.tournamentName || "Unknown Tournament",
+    location: match.venue || "Not Available",
+    date: match.createdAt ? match.createdAt.toDate().toISOString().split('T')[0] + " | Current Overs" : "Unknown Date",
+    battingTeam: battingTeam?.name || (isSecondInnings ? "Team B" : "Team A"),
+    bowlingTeam: bowlingTeam?.name || (isSecondInnings ? "Team A" : "Team B"),
+    score: `${battingTeam?.totalScore || 0}/${battingTeam?.wickets || 0}`,
+    overs: battingTeam?.overs || "0.0",
+    batting: currentInnings?.playerStats?.map(p => ({
+      name: p.name || "Unknown",
+      runs: p.runs || "0",
+      balls: p.balls || "0",
+      fours: p.fours || "0",
+      sixes: p.sixes || "0",
+      sr: p.sr || "0",
+    })) || [],
+    bowling: currentInnings?.bowlerStats?.map(b => ({
+      name: b.name || "Unknown",
+      overs: b.oversBowled || "0.0",
+      maidens: b.maidens || "0",
+      runs: b.runsConceded || "0",
+      wickets: b.wickets || "0",
+      eco: b.eco || "0",
+    })) || [],
+    recentBalls: [], // Placeholder; implement if data available
+  };
+
+  // Calculate target for second innings
+  const targetScore = (match.teamA?.totalScore || 0) + 1; // Assuming chase the score +1 to win
 
   return (
     <div className="p-4 md:p-6 text-white bg-gradient-to-br from-purple-900/30 to-indigo-800/30 min-h-screen">
@@ -138,7 +175,7 @@ const MatchDetails = () => {
           onClick={() => window.history.back()}
         />
         <h2 className="text-xl md:text-2xl font-bold font-['Alegreya']">
-          {match.tournament}
+          {derivedMatch.tournament}
         </h2>
       </div>
 
@@ -148,20 +185,26 @@ const MatchDetails = () => {
         <div className="bg-gradient-to-br from-purple-800/20 to-indigo-800/20 p-4 md:p-6 rounded-xl shadow-lg flex-1 border border-purple-500/30">
           {/* Header Info */}
           <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold">{match.location}</h3>
+            <h3 className="text-lg font-semibold">{derivedMatch.location}</h3>
             <span className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-full shadow-md uppercase tracking-wide pulse-animation">
               <span className="w-2 h-2 bg-red-300 rounded-full mr-2"></span>
               Live
             </span>
           </div>
-          <p className="text-sm text-gray-300 mb-4">{match.date}</p>
+          <p className="text-sm text-gray-300 mb-4">{derivedMatch.date}</p>
 
           {/* Score */}
           <div className="text-xl font-bold mb-2">
-            {match.battingTeam}{" "}
-            <span className="text-red-400">{match.score}</span> ({match.overs} Ov)
+            {derivedMatch.battingTeam}{" "}
+            <span className="text-red-400">{derivedMatch.score}</span> ({derivedMatch.overs} Ov)
           </div>
-          <p className="text-sm text-gray-300 mb-6">Yet to Bat: {match.bowlingTeam}</p>
+          {!isSecondInnings ? (
+            <p className="text-sm text-gray-300 mb-6">Yet to Bat: {derivedMatch.bowlingTeam}</p>
+          ) : (
+            <p className="text-sm text-gray-300 mb-6">
+              Target: {targetScore} ({match.teamA?.name || "Team A"}: {match.teamA?.totalScore || 0}/{match.teamA?.wickets || 0} in {match.teamA?.overs || 0} Ov)
+            </p>
+          )}
 
           {/* Batters Table */}
           <div className="mb-6">
@@ -178,7 +221,7 @@ const MatchDetails = () => {
                 </tr>
               </thead>
               <tbody>
-                {match.batting.map((batter, index) => (
+                {derivedMatch.batting.map((batter, index) => (
                   <tr key={index} className="text-left border-b border-purple-500/20">
                     <td className="py-1 pr-1 font-medium">{batter.name}</td>
                     <td className="text-center p-0.5">{batter.runs}</td>
@@ -188,6 +231,9 @@ const MatchDetails = () => {
                     <td className="text-center p-0.5">{batter.sr}</td>
                   </tr>
                 ))}
+                {derivedMatch.batting.length === 0 && (
+                  <tr><td colSpan="6" className="text-center py-2">No batting data available yet.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -207,7 +253,7 @@ const MatchDetails = () => {
                 </tr>
               </thead>
               <tbody>
-                {match.bowling.map((bowler, index) => (
+                {derivedMatch.bowling.map((bowler, index) => (
                   <tr key={index} className="text-left border-b border-purple-500/20">
                     <td className="py-1 pr-1 font-medium">{bowler.name}</td>
                     <td className="text-center p-0.5">{bowler.overs}</td>
@@ -217,16 +263,19 @@ const MatchDetails = () => {
                     <td className="text-center p-0.5">{bowler.eco}</td>
                   </tr>
                 ))}
+                {derivedMatch.bowling.length === 0 && (
+                  <tr><td colSpan="6" className="text-center py-2">No bowling data available yet.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Recent Balls */}
-          {match.recentBalls?.length > 0 && (
+          {derivedMatch.recentBalls?.length > 0 && (
             <div className="mb-4">
               <h4 className="text-md font-semibold mb-2">Recent Balls</h4>
               <div className="flex flex-wrap gap-2">
-                {match.recentBalls.map((ball, i) => (
+                {derivedMatch.recentBalls.map((ball, i) => (
                   <span key={i} className="bg-purple-700/50 px-2 py-1 rounded text-xs border border-purple-500/30">
                     {ball}
                   </span>
@@ -277,7 +326,7 @@ const MatchDetails = () => {
         <div className="h-[400px] overflow-y-auto pr-2 commentary-scroll">
           {commentary.map((item) => (
             <div 
-              key={item.id} 
+              key={item.id}
               className={`mb-3 pb-3 border-b border-purple-500/30 last:border-b-0 transition-all duration-300 ${item.highlight ? 'bg-purple-700/30 -mx-2 px-2 py-2 rounded' : ''}`}
             >
               <div className="flex">
@@ -286,7 +335,8 @@ const MatchDetails = () => {
                   item.runs === 4 ? 'bg-blue-700' : 
                   item.runs === 6 ? 'bg-purple-700' : 'bg-green-700'
                 }`}>
-                  <span className="text-xs font-bold">{item.over}</span>
+                  {/* You can display ball/over here if stored */}
+                  <p className="text-sm mb-1">{item.totalRuns}/{item.wickets}</p>
                 </div>
                 <div className="flex-1">
                   <p className="text-sm mb-1">{item.text}</p>
@@ -303,6 +353,7 @@ const MatchDetails = () => {
             </div>
           ))}
         </div>
+
         
         <div className="mt-4 pt-3 border-t border-purple-500/30">
           <div className="flex flex-wrap items-center text-xs text-gray-400 gap-2">
@@ -325,8 +376,6 @@ const MatchDetails = () => {
           </div>
         </div>
       </div>
-
-      
 
       <style jsx>{`
         .pulse-animation {

@@ -4,14 +4,15 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 import '../../index.css';
-import nav from '../../assets/kumar/right-chevron.png'; // Added one more level
-import logo from '../../assets/sophita/HomePage/Picture3_2.png'; // Added one more level
- 
+import nav from '../../assets/kumar/right-chevron.png';
+import logo from '../../assets/sophita/HomePage/Picture3_2.png';
+
 const plans = [
   {
     name: 'Bronze',
     price: { yearly: 'Free', monthly: 'Free' },
     razorpayPlanId: { yearly: null, monthly: null },
+    razorpayLink: { yearly: null, monthly: null },
     features: {
       'AI Chatbot Support': true,
       'Core Features Access': true,
@@ -42,6 +43,10 @@ const plans = [
     name: 'Silver',
     price: { yearly: '₹2500/Year', monthly: '₹210/Month' },
     razorpayPlanId: { yearly: 'plan_Qe0XUXFOwggzwq', monthly: 'plan_Qe0YeVwdn3w8gF' },
+    razorpayLink: { 
+      yearly: 'https://razorpay.me/@creativityventures', 
+      monthly: 'https://razorpay.me/@creativityventures' 
+    },
     features: {
       'AI Chatbot Support': true,
       'Core Features Access': true,
@@ -72,6 +77,10 @@ const plans = [
     name: 'Gold',
     price: { yearly: '₹5000/Year', monthly: '₹420/Month' },
     razorpayPlanId: { yearly: 'plan_Qe0ZKD5HdhN5W5', monthly: 'plan_Qe0ZxCpdAEZlxC' },
+    razorpayLink: { 
+      yearly: 'https://razorpay.me/@creativityventures', 
+      monthly: 'https://razorpay.me/@creativityventures' 
+    },
     features: {
       'AI Chatbot Support': true,
       'Core Features Access': true,
@@ -102,6 +111,10 @@ const plans = [
     name: 'Platinum',
     price: { yearly: '₹7500/Year', monthly: '₹630/Month' },
     razorpayPlanId: { yearly: 'plan_Qe0aXjoF1EDtoT', monthly: 'plan_Qe0asdseYwLy4x' },
+    razorpayLink: { 
+      yearly: 'https://razorpay.me/@creativityventures', 
+      monthly: 'https://razorpay.me/@creativityventures' 
+    },
     features: {
       'AI Chatbot Support': true,
       'Core Features Access': true,
@@ -129,7 +142,7 @@ const plans = [
     },
   },
 ];
- 
+
 const faqs = [
   {
     question: 'What is included in the Core Features Access?',
@@ -147,7 +160,7 @@ const faqs = [
     question: 'Is the AI Chatbot available 24/7?',
     answer: 'Yes, the AI Chatbot is available 24/7 across all plans to assist with your queries.',
   },
-    {
+  {
     question: 'Terms & Conditions',
     answer: `Welcome to Cricklytics, a product by Creativity Ventures Pvt. Ltd. By accessing or using our platform, you agree to comply with the following terms:
       - The platform provides cricket analytics, AI-based predictions, and engagement features.
@@ -180,7 +193,7 @@ const faqs = [
       📞 Phone: +91 7397362027`
   }
 ];
- 
+
 const Subscription = () => {
   const [billingCycle, setBillingCycle] = useState('yearly');
   const [activeFaq, setActiveFaq] = useState(null);
@@ -189,11 +202,11 @@ const Subscription = () => {
   const auth = getAuth();
   const db = getFirestore();
   const navigate = useNavigate();
- 
+
   const handleBack = () => {
     navigate(-1); // Go back to previous page
   };
- 
+
   // Fetch user's subscription status
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -209,19 +222,8 @@ const Subscription = () => {
     });
     return () => unsubscribe();
   }, [auth, db]);
- 
-  // Load Razorpay checkout script
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
- 
-  // Handle Razorpay Checkout
+
+  // Handle Razorpay Redirect
   const handleCheckout = async (plan) => {
     if (plan.name === 'Bronze') {
       const user = auth.currentUser;
@@ -231,7 +233,7 @@ const Subscription = () => {
       }
       return;
     }
- 
+
     setLoading(true);
     try {
       const user = auth.currentUser;
@@ -240,82 +242,22 @@ const Subscription = () => {
         setLoading(false);
         return;
       }
- 
-      // Convert price to paise (Razorpay uses smallest currency unit)
-      const price = plan.name === 'Silver' ? (billingCycle === 'yearly' ? 250000 : 21000) :
-                    plan.name === 'Gold' ? (billingCycle === 'yearly' ? 500000 : 42000) :
-                    (billingCycle === 'yearly' ? 750000 : 63000);
- 
-      // Call backend to create Razorpay order
-      const response = await fetch('/api/create-razorpay-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: price,
-          planId: plan.razorpayPlanId[billingCycle],
-          userId: user.uid,
-          planName: plan.name,
-          billingCycle,
-        }),
-      });
- 
-      const order = await response.json();
- 
-      const options = {
-        key: 'rzp_test_cJbmy9En8XJvPv',
-        amount: order.amount,
-        currency: 'INR',
-        name: 'Cricklytics',
-        description: `${plan.name} ${billingCycle} Subscription`,
-        order_id: order.id,
-        handler: async (response) => {
-          // Verify payment on backend
-          try {
-            const verifyResponse = await fetch('/api/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                userId: user.uid,
-                planName: plan.name,
-              }),
-            });
- 
-            const result = await verifyResponse.json();
-            if (result.success) {
-              // Update Firestore
-              await setDoc(doc(db, 'users', user.uid), { subscriptionPlan: plan.name }, { merge: true });
-              setUserPlan(plan.name);
-              window.location.href = '/subscription/success';
-            } else {
-              alert('Payment verification failed.');
-            }
-          } catch (error) {
-            console.error('Error verifying payment:', error);
-            alert('Error verifying payment.');
-          }
-          setLoading(false);
-        },
-        prefill: {
-          name: user.displayName || '',
-          email: user.email || '',
-        },
-        theme: {
-          color: '#16a34a',
-        },
-      };
- 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+
+      const razorpayLink = plan.razorpayLink[billingCycle];
+      if (razorpayLink) {
+        // Open Razorpay payment link in a new tab
+        window.open(razorpayLink, '_blank', 'noopener,noreferrer');
+      } else {
+        alert('Payment link not available for this plan.');
+      }
     } catch (error) {
       console.error('Error initiating checkout:', error);
       alert('Error initiating payment.');
+    } finally {
       setLoading(false);
     }
   };
- 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100">
       <div className="max-w-7xl mx-auto">
@@ -367,7 +309,7 @@ const Subscription = () => {
             </button>
           </div>
         </motion.div>
- 
+
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {plans.map((plan, index) => (
@@ -402,9 +344,7 @@ const Subscription = () => {
             </motion.div>
           ))}
         </div>
- 
 
- 
         {/* FAQs Section */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -444,5 +384,5 @@ const Subscription = () => {
     </div>
   );
 };
- 
+
 export default Subscription;

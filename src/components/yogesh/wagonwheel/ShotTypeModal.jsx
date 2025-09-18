@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ShotTypeModal({ isOpen, onClose, onSelect,setShowMainWheel}) {
+export default function ShotTypeModal({ isOpen, onClose, onSelect, setShowMainWheel, run, player, tournamentId }) {
   const shotTypes = [
     'Drive', 'Pull', 'Hook', 'Punch',
     'Inside Out', 'Switch Hit', 'Backfoot Punch', 'Defence',
@@ -8,6 +8,9 @@ export default function ShotTypeModal({ isOpen, onClose, onSelect,setShowMainWhe
   ];
 
   if (!isOpen) return null;
+
+  // Optional: Log props for debugging
+  console.log('ShotTypeModal received:', { run, player, tournamentId });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
@@ -21,7 +24,7 @@ export default function ShotTypeModal({ isOpen, onClose, onSelect,setShowMainWhe
               key={type}
               className="bg-purple-600 text-white py-2 rounded-xl hover:bg-purple-700 transition"
               onClick={() => {
-                onSelect(type);
+                onSelect(type); // This will trigger the parent handler (including save)
                 onClose();
               }}
             >
@@ -31,7 +34,7 @@ export default function ShotTypeModal({ isOpen, onClose, onSelect,setShowMainWhe
         </div>
 
         {/* Skip button */}
-         <button
+        <button
           className="mt-4 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
           onClick={() => {
             setShowMainWheel(false);  // Close main wheel completely

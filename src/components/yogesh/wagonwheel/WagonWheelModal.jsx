@@ -1,12 +1,15 @@
 import React from 'react';
 
-export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect ,setShowMainWheel}) {
+export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect, setShowMainWheel, run, player, tournamentId }) {
   const regions = [
     'Long Off', 'Cover', 'Point', 'Third Man',
     'Fine Leg', 'Mid Wicket', 'Long On', 'Straight'
   ];
 
   if (!isOpen) return null;
+
+  // Optional: Log props for debugging
+  console.log('WagonWheelModal received:', { run, player, tournamentId });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
@@ -24,7 +27,7 @@ export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect ,se
               className="bg-green-600 text-white py-2 px-1 md:py-3 md:px-2 rounded-lg md:rounded-xl hover:bg-green-700 
                          transition-colors duration-200 text-sm sm:text-base md:text-lg"
               onClick={() => {
-                onDirectionSelect(region);
+                onDirectionSelect(region); // This will trigger the parent handler
                 onClose();
               }}
             >
@@ -32,7 +35,7 @@ export default function WagonWheelModal({ isOpen, onClose, onDirectionSelect ,se
             </button>
           ))}
         </div>
-                {/* Skip button */}
+        {/* Skip button */}
         <button
           className="mt-4 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
           onClick={() => {

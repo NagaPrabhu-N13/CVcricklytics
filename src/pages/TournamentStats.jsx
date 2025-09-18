@@ -119,19 +119,6 @@ function TournamentStats() {
     return () => unsubscribe();
   }, [selectedTournamentId]);
 
-  // Sort players based on active tab
-  const getSortedPlayers = () => {
-    if (activeTab === 'batting') {
-      return [...allPlayers].sort((a, b) => b.runs - a.runs);
-    } else if (activeTab === 'bowling') {
-      return [...allPlayers].sort((a, b) => b.wickets - a.wickets);
-    } else if (activeTab === 'fielding') {
-      return [...allPlayers].sort((a, b) => b.catches - a.catches);
-    }
-    return [];
-  };
-
-  const sortedPlayers = getSortedPlayers();
   const topBatsmen = [...allPlayers].sort((a, b) => b.runs - a.runs).slice(0, 3);
   const topBowlers = [...allPlayers].sort((a, b) => b.wickets - a.wickets).slice(0, 3);
   const topFielders = [...allPlayers].sort((a, b) => b.catches - a.catches).slice(0, 3);
@@ -307,18 +294,42 @@ function TournamentStats() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              {sortedPlayers.length > 0 ? sortedPlayers.map((player, index) => (
+              {activeTab === 'batting' && (topBatsmen.length > 0 ? topBatsmen.map((player, index) => (
                 <StatCard
                   key={player.id}
                   player={player}
-                  statType={activeTab}
+                  statType="batting"
                   rank={index + 1}
                 />
               )) : (
                 <div className="col-span-3 text-center py-12 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-blue-200 text-lg">No statistics available</p>
+                  <p className="text-blue-200 text-lg">No batting statistics available</p>
                 </div>
-              )}
+              ))}
+              {activeTab === 'bowling' && (topBowlers.length > 0 ? topBowlers.map((player, index) => (
+                <StatCard
+                  key={player.id}
+                  player={player}
+                  statType="bowling"
+                  rank={index + 1}
+                />
+              )) : (
+                <div className="col-span-3 text-center py-12 bg-white/5 rounded-xl border border-white/10">
+                  <p className="text-blue-200 text-lg">No bowling statistics available</p>
+                </div>
+              ))}
+              {activeTab === 'fielding' && (topFielders.length > 0 ? topFielders.map((player, index) => (
+                <StatCard
+                  key={player.id}
+                  player={player}
+                  statType="fielding"
+                  rank={index + 1}
+                />
+              )) : (
+                <div className="col-span-3 text-center py-12 bg-white/5 rounded-xl border border-white/10">
+                  <p className="text-blue-200 text-lg">No fielding statistics available</p>
+                </div>
+              ))}
             </div>
             {/* Summary Section */}
             <div className="bg-gradient-to-r from-blue-900/30 to-blue-800/20 backdrop-blur-md rounded-2xl p-8 border border-white/10 shadow-xl">
