@@ -223,107 +223,64 @@ const TwoFactorAuth = ({ selectedColor }) => {
     }
   };
 
+ 
+};
+
+const WhereYoureLoggedIn = ({ selectedColor, isMobileView, userProfile }) => {
+  const [activeSessions, setActiveSessions] = useState([
+    {
+      id: 1,
+      device: "Cricklytics App",
+      location: "Chennai, India",
+      lastActive: new Date().toISOString(),
+      current: true
+    },
+  ]);
+  
+  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+
+  const handleLogoutDevice = (deviceId) => {
+    setActiveSessions(activeSessions.filter(session => session.id !== deviceId));
+  };
+
   return (
-    <div className="p-4">
-      <h3 className="text-lg font-medium mb-4">Two-Step Verification</h3>
+    <div className={`p-4 ${getTextStyleClass()}`}>
+      <h3 className="text-lg font-medium mb-4">Where You're Logged In</h3>
+      <p className="text-sm mb-4">These are the devices where you're currently logged in:</p>
       
-      {!isPhoneVerified ? (
-        <div>
-          <p className="text-sm mb-4">
-            To turn on 2-Step Verification, you first need to add a second step to your Google Account, like a phone number
-          </p>
-          
-          {!showVerification ? (
-            <form onSubmit={handleAddPhone} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm">Phone number</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full p-2 rounded bg-white/10 border border-white/20"
-                  placeholder="Enter phone number"
-                  required
-                />
+      <div className="space-y-4">
+        {activeSessions.map(session => (
+          <div key={session.id} className="p-3 bg-white/10 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="font-medium text-sm">{session.device}</div>
+                <div className="text-xs text-gray-400 mt-1">{session.location}</div>
+                <div className="text-xs text-gray-400">
+                  Last active: {new Date(session.lastActive).toLocaleString()}
+                </div>
+                {session.current && (
+                  <div className="text-xs mt-1" style={{ color: selectedColor }}>
+                    Current session
+                  </div>
+                )}
               </div>
-              
-              <button
-                type="submit"
-                className="w-full py-2 rounded"
-                style={{ backgroundColor: selectedColor }}
-              >
-                Add phone number
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyCode} className="space-y-4">
-              <p className="text-sm">
-                Enter the verification code sent to {phoneNumber}
-              </p>
-              
-              <div className="space-y-1">
-                <label className="text-sm">Verification code</label>
-                <input
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  className="w-full p-2 rounded bg-white/10 border border-white/20"
-                  placeholder="Enter code"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
+              {!session.current && (
                 <button
-                  type="button"
-                  onClick={() => setShowVerification(false)}
-                  className="px-4 py-2 text-sm rounded bg-gray-500 hover:bg-gray-600"
+                  onClick={() => handleLogoutDevice(session.id)}
+                  className="text-xs px-2 py-1 rounded bg-red-500 hover:bg-red-600"
                 >
-                  Cancel
+                  Log out
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm rounded"
-                  style={{ backgroundColor: selectedColor }}
-                >
-                  Verify
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      ) : (
-        <div>
-          <p className="text-sm mb-4">
-            Prevent hackers from accessing your account with an additional layer of security. 
-            Unless you're signing in with a passkey, you'll be asked to complete the most secure 
-            second step available on your account.
-          </p>
-          
-          <div className="bg-white/10 p-3 rounded mb-4">
-            <div className="flex items-center gap-2">
-              <FaMobile className="text-lg" />
-              <span className="font-medium">Phone ({phoneNumber})</span>
+              )}
             </div>
           </div>
-          
-          <button
-            onClick={handleEnable2FA}
-            className="w-full py-2 rounded font-medium"
-            style={{ backgroundColor: selectedColor }}
-          >
-            Turn on 2-Step Verification
-          </button>
-        </div>
-      )}
-      
-      {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
-      {success && <div className="text-green-500 text-sm mt-2">{success}</div>}
+        ))}
+      </div>
     </div>
   );
 };
 
-const LoginDetails = ({ selectedColor, isMobileView }) => {
+const LoginDetails = ({ selectedColor, isMobileView, userProfile }) => {
   const [loginDetails, setLoginDetails] = useState([]);
   const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
 
@@ -345,23 +302,19 @@ const LoginDetails = ({ selectedColor, isMobileView }) => {
     fetchLoginDetails();
   }, []);
 
+
   return (
-    <div className={`p-4 ${getTextStyleClass()}`}>
+   <div className={`p-4 ${getTextStyleClass()}`}>
       <h3 className="text-lg font-medium mb-4">Login Details</h3>
-      <p className="text-sm mb-4">Devices where you are currently logged in:</p>
-      {loginDetails.length > 0 ? (
-        <div className="space-y-3">
-          {loginDetails.map((login, index) => (
-            <div key={index} className="p-2 bg-white/10 rounded">
-              <div className="text-sm">Device: {login.device}</div>
-              <div className="text-xs text-gray-400">Last Login: {new Date(login.timestamp).toLocaleString()}</div>
-              <div className="text-xs text-gray-400">IP Address: {login.ipAddress}</div>
-            </div>
-          ))}
+      
+      {/* User Information Section */}
+      <div className="mb-6 p-3 bg-white/5 rounded-lg">
+        <h4 className="font-medium text-sm mb-2">Account Information</h4>
+        <div className="text-xs space-y-1">
+          <div>Name: {userProfile?.firstName || userProfile?.userName || "Not available"}</div>
+          <div>Email: {userProfile?.email || "Not available"}</div>
         </div>
-      ) : (
-        <p className="text-sm text-gray-400">No login details available</p>
-      )}
+      </div>
     </div>
   );
 };
@@ -381,33 +334,7 @@ const AccountLoginSettings = ({ selectedColor, isMobileView }) => {
     }
   };
 
-  return (
-    <div className={`p-4 ${getTextStyleClass()}`}>
-      <h3 className="text-lg font-medium mb-4">Account Login Settings</h3>
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="radio"
-            name="loginSetting"
-            checked={loginSetting === "requireLogin"}
-            onChange={() => handleLoginSettingChange("requireLogin")}
-            className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-          />
-          <span>Require login</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="radio"
-            name="loginSetting"
-            checked={loginSetting === "noLogin"}
-            onChange={() => handleLoginSettingChange("noLogin")}
-            className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-          />
-          <span>Allow access without login</span>
-        </label>
-      </div>
-    </div>
-  );
+  return 
 };
 
 const HideStoriesContent = ({ selectedColor, isMobileView }) => {
@@ -577,19 +504,20 @@ const HideStoriesContent = ({ selectedColor, isMobileView }) => {
   );
 };
 
-const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
+const PasswordSecurityContent = ({ selectedColor, isMobileView, userProfile }) => {
   const [showPasswordOptions, setShowPasswordOptions] = useState(false);
   const [showSecurityChecks, setShowSecurityChecks] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [show2FAForm, setShow2FAForm] = useState(false);
   const [showLoginDetails, setShowLoginDetails] = useState(false);
+  const [showWhereLoggedIn, setShowWhereLoggedIn] = useState(false);
   const [showAccountLoginSettings, setShowAccountLoginSettings] = useState(false);
   
   const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
   const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
 
   return (
-    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+       <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
       {showPasswordForm && (
         <PasswordChangeForm 
           selectedColor={selectedColor} 
@@ -608,6 +536,17 @@ const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
         <LoginDetails
           selectedColor={selectedColor}
           isMobileView={isMobileView}
+          userProfile={userProfile}
+          onClose={() => setShowLoginDetails(false)}
+        />
+      )}
+      
+      {showWhereLoggedIn && (
+        <WhereYoureLoggedIn
+          selectedColor={selectedColor}
+          isMobileView={isMobileView}
+          userProfile={userProfile}
+          onClose={() => setShowWhereLoggedIn(false)}
         />
       )}
       
@@ -615,6 +554,7 @@ const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
         <AccountLoginSettings
           selectedColor={selectedColor}
           isMobileView={isMobileView}
+          onClose={() => setShowAccountLoginSettings(false)}
         />
       )}
       
@@ -656,48 +596,18 @@ const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
       
       {showSecurityChecks && (
         <div className="pl-8 space-y-2 text-xs">
-          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer" onClick={() => setShowWhereLoggedIn(true)}>
             Where you're logged in
           </div>
           <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer" onClick={() => setShowLoginDetails(true)}>
             Login details
           </div>
-          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            Login alerts
-          </div>
-          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            Recent emails
-          </div>
-          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            Security checkup
-          </div>
         </div>
       )}
-      
-      <div 
-        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setShow2FAForm(!show2FAForm)}
-      >
-        <div className="flex items-center gap-3">
-          <FaShieldAlt style={getIconStyle()} />
-          <span>Two-factor authentication</span>
-        </div>
-        {show2FAForm ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      <div 
-        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setShowAccountLoginSettings(!showAccountLoginSettings)}
-      >
-        <div className="flex items-center gap-3">
-          <FaLock style={getIconStyle()} />
-          <span>Account login settings</span>
-        </div>
-        {showAccountLoginSettings ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
     </div>
   );
 };
+
 
 const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) => {
   const [showDOBInput, setShowDOBInput] = useState(false);
@@ -968,10 +878,6 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
         </div>
       )}
       
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaCheck style={getIconStyle()} />
-        <span>Allow ownership and control</span>
-      </div>
     </div>
   );
 };
@@ -1113,106 +1019,7 @@ const SettingsAndActivityContent = ({ selectedColor, isMobileView }) => {
     }));
   };
 
-  return (
-    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
-      <h3 className="text-lg font-medium mb-2">Settings and activity</h3>
-      
-      <div 
-        className="flex items-center justify-between p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer"
-        onClick={() => toggleSection('limitInteractions')}
-      >
-        <span>🔒 Limit interactions</span>
-        {expandedSections.limitInteractions ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      {expandedSections.limitInteractions && (
-        <div className="pl-4 space-y-2 text-sm">
-          <p>Control who can interact with your content</p>
-        </div>
-      )}
-      
-      <div 
-        className="flex items-center justify-between p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer"
-        onClick={() => toggleSection('hiddenWords')}
-      >
-        <span>🚫 Hidden words</span>
-        {expandedSections.hiddenWords ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      {expandedSections.hiddenWords && (
-        <div className="pl-4 space-y-2 text-sm">
-          <p>Manage words you want to filter out</p>
-        </div>
-      )}
-      
-      <div 
-        className="flex items-center justify-between p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer"
-        onClick={() => toggleSection('followAndInvite')}
-      >
-        <span>👥 Follow and invite friends</span>
-        {expandedSections.followAndInvite ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      {expandedSections.followAndInvite && (
-        <div className="pl-4 space-y-2 text-sm">
-          <p>Manage how people can follow you</p>
-        </div>
-      )}
-      
-      <div 
-        className="flex items-center justify-between p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer"
-        onClick={() => toggleSection('whatYouSee')}
-      >
-        <span>👀 What you see</span>
-        {expandedSections.whatYouSee ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      {expandedSections.whatYouSee && (
-        <div className="pl-4 space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span>⭐ Favorites</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>🔇 Muted accounts</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>🎨 Content preferences</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>❤️ Like and share counts</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>💳 Subscriptions</span>
-          </div>
-        </div>
-      )}
-      
-      <div 
-        className="flex items-center justify-between p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer"
-        onClick={() => toggleSection('appAndMedia')}
-      >
-        <span>📱 Your app and media</span>
-        {expandedSections.appAndMedia ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
-      
-      {expandedSections.appAndMedia && (
-        <div className="pl-4 space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span>📲 Device permissions</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>📥 Archiving and downloading</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>♿ Accessibility</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>🌐 Language and translations</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return 
 };
 
 const RestrictedAccountsContent = ({ selectedColor, isMobileView }) => {
@@ -1367,9 +1174,6 @@ const TagsMentionsContent = ({ selectedColor, isMobileView }) => {
                 <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${manualApproveTags ? 'translate-x-5' : 'translate-x-0'}`}></div>
               </button>
             </div>
-            <div className="pl-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-              Review tags
-            </div>
           </div>
 
           <div 
@@ -1416,41 +1220,7 @@ const TagsMentionsContent = ({ selectedColor, isMobileView }) => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <h4 className="font-medium">Who can @mention you</h4>
-            <div className="space-y-2 pl-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mentionsPermission"
-                  checked={mentionsPermission === "everyone"}
-                  onChange={() => handleMentionsPermissionChange("everyone")}
-                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-                />
-                <span>Everyone</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mentionsPermission"
-                  checked={mentionsPermission === "peopleYouFollow"}
-                  onChange={() => handleMentionsPermissionChange("peopleYouFollow")}
-                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-                />
-                <span>People you follow</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mentionsPermission"
-                  checked={mentionsPermission === "noOne"}
-                  onChange={() => handleMentionsPermissionChange("noOne")}
-                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-                />
-                <span>Don't allow mentions</span>
-              </label>
-            </div>
-          </div>
+          
         </div>
       )}
     </div>
@@ -1471,7 +1241,7 @@ const AccountSettingsContent = ({
   isMobileView,
   accountSettingsBg,
   userProfile,
-  navigate // Add this prop
+  navigate
 }) => {
   const [activeSection, setActiveSection] = useState("accountType");
   
@@ -1479,37 +1249,8 @@ const AccountSettingsContent = ({
   const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
 
   return (
-    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
-      {activeSection === "accountType" && (
-        <div className="p-2">
-          <div className="flex items-center gap-3 mb-2">
-            <FaUserCog style={getIconStyle()} />
-            <span>Account Type</span>
-          </div>
-          <div className="space-y-2 pl-8">
-            <label className="flex items-center gap-2 cursor-pointer text-sm">
-              <input
-                type="radio"
-                name="accountType"
-                checked={accountType === "public"}
-                onChange={() => handleAccountTypeChange("public")}
-                className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-              />
-              <span>Public</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm">
-              <input
-                type="radio"
-                name="accountType"
-                checked={accountType === "private"}
-                onChange={() => handleAccountTypeChange("private")}
-                className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-              />
-              <span>Private</span>
-            </label>
-          </div>
-        </div>
-      )}
+   <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+     
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
         onClick={() => setActiveSection(activeSection === "passwordSecurity" ? "" : "passwordSecurity")}
@@ -1518,8 +1259,13 @@ const AccountSettingsContent = ({
         <span>Password and Security</span>
       </div>
       {activeSection === "passwordSecurity" && (
-        <PasswordSecurityContent selectedColor={selectedColor} isMobileView={isMobileView} />
+        <PasswordSecurityContent 
+          selectedColor={selectedColor} 
+          isMobileView={isMobileView} 
+          userProfile={userProfile} // Pass userProfile here
+        />
       )}
+
 
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
@@ -1543,16 +1289,7 @@ const AccountSettingsContent = ({
         <DevicePermissionsContent selectedColor={selectedColor} isMobileView={isMobileView} />
       )}
 
-      <div 
-        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setActiveSection(activeSection === "settingsAndActivity" ? "" : "settingsAndActivity")}
-      >
-        <FaCog style={getIconStyle()} />
-        <span>Settings and activity</span>
-      </div>
-      {activeSection === "settingsAndActivity" && (
-        <SettingsAndActivityContent selectedColor={selectedColor} isMobileView={isMobileView} />
-      )}
+     
 
      <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
@@ -1580,16 +1317,7 @@ const AccountSettingsContent = ({
       {activeSection === "hideStories" && (
         <HideStoriesContent selectedColor={selectedColor} isMobileView={isMobileView} />
       )}
-      <div 
-        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setActiveSection(activeSection === "restrictedAccounts" ? "" : "restrictedAccounts")}
-      >
-        <FaShieldAlt style={getIconStyle()} />
-        <span>Restricted accounts</span>
-      </div>
-      {activeSection === "restrictedAccounts" && (
-        <RestrictedAccountsContent selectedColor={selectedColor} isMobileView={isMobileView} />
-      )}
+      
 
       <div 
         className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"

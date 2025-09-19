@@ -334,22 +334,22 @@ function Tournamentseries() {
                           <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
                         )}
                     </div>
-                    <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
-                        <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
-                            <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
-                                <div className="flex items-center justify-center w-full">
-                                    <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
-                                            <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
-                                        </div>
-                                        <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            {/* Show image preview if available */}
+<div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+    <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
+    <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
+        <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
+            <div className="flex items-center justify-center w-full">
+                <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
+                        <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                    </div>
+                    <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
+                </label>
+            </div>
+        </div>
+        
+        {/* Show image preview if available */}
         {imagePreview && (
             <div className="ml-4 flex flex-col items-center">
                 <img 
