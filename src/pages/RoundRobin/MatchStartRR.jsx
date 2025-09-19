@@ -11,87 +11,10 @@ import Startmatch from '../RoundRobin/StartmatchRR';
 import nav from '../../assets/kumar/right-chevron.png';
 import placeholderFlag from '../../assets/sophita/HomePage/Netherland.jpeg';
 import { db, storage, auth } from '../../firebase';
-import { collection, addDoc, getDocs, query, where, serverTimestamp, onSnapshot, orderBy, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import LiveComments from './LiveComments';
 
-// Live Comments Component with real Firebase integration
-const LiveComments = ({ matchData }) => {
-  const [comments, setComments] = useState([]);
-  const commentsEndRef = useRef(null);
-
-  // Fetch real comments from Firestore
-  useEffect(() => {
-    if (!matchData || !matchData.id) return;
-
-    const commentsRef = collection(db, 'matches', matchData.id, 'comments');
-    const q = query(commentsRef, orderBy('timestamp', 'asc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const realComments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate().toLocaleTimeString() || new Date().toLocaleTimeString()
-      }));
-      
-      setComments(realComments);
-    }, (error) => {
-      console.error('Error fetching comments:', error);
-      // Fallback to initial comments if real data fails
-      const initialComments = [
-        {
-          id: 1,
-          text: "Welcome to the live commentary! Match about to begin...",
-          ball: "0.0",
-          timestamp: new Date().toLocaleTimeString()
-        },
-        {
-          id: 2,
-          text: "Players are taking their positions on the field",
-          ball: "0.0",
-          timestamp: new Date().toLocaleTimeString()
-        },
-        {
-          id: 3,
-          text: "The umpires are having a final discussion",
-          ball: "0.0",
-          timestamp: new Date().toLocaleTimeString()
-        }
-      ];
-      setComments(initialComments);
-    });
-
-    return () => unsubscribe();
-  }, [matchData]);
-
-  useEffect(() => {
-    // Scroll to bottom when new comment is added
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
-
-  return (
-    <div className="bg-gray-800 rounded-lg p-4 h-96 overflow-hidden flex flex-col">
-      <h3 className="text-lg font-semibold mb-4 text-white">Live Commentary</h3>
-      <div className="flex-1 overflow-y-auto">
-        {comments.length === 0 ? (
-          <p className="text-gray-400 text-center">Loading commentary...</p>
-        ) : (
-          <div className="space-y-3">
-            {comments.map(comment => (
-              <div key={comment.id} className="bg-gray-700 p-3 rounded-lg">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-yellow-400 font-semibold">Ball {comment.ball}</span>
-                  <span className="text-gray-400 text-sm">{comment.timestamp}</span>
-                </div>
-                <p className="text-white">{comment.text}</p>
-              </div>
-            ))}
-            <div ref={commentsEndRef} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // Leader Stats Component
 const LeaderStats = () => {
@@ -553,6 +476,7 @@ const FixtureGenerator = () => {
   const [matchResultWinner, setMatchResultWinner] = useState(null);
   const [matchData, setMatchData] = useState(null);
   const [matchDateTime, setMatchDateTime] = useState('');
+  const [pointsTable, setPointsTable] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { tournamentName } = location.state || {};
@@ -671,6 +595,26 @@ const FixtureGenerator = () => {
       }
     }
   }, [location.state]);
+
+  
+useEffect(() => {
+  if (activeTab === 'Match Results' && location.state?.tournamentId) {
+    const fetchPointsTable = async () => {
+      try {
+        const docRef = doc(db, 'PointsTable', location.state.tournamentId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const sortedTeams = (data.teams || []).sort((a, b) => b.points - a.points || parseFloat(b.nrr) - parseFloat(a.nrr));
+          setPointsTable(sortedTeams);
+        }
+      } catch (error) {
+        console.error('Error fetching points table:', error);
+      }
+    };
+    fetchPointsTable();
+  }
+}, [activeTab, location.state?.tournamentId]);
 
   const handleTeamsSelected = (teamAData, teamBData) => {
     setLiveTeamA({
@@ -922,7 +866,7 @@ const FixtureGenerator = () => {
             >
               <FireworksCanvas />
               <div className="relative z-20 text-center p-8 flex flex-col items-center justify-between h-full w-full">
-                <div>
+                <div className='w-full flex flex-col items-center'>
                   <img
                     src={location.state?.tournamentImageUrl || tournamentName}
                     alt="Tournament Logo"
@@ -931,7 +875,7 @@ const FixtureGenerator = () => {
                   <img
                     src={trophy}
                     alt="Trophy"
-                    className="w-[300px] h-auto mb-4 drop-shadow-lg mx-auto"
+                    className="w-[350px] h-auto mb-4 drop-shadow-lg mx-auto"
                   />
                   {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
                     <div className="flex items-center justify-center mb-4">
@@ -954,6 +898,44 @@ const FixtureGenerator = () => {
                   {!matchData && (
                     <p>No match results available yet.</p>
                   )}
+                  {pointsTable.length > 0 ? (
+                    <div className="mt-4 w-[80%] bg-white/80 p-4 rounded-lg shadow-md">
+                      <h2 className="text-2xl font-bold text-center mb-2 text-gray-800">Points Table</h2>
+                      <table className="w-full text-left text-sm text-gray-700">
+                        <thead className="bg-gray-200">
+                          <tr>
+                            <th className="p-2">S.No</th> {/* Serial number column */}
+                            <th className="p-2">Team</th>
+                            <th className="p-2">Matches</th>
+                            <th className="p-2">Wins</th>
+                            <th className="p-2">Loss</th>
+                            <th className="p-2">Drawn</th>
+                            <th className="p-2">Pts</th>
+                            <th className="p-2">NRR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pointsTable
+                            .slice() // copy array so we don’t mutate original
+                            .sort((a, b) => b.points - a.points) // sort by wins (highest first)
+                            .map((team, index) => (
+                              <tr key={index} className="border-b">
+                                <td className="p-2">{index + 1}</td> {/* Serial number */}
+                                <td className="p-2">{team.teamName}</td>
+                                <td className="p-2">{team.matches}</td>
+                                <td className="p-2">{team.wins}</td>
+                                <td className="p-2">{team.losses}</td>
+                                <td className="p-2">{team.draws}</td>
+                                <td className="p-2">{team.points}</td>
+                                <td className="p-2">{team.nrr}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-gray-600">No points table data available.</p>
+                  )}
                 </div>
                 <div className="self-end">
                   <motion.button
@@ -968,6 +950,7 @@ const FixtureGenerator = () => {
               </div>
             </motion.div>
           )}
+
 
           {activeTab === 'Highlights' && (
             <motion.div
@@ -1007,16 +990,17 @@ const FixtureGenerator = () => {
                     </div>
                   </>
                 )}
-                {activeAnalyticsTab === 'liveComments' && (
-                  <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-                    <LiveComments matchData={matchData} />
-                  </div>
-                )}
-                   
+                
 
               </div>
             </div>
           )}
+          {activeTab === 'Live Comments' && (
+                  <div className="bg-transparent rounded-lg p-4 md:col-span-2">
+                    <LiveComments tournamentId={location.state?.tournamentId || ''}/>
+                  </div>
+                )}
+                   
 
            {activeTab === 'Leader Stats' && (
     <div className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">

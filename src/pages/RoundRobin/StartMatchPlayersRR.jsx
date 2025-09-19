@@ -7,6 +7,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Player } from '@lottiefiles/react-lottie-player';
 import { db, auth } from '../../firebase';
 import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { arrayUnion, increment } from 'firebase/firestore';
 import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
@@ -45,13 +46,11 @@ async function updatePlayerCareerStats(playerName, statUpdates, db) {
       let firestoreUpdates = {};
 
       Object.entries(statUpdates).forEach(([statPath, valueToAdd]) => {
-        // statPath should be in dot notation e.g. "careerStats.batting.runs"
         const pathSegments = statPath.split(".");
         let currentVal = playerData;
         for (let seg of pathSegments) {
           currentVal = currentVal && typeof currentVal === "object" ? currentVal[seg] : undefined;
         }
-        // Add new value to old, defaulting to 0 if unset
         firestoreUpdates[statPath] = (parseInt(currentVal) || 0) + valueToAdd;
       });
 
@@ -113,17 +112,16 @@ async function updatePlayerBowlingAverage(playerName, db) {
 async function initializeTournamentStats(tournamentId, matchId, allPlayers, db) {
   try {
     const matchStatsRef = doc(db, "tournamentStats", tournamentId, "matches", matchId);
-    const matchDoc = await getDoc(matchStatsRef); // Check if document exists
+    const matchDoc = await getDoc(matchStatsRef);
 
     if (matchDoc.exists()) {
       console.log(`Tournament stats for match ${matchId} already initialized. Skipping reset.`);
-      return; // Exit if already exists to avoid overwriting
+      return;
     }
 
-    // Proceed with initialization only if it doesn't exist
     const defaultPlayerStats = allPlayers.map(player => ({
       playerName: player.name,
-      playerIndex: player.index || "unknown", // Or unique ID
+      playerIndex: player.index || "unknown",
       runs: 0,
       wickets: 0,
       catches: 0,
@@ -136,7 +134,6 @@ async function initializeTournamentStats(tournamentId, matchId, allPlayers, db) 
       battingAverage: 0,
       bowlingAverage: 0,
       strikeRate: 0,
-      // Add more if needed, e.g., fours: 0, sixes: 0
     }));
 
     await setDoc(matchStatsRef, { players: defaultPlayerStats });
@@ -160,11 +157,9 @@ async function updateTournamentBatting(tournamentId, matchId, playerName, rawUpd
       const updatedPlayers = data.players.map(p => {
         if (p.playerName === playerName) {
           const incremented = { ...p };
-          // Increment raw stats
           Object.entries(rawUpdates).forEach(([key, valueToAdd]) => {
             incremented[key] = (incremented[key] || 0) + valueToAdd;
           });
-          // Compute derived stats based on updated values
           const battingAverage = incremented.dismissals > 0 ? (incremented.runs / incremented.dismissals).toFixed(2) : 0;
           const strikeRate = incremented.ballsFaced > 0 ? ((incremented.runs / incremented.ballsFaced) * 100).toFixed(2) : 0;
           return { ...incremented, battingAverage, strikeRate };
@@ -190,12 +185,10 @@ async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpd
       let updatedPlayers = [];
       
       if (!matchDoc.exists()) {
-        // If document doesn't exist, initialize it with default players (adapt from your initialize function)
-        const allPlayers = []; // Fetch or pass allPlayers here (e.g., from component state or a query)
-        // Replace with actual allPlayers data; this is a placeholder
+        const allPlayers = [];
         const defaultPlayerStats = allPlayers.map(player => ({
           playerName: player.name,
-          playerIndex: player.index || "unknown", // Or unique ID
+          playerIndex: player.index || "unknown",
           runs: 0,
           wickets: 0,
           catches: 0,
@@ -208,10 +201,8 @@ async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpd
           battingAverage: 0,
           bowlingAverage: 0,
           strikeRate: 0,
-          // Add more if needed, e.g., fours: 0, sixes: 0
         }));
         
-        // Create the document in the transaction
         transaction.set(matchStatsRef, { players: defaultPlayerStats });
         updatedPlayers = defaultPlayerStats;
         console.log(`Initialized match stats for ${matchId} during update.`);
@@ -220,16 +211,13 @@ async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpd
         updatedPlayers = data.players;
       }
       
-      // Now proceed with the update logic
       updatedPlayers = updatedPlayers.map(p => {
         if (p.playerName === playerName) {
           const incremented = { ...p };
-          // Increment raw stats
           Object.entries(rawUpdates).forEach(([key, valueToAdd]) => {
             incremented[key] = (incremented[key] || 0) + valueToAdd;
           });
           
-          // Compute derived stats based on updated values
           const bowlingAverage = incremented.wickets > 0 ? (incremented.runsConceded / incremented.wickets).toFixed(2) : 0;
           
           return { ...incremented, bowlingAverage };
@@ -237,7 +225,7 @@ async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpd
         return p;
       });
       
-      transaction.set(matchStatsRef, { players: updatedPlayers }, { merge: true }); // Use set with merge to update
+      transaction.set(matchStatsRef, { players: updatedPlayers }, { merge: true });
     });
     
     console.log(`Atomically updated bowling stats for ${playerName} in match ${matchId}`);
@@ -246,9 +234,7 @@ async function updateTournamentBowling(tournamentId, matchId, playerName, rawUpd
   }
 }
 
-
 async function updateTournamentFielding(tournamentId, matchId, playerName, rawUpdates, db) {
-  // Simple update for fielding (no computations needed)
   try {
     const matchStatsRef = doc(db, "tournamentStats", tournamentId, "matches", matchId);
     const matchDoc = await getDoc(matchStatsRef);
@@ -274,13 +260,9 @@ async function updateTournamentFielding(tournamentId, matchId, playerName, rawUp
   }
 }
 
-
-
-
 function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const location = useLocation();
   const navigate = useNavigate();
-  // Extract all relevant data from location.state
   const originPage = location.state?.origin;
   const maxOvers = location.state?.overs;
   console.log("Max Overs:", maxOvers);
@@ -291,7 +273,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const phase = location.state?.phase;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentName = location.state?.tournamentName;
-  const information =  location.state?.information;
+  const information = location.state?.information;
   const tossWinner = location.state?.tossWinner;
   const tossDecision = location.state?.tossDecision;
   console.log(information);
@@ -339,69 +321,59 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [firstInningsData, setFirstInningsData] = useState(null);
   const [showMainWheel, setShowMainWheel] = useState(false);
   const [selectedRun, setSelectedRun] = useState(null);
-  // New states for dismissal modal
   const [showDismissalModal, setShowDismissalModal] = useState(false);
   const [selectedDismissalType, setSelectedDismissalType] = useState('');
   const [selectedCatchType, setSelectedCatchType] = useState('');
   const [selectedInvolvedPlayer, setSelectedInvolvedPlayer] = useState(null);
   const [outRuns, setOutRuns] = useState(null);
-  const [outBatsmanType, setOutBatsmanType] = useState('striker'); // New state for which batsman is out in runout
-  const [nextBatsmanEnd, setNextBatsmanEnd] = useState(null); // New state for which end the new batsman comes to
-
-  // New states for leg by selection
+  const [outBatsmanType, setOutBatsmanType] = useState('striker');
+  const [nextBatsmanEnd, setNextBatsmanEnd] = useState(null);
   const [showLegByModal, setShowLegByModal] = useState(false);
   const [legByBatsmanType, setLegByBatsmanType] = useState('striker');
-
-  // New states for retired hurt
   const [retiredHurtPlayers, setRetiredHurtPlayers] = useState([]);
   const [showRetiredHurtModal, setShowRetiredHurtModal] = useState(false);
   const [retiredHurtBatsmanType, setRetiredHurtBatsmanType] = useState('striker');
   const [pendingRetiredHurt, setPendingRetiredHurt] = useState(false);
-
-  // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
-
   const [isAICompanionOpen, setIsAICompanionOpen] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
-
   const [currentBattingTeam, setCurrentBattingTeam] = useState(null);
   const [currentBowlingTeam, setCurrentBowlingTeam] = useState(null);
-
-  useEffect(() => {
-    const isOverCompleted = validBalls === 0 && overNumber > 0;
-    const shouldTriggerPrediction =
-      playerScore >= 10 || outCount > 0 || isOverCompleted;
-
-    if (shouldTriggerPrediction) {
-      const winA = Math.max(0, 100 - (playerScore + outCount * 5));
-      const winB = 100 - winA;
-      const generatedPrediction = {
-        battingTeam: isChasing ? teamB.name : teamA.name,
-        bowlingTeam: isChasing ? teamA.name : teamB.name,
-        battingScore: playerScore,
-        bowlingScore: targetScore,
-        winA,
-        winB,
-        tournamentId,
-        overNumber,
-        nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
-        alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
-      };
-
-      setPredictionData(generatedPrediction);
-    }
-  }, [playerScore, outCount, overNumber]);
-
-  useEffect(() => {
-  if (!gameFinished && matchId) {  // Avoid saving if game is over or no matchId
-    saveMatchData();
-  }
-}, [playerScore, currentOverBalls, outCount, validBalls, overNumber, isChasing, striker, nonStriker, selectedBowler, batsmenStats, bowlerStats, wicketOvers]);
-
+  // New state for button freeze and hurry message
+  const [isButtonFrozen, setIsButtonFrozen] = useState(false);
+  const [showHurryMessage, setShowHurryMessage] = useState(false);
 
   const dismissalTypes = ['Caught', 'Bowled', 'LBW', 'Run Out', 'Stumped', 'Caught & Bowled', 'Caught Behind'];
   const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
+
+  useEffect(() => {
+    const isOverCompleted = validBalls === 0 && overNumber > 0;
+    const winA = Math.max(0, 100 - (playerScore + outCount * 5));
+    const winB = 100 - winA;
+    const generatedPrediction = {
+      Chasing: isChasing,
+      TeamA: teamA.name,
+      TeamB: teamB.name,
+      battingScore: playerScore,
+      bowlingScore: targetScore,
+      winA,
+      winB,
+      tournamentId,
+      overNumber,
+      wicketsFallen: outCount,
+      nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
+      alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
+    };
+    setPredictionData(generatedPrediction);
+  }, [playerScore, outCount, overNumber, validBalls, isChasing]);
+
+  useEffect(() => {
+    if (!gameFinished && matchId) {
+      saveMatchData();
+    }
+  }, [playerScore, currentOverBalls, outCount, validBalls, overNumber, isChasing, striker, nonStriker, selectedBowler, batsmenStats, bowlerStats, wicketOvers]);
+
   useEffect(() => {
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
@@ -411,7 +383,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       navigate('/');
       return;
     }
-     // Determine initial batting and bowling teams based on toss
     let initialBattingTeam = teamA;
     let initialBowlingTeam = teamB;
     let initialBattingPlayers = selectedPlayersFromProps.left;
@@ -548,7 +519,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.batting.runs": runs
       };
       await updatePlayerCareerStats(player.name, statUpdates, db);
-      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, { runs: runs }, db); // Incremental add
     }
   };
 
@@ -611,28 +581,24 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         "careerStats.batting.centuries": (newRuns >= 100 && currentStats.runs < 100) ? 1 : 0,
         "careerStats.batting.fours": (runs === 4) ? 1 : 0,
         "careerStats.batting.sixes": (runs === 6) ? 1 : 0,
-        "careerStats.batting.highest": Math.max(newRuns, currentStats.highest || 0) - currentStats.runs, // Update if new high
-        "careerStats.batting.average": 0, // Recalculate as needed
-        "careerStats.batting.strikeRate": 0, // Recalculate as needed
+        "careerStats.batting.highest": Math.max(newRuns, currentStats.highest || 0) - currentStats.runs,
+        "careerStats.batting.average": 0,
+        "careerStats.batting.strikeRate": 0,
         "careerStats.batting.innings": (isDotBall || runs > 0) ? 1 : 0,
-        "careerStats.batting.matches": 0, // Increment if new match
-        "careerStats.batting.notOuts": 0, // Based on logic
-        "careerStats.batting.wickets": 0 // If applicable
+        "careerStats.batting.matches": 0,
+        "careerStats.batting.notOuts": 0,
+        "careerStats.batting.wickets": 0
       };
       const tournamentUpdates = {
-      runs: runs, // Or accumulate as needed
-      ballsFaced: 1,
-      // e.g., fours: runs === 4 ? 1 : 0,
-      // sixes: runs === 6 ? 1 : 0,
+        runs: runs,
+        ballsFaced: 1,
       };
-      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, tournamentUpdates, db);
-      await updateTournamentBatting(tournamentId, matchId, player.name, tournamentUpdates, db); // Single call now
- 
- 
+      await updateTournamentBatting(tournamentId, matchId, player.name, tournamentUpdates, db);
       await updatePlayerCareerStats(player.name, statUpdates, db);
-      await updatePlayerBattingAverage(player.name, db); // Update batting average
+      await updatePlayerBattingAverage(player.name, db);
     }
   };
+
   const updateBowlerStats = async (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0) => {
     let currentBowler = {};
     setBowlerStats(prev => {
@@ -654,26 +620,23 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       const statUpdates = {
         "careerStats.bowling.wickets": isWicket ? 1 : 0,
         "careerStats.bowling.innings": isValidBall ? 1 : 0,
-        "careerStats.bowling.runsConceded": runsConceded, // Added for conceded runs update
-        "careerStats.bowling.average": 0, // Recalculate
-        "careerStats.bowling.best": 0, // Update best if applicable
-        "careerStats.bowling.economy": 0, // Recalculate
-        "careerStats.bowling.strikeRate": 0 // Recalculate
+        "careerStats.bowling.runsConceded": runsConceded,
+        "careerStats.bowling.average": 0,
+        "careerStats.bowling.best": 0,
+        "careerStats.bowling.economy": 0,
+        "careerStats.bowling.strikeRate": 0
       };
       const tournamentUpdates = {
-          wickets: isWicket ? 1 : 0,
-          ballsBowled: isValidBall ? 1 : 0,
-          runsConceded: runsConceded,
-        // runsConceded: runsConceded, // If tracking per match
+        wickets: isWicket ? 1 : 0,
+        ballsBowled: isValidBall ? 1 : 0,
+        runsConceded: runsConceded,
       };
-      // await updateTournamentPlayerStats(tournamentId, matchId, player.name, tournamentUpdates, db);
-      await updateTournamentBowling(tournamentId, matchId, player.name, tournamentUpdates, db); // Single call now
- 
-  
+      await updateTournamentBowling(tournamentId, matchId, player.name, tournamentUpdates, db);
       await updatePlayerCareerStats(player.name, statUpdates, db);
-      await updatePlayerBowlingAverage(player.name, db); // Update bowling average
+      await updatePlayerBowlingAverage(player.name, db);
     }
   };
+
   const recordDismissal = async (batsmanIndex, dismissalType, catchType = null, involvedPlayer = null) => {
     const currentOver = `${overNumber - 1}.${validBalls + 1}`;
     setWicketOvers(prev => [...prev, { 
@@ -684,32 +647,27 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       involvedPlayer: involvedPlayer ? { name: involvedPlayer.name, index: involvedPlayer.index } : null
     }]);
 
-    // Update batsman dismissal
     const batsman = battingTeamPlayers.find(p => p.index === batsmanIndex);
     if (batsman) {
       const statUpdates = {
-        "careerStats.batting.dismissals": 1 // Increment dismissed count
+        "careerStats.batting.dismissals": 1
       };
-      
-      // await updateTournamentPlayerStats(tournamentId, matchId, batsman.name, { dismissals: 1 }, db);
-      await updateTournamentBatting(tournamentId, matchId, batsman.name, { dismissals: 1 }, db); // Handles dismissal and recomputes average/strike
-
+      await updateTournamentBatting(tournamentId, matchId, batsman.name, { dismissals: 1 }, db);
       await updatePlayerCareerStats(batsman.name, statUpdates, db);
-      await updatePlayerBattingAverage(batsman.name, db); // Update batting average
+      await updatePlayerBattingAverage(batsman.name, db);
     }
     if (involvedPlayer) {
-    let fieldingUpdate = {};
-    if (['Caught', 'Caught Behind', 'Caught Bowled'].includes(dismissalType)) {
-      fieldingUpdate = { catches: 1 };
-    } else if (dismissalType === 'Stumped') {
-      fieldingUpdate = { stumpings: 1 };
-    } else if (dismissalType === 'Run Out') {
-      fieldingUpdate = { runOuts: 1 };
+      let fieldingUpdate = {};
+      if (['Caught', 'Caught Behind', 'Caught & Bowled'].includes(dismissalType)) {
+        fieldingUpdate = { catches: 1 };
+      } else if (dismissalType === 'Stumped') {
+        fieldingUpdate = { stumpings: 1 };
+      } else if (dismissalType === 'Run Out') {
+        fieldingUpdate = { runOuts: 1 };
+      }
+      await updateTournamentFielding(tournamentId, matchId, involvedPlayer.name, fieldingUpdate, db);
     }
-    await updateTournamentFielding(tournamentId, matchId, involvedPlayer.name, fieldingUpdate, db); // Separate for fielding
-  }
 
-    // Update involved player and bowler stats based on dismissal type
     let isBowlerWicket = false;
 
     switch (dismissalType) {
@@ -752,7 +710,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           };
           await updatePlayerCareerStats(involvedPlayer.name, statUpdates, db);
         }
-        // No bowler wicket for run out
         break;
       default:
         break;
@@ -770,6 +727,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       setShowAnimation(false);
     }, 3000);
   };
+
   const saveMatchData = async (isFinal = false) => {
     try {
       if (!auth.currentUser) {
@@ -877,72 +835,202 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     }
   };
 
-// Modified handleScoreButtonClick (remove all saveMatchData calls)
-const handleScoreButtonClick = (value, isLabel) => {
-  if (gameFinished) return;
+  const handleScoreButtonClick = (value, isLabel) => {
+    if (gameFinished) return;
 
-  let runsToAdd = 0;
-  let isValidBall = false;
-
-  if (isLabel) {
-    setActiveNumber(null);
-    setActiveLabel(value);
-  } else {
-    setActiveLabel(null);
-    setActiveNumber(value);
-  }
-
-  if (pendingWide) {
-    if (!isLabel && typeof value === 'number') {
-      runsToAdd = value + 1;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `W${value}`]);
-      setCurrentOverBalls(prev => [...prev, `W${value}`]);
-
-      if (striker) {
-        updateBatsmanScore(striker.index, value + 1);
-        updateBatsmanStats(striker.index, value + 1);
-      }
-      if (selectedBowler) {
-        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+    // Handle numeric buttons with debouncing
+    if (!isLabel && typeof value === 'number' && [0, 1, 2, 3, 4, 6].includes(value)) {
+      if (isButtonFrozen) {
+        setShowHurryMessage(true);
+        setTimeout(() => setShowHurryMessage(false), 2000);
+        return;
       }
 
-      setPendingWide(false);
+      // Freeze buttons for 2 seconds
+      setIsButtonFrozen(true);
+      setTimeout(() => setIsButtonFrozen(false), 2000);
+    }
+
+    let runsToAdd = 0;
+    let isValidBall = false;
+
+    if (isLabel) {
+      setActiveNumber(null);
+      setActiveLabel(value);
+    } else {
+      setActiveLabel(null);
+      setActiveNumber(value);
+    }
+
+    if (pendingWide) {
+      if (!isLabel && typeof value === 'number') {
+        runsToAdd = value + 1;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, `W${value}`]);
+        setCurrentOverBalls(prev => [...prev, `W${value}`]);
+
+        if (striker) {
+          updateBatsmanScore(striker.index, value + 1);
+          updateBatsmanStats(striker.index, value + 1);
+        }
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+        }
+
+        setPendingWide(false);
+        return;
+      }
+    }
+
+    if (pendingNoBall) {
+      if (!isLabel && typeof value === 'number') {
+        runsToAdd = value + 1;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, `NB${value}`]);
+        setCurrentOverBalls(prev => [...prev, `NB${value}`]);
+
+        if (striker) {
+          updateBatsmanScore(striker.index, value + 1);
+          updateBatsmanStats(striker.index, value + 1);
+        }
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+        }
+
+        setPendingNoBall(false);
+        return;
+      }
+    }
+
+    if (pendingLegBy) {
+      if (!isLabel && typeof value === 'number') {
+        runsToAdd = value;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, `L${value}`]);
+        setCurrentOverBalls(prev => [...prev, `L${value}`]);
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+
+        const legByBatsmanIndex = legByBatsmanType === 'striker' ? striker.index : nonStriker.index;
+        updateBatsmanBalls(legByBatsmanIndex);
+
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        }
+
+        if (value % 2 !== 0) {
+          const temp = striker;
+          setStriker(nonStriker);
+          setNonStriker(temp);
+        }
+
+        setPendingLegBy(false);
+        setLegByBatsmanType('striker');
+        return;
+      }
+    }
+
+    if (pendingOut) {
+      if (!isLabel && typeof value === 'number') {
+        if (value !== 0 && value !== 1 && value !== 2) return;
+        setOutRuns(value);
+        playAnimation('out');
+        setTimeout(() => {
+          setShowDismissalModal(true);
+        }, 3000);
+        return;
+      }
+    }
+
+    if (pendingRetiredHurt) {
       return;
     }
-  }
 
-  if (pendingNoBall) {
-    if (!isLabel && typeof value === 'number') {
-      runsToAdd = value + 1;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `NB${value}`]);
-      setCurrentOverBalls(prev => [...prev, `NB${value}`]);
+    const extraBalls = ['No-ball', 'Wide', 'No ball'];
+    const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
-      if (striker) {
-        updateBatsmanScore(striker.index, value + 1);
-        updateBatsmanStats(striker.index, value + 1);
-      }
-      if (selectedBowler) {
-        updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+    if (isLabel) {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT' || value === 'Retired Hurt') {
+        setShowRunInfo(true);
+      } else {
+        setShowRunInfo(false);
       }
 
-      setPendingNoBall(false);
-      return;
-    }
-  }
+      if (value === 'Six') {
+        playAnimation('six');
+        runsToAdd = 6;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, '6']);
+        setCurrentOverBalls(prev => [...prev, '6']);
 
-  if (pendingLegBy) {
-    if (!isLabel && typeof value === 'number') {
+        if (striker) {
+          updateBatsmanScore(striker.index, 6);
+          updateBatsmanStats(striker.index, 6);
+          updateBatsmanBalls(striker.index);
+        }
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        }
+      } else if (value === 'Four') {
+        playAnimation('four');
+        runsToAdd = 4;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, '4']);
+        setCurrentOverBalls(prev => [...prev, '4']);
+
+        if (striker) {
+          updateBatsmanScore(striker.index, 4);
+          updateBatsmanStats(striker.index, 4);
+          updateBatsmanBalls(striker.index);
+        }
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        }
+      } else if (value === 'Wide') {
+        setPendingWide(true);
+        return;
+      } else if (value === 'No-ball') {
+        setPendingNoBall(true);
+        return;
+      } else if (value === 'Leg By') {
+        setShowLegByModal(true);
+        return;
+      } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
+        setPendingOut(true);
+        return;
+      } else if (value === 'Retired Hurt') {
+        setShowRetiredHurtModal(true);
+        return;
+      }
+
+      if (!extraBalls.includes(value)) {
+        setValidBalls(prev => prev + 1);
+
+        if (striker && value !== 'Wide' && value !== 'No-ball') {
+          updateBatsmanBalls(striker.index);
+        }
+      } else {
+        setShowRunInfo(false);
+      }
+    } else {
       runsToAdd = value;
       setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `L${value}`]);
-      setCurrentOverBalls(prev => [...prev, `L${value}`]);
+      setTopPlays(prev => [...prev, value]);
+      setCurrentOverBalls(prev => [...prev, value]);
       setValidBalls(prev => prev + 1);
       isValidBall = true;
 
-      const legByBatsmanIndex = legByBatsmanType === 'striker' ? striker.index : nonStriker.index;
-      updateBatsmanBalls(legByBatsmanIndex);
+      if (striker) {
+        updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value, value === 0);
+        updateBatsmanBalls(striker.index);
+      }
 
       if (selectedBowler) {
         updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
@@ -954,139 +1042,19 @@ const handleScoreButtonClick = (value, isLabel) => {
         setNonStriker(temp);
       }
 
-      setPendingLegBy(false);
-      setLegByBatsmanType('striker'); // Reset
-      return;
-    }
-  }
-
-  if (pendingOut) {
-    if (!isLabel && typeof value === 'number') {
-      if (value !== 0 && value !== 1 && value !== 2) return;
-      setOutRuns(value);
-      playAnimation('out');
-      setTimeout(() => {
-        setShowDismissalModal(true);
-      }, 3000);
-      return;
-    }
-  }
-
-  if (pendingRetiredHurt) {
-    // For retired hurt, perhaps no runs, or handle separately
-    // Assuming retired hurt not associated with runs, but since button is like out, perhaps allow 0 runs or something.
-    // For simplicity, ignore runs for retired hurt or adjust.
-    return; // Placeholder
-  }
-
-  const extraBalls = ['No-ball', 'Wide', 'No ball'];
-  const playValue = typeof value === 'string' ? value.charAt(0) : value;
-
-  if (isLabel) {
-    if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT' || value === 'Retired Hurt') {
-      setShowRunInfo(true);
-    } else {
-      setShowRunInfo(false);
-    }
-
-    if (value === 'Six') {
-      playAnimation('six');
-      runsToAdd = 6;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, '6']);
-      setCurrentOverBalls(prev => [...prev, '6']);
-
-      if (striker) {
-        updateBatsmanScore(striker.index, 6);
-        updateBatsmanStats(striker.index, 6);
-        updateBatsmanBalls(striker.index);
+      if (value === 6) {
+        playAnimation('six');
+      } else if (value === 4) {
+        playAnimation('four');
       }
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
 
-      if (selectedBowler) {
-        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number' && value !== 0) {
+        setSelectedRun(value);
+        setShowMainWheel(true);
       }
-    } else if (value === 'Four') {
-      playAnimation('four');
-      runsToAdd = 4;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, '4']);
-      setCurrentOverBalls(prev => [...prev, '4']);
-
-      if (striker) {
-        updateBatsmanScore(striker.index, 4);
-        updateBatsmanStats(striker.index, 4);
-        updateBatsmanBalls(striker.index);
-      }
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-
-      if (selectedBowler) {
-        updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-      }
-    } else if (value === 'Wide') {
-      setPendingWide(true);
-      return;
-    } else if (value === 'No-ball') {
-      setPendingNoBall(true);
-      return;
-    } else if (value === 'Leg By') {
-      setShowLegByModal(true); // Open modal for leg by selection
-      return;
-    } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
-      setPendingOut(true);
-      return;
-    } else if (value === 'Retired Hurt') {
-      setShowRetiredHurtModal(true);
-      return;
     }
+  };
 
-    if (!extraBalls.includes(value)) {
-      setValidBalls(prev => prev + 1);
-
-      if (striker && value !== 'Wide' && value !== 'No-ball') {
-        updateBatsmanBalls(striker.index);
-      }
-    } else {
-      setShowRunInfo(false);
-    }
-  } else {
-    runsToAdd = value;
-    setPlayerScore(prev => prev + runsToAdd);
-    setTopPlays(prev => [...prev, value]);
-    setCurrentOverBalls(prev => [...prev, value]);
-    setValidBalls(prev => prev + 1);
-    isValidBall = true;
-
-    if (striker) {
-      updateBatsmanScore(striker.index, value);
-      updateBatsmanStats(striker.index, value, value === 0);
-      updateBatsmanBalls(striker.index);
-    }
-
-    if (selectedBowler) {
-      updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-    }
-
-    if (value % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-    }
-
-    if (value === 6) {
-      playAnimation('six');
-    } else if (value === 4) {
-      playAnimation('four');
-    }
-
-    if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number' && value !== 0) {
-      setSelectedRun(value);
-      setShowMainWheel(true);
-    }
-  }
-};
   const handleLegByModalSubmit = () => {
     if (!legByBatsmanType) return;
     setPendingLegBy(true);
@@ -1094,134 +1062,117 @@ const handleScoreButtonClick = (value, isLabel) => {
     setShowRunInfo(true);
   };
 
-// Modified handleRetiredHurtModalSubmit (remove saveMatchData call)
-const handleRetiredHurtModalSubmit = () => {
-  if (!retiredHurtBatsmanType) return;
+  const handleRetiredHurtModalSubmit = () => {
+    if (!retiredHurtBatsmanType) return;
 
-  const retiredBatsman = retiredHurtBatsmanType === 'striker' ? striker : nonStriker;
+    const retiredBatsman = retiredHurtBatsmanType === 'striker' ? striker : nonStriker;
 
-  setRetiredHurtPlayers(prev => [...prev, retiredBatsman]);
+    setRetiredHurtPlayers(prev => [...prev, retiredBatsman]);
 
-  if (retiredHurtBatsmanType === 'striker') {
-    setStriker(null);
-    setNextBatsmanEnd('striker');
-  } else {
-    setNonStriker(null);
-    setNextBatsmanEnd('non-striker');
-  }
-
-  setShowRetiredHurtModal(false);
-  setShowBatsmanDropdown(true); // Show dropdown to select replacement
-
-  // Do NOT increment outCount
-
-  // Add to over balls something like "RH"
-  setCurrentOverBalls(prev => [...prev, 'RH']);
-  setTopPlays(prev => [...prev, 'RH']);
-  setValidBalls(prev => prev + 1); // Count as valid ball
-};
-
-// Modified handleDismissalModalSubmit (remove saveMatchData call)
-const handleDismissalModalSubmit = () => {
-  if (!selectedDismissalType) return;
-
-  let isValid = true;
-  if (['Caught', 'Caught Behind'].includes(selectedDismissalType)) {
-    if (!selectedCatchType || !selectedInvolvedPlayer) isValid = false;
-  } else if (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType)) {
-    if (!selectedInvolvedPlayer) isValid = false;
-  } else if (selectedDismissalType === 'Run Out') {
-    if (!outBatsmanType) isValid = false;
-  }
-
-  if (!isValid) return;
-
-  playAnimation('out');
-
-  setTimeout(() => {
-    setPlayerScore(prev => prev + outRuns);
-
-    let displayText = `O${outRuns} ${selectedDismissalType}`;
-    if (selectedCatchType) displayText += ` - ${selectedCatchType}`;
-    displayText;
-
-    setTopPlays(prev => [...prev, displayText]);
-    setCurrentOverBalls(prev => [...prev, displayText]);
-
-    // Determine the out batsman based on selection
-    let outBatsman = outBatsmanType === 'striker' ? striker : nonStriker;
-    const batsmanIndex = outBatsman.index;
-
-    updateBatsmanScore(batsmanIndex, outRuns);
-    updateBatsmanStats(batsmanIndex, outRuns, outRuns === 0);
-    updateBatsmanBalls(batsmanIndex);
-
-    recordDismissal(batsmanIndex, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
-
-    setValidBalls(prev => prev + 1);
-
-    // Increment outCount here
-    setOutCount(prev => prev + 1);
-
-    let positionToRemove = outBatsmanType;
-
-    // Handle strike change if odd runs on out
-    if (outRuns % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-
-      // After swap, flip the position to remove
-      positionToRemove = positionToRemove === 'striker' ? 'non-striker' : 'striker';
-    }
-
-    // Remove the out batsman from the correct position
-    if (positionToRemove === 'striker') {
+    if (retiredHurtBatsmanType === 'striker') {
       setStriker(null);
+      setNextBatsmanEnd('striker');
     } else {
       setNonStriker(null);
+      setNextBatsmanEnd('non-striker');
     }
 
-    // Set the end for the new batsman
-    setNextBatsmanEnd(positionToRemove);
+    setShowRetiredHurtModal(false);
+    setShowBatsmanDropdown(true);
 
-    // Check if this was the last wicket
-    const availableBatsmen = getAvailableBatsmen();
+    setCurrentOverBalls(prev => [...prev, 'RH']);
+    setTopPlays(prev => [...prev, 'RH']);
+    setValidBalls(prev => prev + 1);
+  };
 
-    if (availableBatsmen.length === 0) {
-      // All out, end innings without showing dropdown
-      setShowDismissalModal(false);
-      setPendingOut(false);
-      setSelectedDismissalType('');
-      setSelectedCatchType('');
-      setSelectedInvolvedPlayer(null);
-      setOutRuns(null);
-      setOutBatsmanType('striker');
+  const handleDismissalModalSubmit = () => {
+    if (!selectedDismissalType) return;
 
-      // Trigger innings end logic (handled in useEffect)
-    } else {
-      setShowBatsmanDropdown(true);
-      setShowDismissalModal(false);
-      setPendingOut(false);
-      setSelectedDismissalType('');
-      setSelectedCatchType('');
-      setSelectedInvolvedPlayer(null);
-      setOutRuns(null);
-      setOutBatsmanType('striker');
+    let isValid = true;
+    if (['Caught', 'Caught Behind'].includes(selectedDismissalType)) {
+      if (!selectedCatchType || !selectedInvolvedPlayer) isValid = false;
+    } else if (['Run Out', 'Stumped', 'Caught Behind'].includes(selectedDismissalType)) {
+      if (!selectedInvolvedPlayer) isValid = false;
+    } else if (selectedDismissalType === 'Run Out') {
+      if (!outBatsmanType) isValid = false;
     }
-  }, 1000);
-};
+
+    if (!isValid) return;
+
+    playAnimation('out');
+
+    setTimeout(() => {
+      setPlayerScore(prev => prev + outRuns);
+
+      let displayText = `O${outRuns} ${selectedDismissalType}`;
+      if (selectedCatchType) displayText += ` - ${selectedCatchType}`;
+      displayText;
+
+      setTopPlays(prev => [...prev, displayText]);
+      setCurrentOverBalls(prev => [...prev, displayText]);
+
+      let outBatsman = outBatsmanType === 'striker' ? striker : nonStriker;
+      const batsmanIndex = outBatsman.index;
+
+      updateBatsmanScore(batsmanIndex, outRuns);
+      updateBatsmanStats(batsmanIndex, outRuns, outRuns === 0);
+      updateBatsmanBalls(batsmanIndex);
+
+      recordDismissal(batsmanIndex, selectedDismissalType, selectedCatchType, selectedInvolvedPlayer);
+
+      setValidBalls(prev => prev + 1);
+
+      setOutCount(prev => prev + 1);
+
+      let positionToRemove = outBatsmanType;
+
+      if (outRuns % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+
+        positionToRemove = positionToRemove === 'striker' ? 'non-striker' : 'striker';
+      }
+
+      if (positionToRemove === 'striker') {
+        setStriker(null);
+      } else {
+        setNonStriker(null);
+      }
+
+      setNextBatsmanEnd(positionToRemove);
+
+      const availableBatsmen = getAvailableBatsmen();
+
+      if (availableBatsmen.length === 0) {
+        setShowDismissalModal(false);
+        setPendingOut(false);
+        setSelectedDismissalType('');
+        setSelectedCatchType('');
+        setSelectedInvolvedPlayer(null);
+        setOutRuns(null);
+        setOutBatsmanType('striker');
+      } else {
+        setShowBatsmanDropdown(true);
+        setShowDismissalModal(false);
+        setPendingOut(false);
+        setSelectedDismissalType('');
+        setSelectedCatchType('');
+        setSelectedInvolvedPlayer(null);
+        setOutRuns(null);
+        setOutBatsmanType('striker');
+      }
+    }, 1000);
+  };
 
   const handleUndoBall = async () => {
     if (currentOverBalls.length === 0) {
-      if (pastOvers.length === 0) return; // Nothing to undo
-      // Restore last over to current
+      if (pastOvers.length === 0) return;
       const lastOver = pastOvers.pop();
       setCurrentOverBalls(lastOver);
       setPastOvers([...pastOvers]);
       setOverNumber(prev => prev - 1);
-      setValidBalls(6); // Since we're undoing a full over completion
-      // Swap strikers back if needed
+      setValidBalls(6);
       const temp = striker;
       setStriker(nonStriker);
       setNonStriker(temp);
@@ -1243,7 +1194,6 @@ const handleDismissalModalSubmit = () => {
       runs = lastBall;
       isValid = true;
       if (runs % 2 !== 0) {
-        // Swap back strikers
         const temp = striker;
         setStriker(nonStriker);
         setNonStriker(temp);
@@ -1275,7 +1225,6 @@ const handleDismissalModalSubmit = () => {
         } else {
           runs = parseInt(lastBall.slice(2));
         }
-        // Remove last wicket
         const lastWicket = wicketOvers.pop();
         setWicketOvers([...wicketOvers]);
         setOutCount(prev => prev - 1);
@@ -1303,8 +1252,6 @@ const handleDismissalModalSubmit = () => {
           await updatePlayerCareerStats(batsman.name, { "careerStats.batting.dismissals": -1 }, db);
           await updatePlayerBattingAverage(batsman.name, db);
         }
-        // Restore striker if needed (assuming the out was on striker)
-        // This might need more logic if non-striker was out, but assuming striker for simplicity
       }
     }
 
@@ -1329,7 +1276,6 @@ const handleDismissalModalSubmit = () => {
       }
     }
 
-    // Reset pendings if applicable
     setPendingWide(false);
     setPendingNoBall(false);
     setPendingLegBy(false);
@@ -1337,7 +1283,6 @@ const handleDismissalModalSubmit = () => {
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
-
   };
 
   useEffect(() => {
@@ -1420,6 +1365,7 @@ const handleDismissalModalSubmit = () => {
       ctx.clearRect(0, 0, width, height);
     };
   }, [modalContent.title]);
+
   useEffect(() => {
     if (gameFinished) {
       saveMatchData(true);
@@ -1556,12 +1502,14 @@ const handleDismissalModalSubmit = () => {
     setOutRuns(null);
     setRetiredHurtPlayers([]);
   };
+
   const resetGame = () => {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
     setViewHistory(['toss']);
   };
+
   const getStrikeRate = (batsmanIndex) => {
     const runs = batsmenScores[batsmanIndex] || 0;
     const balls = batsmenBalls[batsmanIndex] || 0;
@@ -1624,8 +1572,8 @@ const handleDismissalModalSubmit = () => {
     }));
     setShowBowlerDropdown(false);
   };
+
   const handleBatsmanSelect = (player) => {
-    // If player is returning from retired hurt, remove from retiredHurtPlayers
     if (retiredHurtPlayers.some(p => p.index === player.index)) {
       setRetiredHurtPlayers(prev => prev.filter(p => p.index !== player.index));
     }
@@ -1654,14 +1602,15 @@ const handleDismissalModalSubmit = () => {
     }));
     setNextBatsmanEnd(null);
   };
+
   const getAvailableBatsmen = () => {
-    // Include players not yet batted and retired hurt players (if wickets left)
     const notBatted = battingTeamPlayers.filter(player =>
       !selectedBatsmenIndices.includes(player.index)
     );
     const availableRetired = (outCount < 9) ? retiredHurtPlayers : [];
     return [...notBatted, ...availableRetired];
   };
+
   const cancelStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== striker?.index));
     const newScores = { ...batsmenScores };
@@ -1675,6 +1624,7 @@ const handleDismissalModalSubmit = () => {
     setBatsmenStats(newStats);
     setStriker(null);
   };
+
   const cancelNonStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== nonStriker?.index));
     const newScores = { ...batsmenScores };
@@ -1794,10 +1744,113 @@ const handleDismissalModalSubmit = () => {
       console.error('Error updating winner in Firebase:', err);
     }
   };
+  async function updatePointsTable(tournamentId, teamA, teamB, winnerTeamName, isTie, firstInnings, secondInnings, maxOvers) {
+  try {
+    const pointsTableRef = doc(db, 'PointsTable', tournamentId);
+    const pointsTableDoc = await getDoc(pointsTableRef);
+
+    let teams = [];
+    if (pointsTableDoc.exists()) {
+      teams = pointsTableDoc.data().teams || [];
+    } else {
+      // Initialize if document doesn't exist
+      await setDoc(pointsTableRef, { tournamentId, teams: [] });
+    }
+
+    // Helper to get/update team stats
+    const getTeamIndex = (teamName) => teams.findIndex(t => t.teamName === teamName);
+    const updateTeamStats = (teamName, isWin, isLoss, isDraw, runsScored, oversFaced, runsConceded, oversBowled) => {
+      const index = getTeamIndex(teamName);
+      if (index === -1) {
+        // Add new team if not present
+        teams.push({
+          teamName,
+          matches: 1,
+          wins: isWin ? 1 : 0,
+          losses: isLoss ? 1 : 0,
+          draws: isDraw ? 1 : 0,
+          points: isWin ? 2 : (isDraw ? 1 : 0),
+          runsScored,
+          oversFaced,
+          runsConceded,
+          oversBowled,
+          nrr: ((runsScored / oversFaced) - (runsConceded / oversBowled)).toFixed(3) || 0,
+        });
+      } else {
+        // Update existing team
+        const updatedTeam = { ...teams[index] };
+        updatedTeam.matches += 1;
+        if (isWin) updatedTeam.wins += 1;
+        if (isLoss) updatedTeam.losses += 1;
+        if (isDraw) updatedTeam.draws += 1;
+        updatedTeam.points += isWin ? 2 : (isDraw ? 1 : 0);
+        updatedTeam.runsScored += runsScored;
+        updatedTeam.oversFaced += oversFaced;
+        updatedTeam.runsConceded += runsConceded;
+        updatedTeam.oversBowled += oversBowled;
+        updatedTeam.nrr = ((updatedTeam.runsScored / updatedTeam.oversFaced) - (updatedTeam.runsConceded / updatedTeam.oversBowled)).toFixed(3) || 0;
+        teams[index] = updatedTeam;
+      }
+    };
+
+    // Determine stats for each team
+    const battingFirstTeam = firstInnings.teamName; // Assuming firstInnings is batting first
+    const battingSecondTeam = secondInnings ? secondInnings.teamName : teamB.name; // Fallback if no second innings
+
+    // Runs and overs (handle all-out by using actual overs; otherwise maxOvers)
+    const teamARuns = (battingFirstTeam === teamA.name) ? firstInnings.totalScore : (secondInnings ? secondInnings.totalScore : 0);
+    const teamAOversFaced = (battingFirstTeam === teamA.name) ? (firstInnings.wickets === 10 ? firstInnings.overs : maxOvers) : (secondInnings ? (secondInnings.wickets === 10 ? secondInnings.overs : maxOvers) : 0);
+    const teamBRuns = (battingFirstTeam === teamB.name) ? firstInnings.totalScore : (secondInnings ? secondInnings.totalScore : 0);
+    const teamBOversFaced = (battingFirstTeam === teamB.name) ? (firstInnings.wickets === 10 ? firstInnings.overs : maxOvers) : (secondInnings ? (secondInnings.wickets === 10 ? secondInnings.overs : maxOvers) : 0);
+
+    // Conceded = opponent's scored; bowled = opponent's faced
+    updateTeamStats(teamA.name,
+      winnerTeamName === teamA.name,
+      winnerTeamName === teamB.name,
+      isTie,
+      teamARuns, teamAOversFaced, teamBRuns, teamBOversFaced
+    );
+    updateTeamStats(teamB.name,
+      winnerTeamName === teamB.name,
+      winnerTeamName === teamA.name,
+      isTie,
+      teamBRuns, teamBOversFaced, teamARuns, teamAOversFaced
+    );
+
+    // Update Firestore
+    await updateDoc(pointsTableRef, { teams });
+    console.log('PointsTable updated for tournamentId:', tournamentId);
+  } catch (error) {
+    console.error('Error updating PointsTable:', error);
+  }
+}
+
+async function updateMatchWinnerInSchedule(tournamentId, matchId, winnerTeamName) {
+  const docRef = doc(db, "roundrobin", tournamentId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return;
+
+  const data = docSnap.data();
+  const matchSchedule = data.matchSchedule || [];
+  // Find match index
+  const idx = matchSchedule.findIndex(
+    (ms) => ms.matchId === matchId
+  );
+  if (idx === -1) return;
+
+  // Update winner
+  matchSchedule[idx].winner = winnerTeamName;
+
+  await updateDoc(docRef, {
+    matchSchedule,
+  });
+}
+
   const handleModalOkClick = () => {
     setShowModal(false);
     if (gameFinished && modalContent.title === 'Match Result') {
       let winnerTeamName = '';
+      let isTie = false;
       let winningDifference = '';
       
       if (playerScore < targetScore - 1) {
@@ -1805,12 +1858,23 @@ const handleDismissalModalSubmit = () => {
         winningDifference = `${targetScore - 1 - playerScore} runs`;
       } else if (playerScore === targetScore - 1) {
         winnerTeamName = 'Tie';
+        isTie = true;
         winningDifference = 'Tie';
       } else {
         winnerTeamName = teamB.name;
         winningDifference = `${10 - outCount} wickets`;
       }
       updateWinnerInFirebase(winnerTeamName);
+      updateMatchWinnerInSchedule(
+        tournamentId,     // document id
+        matchId,          // e.g. "group_1_1"
+        winnerTeamName    // e.g. "NS1"
+      );
+
+      
+      // New call to update PointsTable
+      updatePointsTable(tournamentId, teamA, teamB, winnerTeamName, isTie, firstInningsData, isChasing ? { teamName: currentBattingTeam.name, totalScore: playerScore, wickets: outCount, overs: overNumber - 1 + (validBalls / 6) } : null, maxOvers);
+
       if (originPage) {
         navigate(originPage, { 
           state: { 
@@ -1848,6 +1912,7 @@ const handleDismissalModalSubmit = () => {
       setViewHistory(['toss']);
     }
   };
+
   if (!currentView && !showThirdButtonOnly) {
     return (
       <div className="text-white text-center p-4">

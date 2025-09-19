@@ -3,7 +3,7 @@ import { FaMapMarkerAlt, FaTrashAlt } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import PitchAnalyzer from '../components/sophita/HomePage/PitchAnalyzer';
 
@@ -15,6 +15,8 @@ export default function TournamentList() {
   const navigate = useNavigate();
   const [showPitchAnalyzer, setShowPitchAnalyzer] = useState(false);
   const [selectedForAnalyzer, setSelectedForAnalyzer] = useState(null);
+  const [showPointsTable, setShowPointsTable] = useState(false);
+  const [pointsTableData, setPointsTableData] = useState([]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -59,6 +61,22 @@ export default function TournamentList() {
   const handleCardClick = (tournament) => {
     setSelectedTournament(tournament);
     setIsModalOpen(true);
+  };
+
+  const fetchPointsTable = async (tournamentId) => {
+    try {
+      const docRef = doc(db, 'PointsTable', tournamentId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const sortedTeams = (data.teams || []).sort((a, b) => b.points - a.points || parseFloat(b.nrr) - parseFloat(a.nrr));
+        setPointsTableData(sortedTeams);
+      } else {
+        setPointsTableData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching points table:', error);
+    }
   };
 
   let tournamentsToShow = [];
@@ -312,6 +330,16 @@ export default function TournamentList() {
                   </button>
                   <button
                     onClick={() => {
+                      fetchPointsTable(selectedTournament.tournamentId);
+                      setShowPointsTable(true);
+                      setIsModalOpen(false);
+                    }}
+                    className="bg-purple-700 hover:bg-purple-600 text-white px-3 py-1 sm:px-4 sm:py-2 rounded transition font-semibold text-xs sm:text-sm"
+                  >
+                    PointsTable
+                  </button>
+                  <button
+                    onClick={() => {
                       setSelectedForAnalyzer(selectedTournament);
                       setShowPitchAnalyzer(true);
                       setIsModalOpen(false);
@@ -352,6 +380,58 @@ export default function TournamentList() {
               noOfTeams={selectedForAnalyzer.noOfTeams}
               tournamentName={selectedForAnalyzer.name}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Points Table Overlay */}
+      {showPointsTable && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 px-2">
+          <div
+            className="w-full max-w-4xl rounded-lg p-4 sm:p-6 shadow-lg border-2 border-white relative"
+            style={{
+              background: 'rgba(66, 21, 21, 0.85)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
+            }}
+          >
+            <button
+              onClick={() => setShowPointsTable(false)}
+              className="absolute top-2 right-2 text-white text-2xl font-bold hover:text-gray-300"
+            >
+              &times;
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">Points Table</h2>
+            {pointsTableData.length > 0 ? (
+              <table className="w-full text-left text-sm text-white">
+                <thead className="bg-gray-700">
+                  <tr>
+                    <th className="p-2">Team</th>
+                    <th className="p-2">M</th>
+                    <th className="p-2">W</th>
+                    <th className="p-2">L</th>
+                    <th className="p-2">D</th>
+                    <th className="p-2">Pts</th>
+                    <th className="p-2">NRR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pointsTableData.map((team, index) => (
+                    <tr key={index} className="border-b border-gray-600">
+                      <td className="p-2">{team.teamName}</td>
+                      <td className="p-2">{team.matches}</td>
+                      <td className="p-2">{team.wins}</td>
+                      <td className="p-2">{team.losses}</td>
+                      <td className="p-2">{team.draws}</td>
+                      <td className="p-2">{team.points}</td>
+                      <td className="p-2">{team.nrr}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-white text-center">No points table data available.</p>
+            )}
           </div>
         </div>
       )}

@@ -151,8 +151,9 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
 
   const data = displayData || {};
   const {
-    battingTeam,
-    bowlingTeam,
+    Chasing,
+    TeamA ,
+    TeamB,
     battingScore,
     bowlingScore,
     overNumber,
@@ -173,9 +174,9 @@ const { winA, winB } = calculateWinProbability(
   let probableWinner = null;
   if (typeof battingScore === "number" && typeof bowlingScore === "number") {
     if (winA > winB) {
-      probableWinner = battingTeam;
+      probableWinner = Chasing?TeamB:TeamA;
     } else if (winB > winA) {
-      probableWinner = bowlingTeam;
+      probableWinner = Chasing?TeamA:TeamB;
     } else {
       probableWinner = "It's a tie";
     }
@@ -218,12 +219,12 @@ const { winA, winB } = calculateWinProbability(
                 <div className="text-sm font-medium text-gray-300 mb-2">Current Scores</div>
                 <div className="flex justify-between text-sm font-semibold mb-1">
                   <span>
-                    {battingTeam}{" "}
+                    {Chasing?TeamB:TeamA}{" "}
                     {typeof battingScore === "number" ? `(${battingScore} runs)` : ""}
                   </span>
                   <span>Ov-{overNumber}</span>
                   <span>
-                    {bowlingTeam}{" "}
+                    {Chasing?TeamA:TeamB}{" "}
                     {typeof bowlingScore === "number" ? `(${bowlingScore} runs)` : ""}
                   </span>
                 </div>
@@ -245,13 +246,13 @@ const { winA, winB } = calculateWinProbability(
                   <div className="text-sm font-medium text-gray-300 mb-2">Win Probability</div>
                   <div className="flex justify-between text-sm text-gray-400 mb-2">
                     <span>
-                      {battingTeam}:{" "}
+                      {Chasing?TeamB:TeamA}:{" "}
                       <span className={`${winA === 0 ? "text-gray-500" : "text-green-400"} font-semibold`}>
                         {winA}%
                       </span>
                     </span>
                     <span>
-                      {bowlingTeam}:{" "}
+                      {Chasing?TeamA:TeamB}:{" "}
                       <span className={`${winB === 0 ? "text-gray-500" : "text-red-400"} font-semibold`}>
                         {winB}%
                       </span>
@@ -264,12 +265,12 @@ const { winA, winB } = calculateWinProbability(
                     <div
                       className="h-full bg-green-500 transition-all duration-500"
                       style={{ width: `${winA}%` }}
-                      title={`${battingTeam}: ${winA}%`}
+                      title={`${Chasing?TeamB:TeamA}: ${winA}%`}
                     />
                     <div
                       className="h-full bg-red-500 transition-all duration-500"
                       style={{ width: `${winB}%` }}
-                      title={`${bowlingTeam}: ${winB}%`}
+                      title={`${Chasing?TeamA:TeamB}: ${winB}%`}
                     />
                   </div>
                 </div>

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
 
 const Match = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Match = () => {
   const [activeTab, setActiveTab] = useState("my-matches");
   const [activeSubOption, setActiveSubOption] = useState("info");
   const [matches, setMatches] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
   const { tournamentName } = location.state || {};
   const { tournamentId } = location.state || {};
   console.log(tournamentId, tournamentName);
@@ -60,6 +61,46 @@ const Match = () => {
     }
     setActiveSubOption("info");
   }, [location.state, tournamentId]);  // Added tournamentId dependency
+
+  useEffect(() => {
+    if (activeTab !== 'upcoming' || !tournamentId) return;
+
+    const fetchUpcoming = async () => {
+      try {
+        const docRef = doc(db, 'roundrobin', tournamentId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const schedule = docSnap.data().matchSchedule || [];
+          const upcoming = getUpcomingMatches(schedule);
+          setUpcomingMatches(upcoming);
+        } else {
+          setUpcomingMatches([]);
+        }
+      } catch (error) {
+        console.error('Error fetching roundrobin:', error);
+      }
+    };
+
+    fetchUpcoming();
+  }, [activeTab, tournamentId]);
+
+  const getUpcomingMatches = (matchSchedule) => {
+    const now = new Date(); // current datetime
+    return matchSchedule.filter(match => {
+      if (!match.date || !match.time || match.winner) return false;
+
+      // Parse date: '17 Sept 25' -> YYYY-MM-DD
+      const dateObj = new Date(Date.parse(match.date.replace(/(\d+) (\w+) (\d+)/, '$2 $1 20$3')));
+      // Parse time: '1:00 AM'
+      let [time, meridian] = match.time.split(' ');
+      let [hours, minutes] = time.split(':');
+      hours = meridian.toLowerCase() === 'pm' ? (parseInt(hours, 10) === 12 ? 12 : parseInt(hours, 10) + 12) : (parseInt(hours, 10) === 12 ? 0 : parseInt(hours, 10));
+      const matchDateTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(hours), parseInt(minutes));
+
+      // If the match is in the future or within 3 hours
+      return matchDateTime > now || (matchDateTime - now) / 3600000 <= 3;
+    });
+  };
 
   const getFilteredMatches = (tab) => {
     const today = new Date().toISOString().split('T')[0];
@@ -235,14 +276,15 @@ const Match = () => {
 
   // New function to transform match data into upcoming layout format
   const transformToUpcomingFormat = (match) => {
-    const matchData = getMatchData(match, "info");
-
     return {
-      id: match.id,
-      tournament: match.tournamentName || "Unknown Tournament",
-      location: matchData.venue,
-      date: matchData.date,
+      id: match.matchId || "N/A",
+      tournament: tournamentName || "Unknown Tournament",
+      location: match.venue || "Not Available",
+      date: `${match.date} ${match.time}`,
       status: "UPCOMING",
+      matchId: match.matchId || "N/A",
+      // teams: `${match.team1 || "Team 1"} vs ${match.team2 || "Team 2"}`,
+      match: match.match,
     };
   };
 
@@ -571,10 +613,10 @@ const Match = () => {
               </div>
 
               <div className="space-y-4 md:space-y-6">
-                {getFilteredMatches(activeTab).length === 0 ? (
+                {upcomingMatches.length === 0 ? (
                   <p className="text-center text-gray-300 py-4">No upcoming matches available.</p>
                 ) : (
-                  getFilteredMatches(activeTab).map((match) => {
+                  upcomingMatches.map((match) => {
                     const transformedMatch = transformToUpcomingFormat(match);
                     return (
                       <div key={transformedMatch.id} className="bg-[rgba(0,0,0,0.3)] p-4 md:p-6 rounded-lg">
@@ -584,7 +626,9 @@ const Match = () => {
                             {transformedMatch.status}
                           </span>
                         </div>
+                        <p className="text-xs md:text-sm text-gray-300">{transformedMatch.matchId}</p>
                         <p className="text-xs md:text-sm text-gray-300">{transformedMatch.location} | {transformedMatch.date}</p>
+                        <p className="text-sm md:text-base mt-2">{transformedMatch.match}</p>
                       </div>
                     );
                   })
