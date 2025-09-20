@@ -4,7 +4,6 @@ import { Trophy, TrendingUp, HelpCircle, X } from "lucide-react";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase"; // Adjust this import to match your Firebase config file
 
-
 // 🔢 Win Probability Calculation Logic
 function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOvers, wickets = 0) {
   if (Number.isNaN(battingRuns) || Number.isNaN(battingBalls) || Number.isNaN(bowlingRuns) || Number.isNaN(maxOvers) ||
@@ -76,13 +75,11 @@ function calculateWinProbability(battingRuns, battingBalls, bowlingRuns, maxOver
   return { winA, winB: 100 - winA };
 }
 
-
-
-export default function AIMatchCompanionModal({ isOpen, onClose, predictionData, tournamentId , maxOvers, battingBalls}) {
+export default function AIMatchCompanionModal({ isOpen, onClose, predictionData, tournamentId, maxOvers, battingBalls }) {
   const [displayData, setDisplayData] = useState(predictionData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const [winProbabilities, setWinProbabilities] = useState({ winA: null, winB: null });
 
   // Extract the actual document ID if tournamentId is an object
   let safeTournamentId = null;
@@ -92,13 +89,12 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     safeTournamentId = tournamentId;
   }
 
-
-  // Function to update Firestore with predictionData
-  const updateFirestore = async (data) => {
+  // Function to update Firestore with data including win probabilities
+  const updateFirestore = async (data, probabilities) => {
     if (!safeTournamentId || !data) return;
     try {
       const docRef = doc(db, "AIMatchCompanion", safeTournamentId);
-      await setDoc(docRef, data, { merge: true });
+      await setDoc(docRef, { ...data, ...probabilities }, { merge: true });
       console.log("Document updated for tournamentId:", safeTournamentId);
     } catch (err) {
       console.error("Error updating Firestore:", err);
@@ -106,29 +102,49 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     }
   };
 
-
-  // Update Firestore whenever predictionData changes
+  // Update Firestore whenever predictionData changes, and compute/store win probabilities
   useEffect(() => {
     if (predictionData && safeTournamentId) {
       setDisplayData(predictionData);
-      updateFirestore(predictionData);
+      const probs = calculateWinProbability(
+        predictionData.battingScore,
+        battingBalls,
+        predictionData.bowlingScore,
+        maxOvers,
+        predictionData.wickets || 0
+      );
+      setWinProbabilities(probs);
+      updateFirestore(predictionData, probs);
     }
-  }, [predictionData, safeTournamentId]);
-
+  }, [predictionData, safeTournamentId, battingBalls, maxOvers]);
 
   // Real-time listener for fetching from Firestore if no predictionData is provided
   useEffect(() => {
     if (!isOpen || predictionData || !safeTournamentId) return;
 
-
     setLoading(true);
     setError(null);
-
 
     const docRef = doc(db, "AIMatchCompanion", safeTournamentId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        setDisplayData(docSnap.data());
+        const fetchedData = docSnap.data();
+        setDisplayData(fetchedData);
+
+        // Use stored win probabilities if available, else compute
+        if (fetchedData.winA !== undefined && fetchedData.winB !== undefined) {
+          setWinProbabilities({ winA: fetchedData.winA, winB: fetchedData.winB });
+        } else {
+          const probs = calculateWinProbability(
+            fetchedData.battingScore,
+            battingBalls,
+            fetchedData.bowlingScore,
+            maxOvers,
+            fetchedData.wickets || 0
+          );
+          setWinProbabilities(probs);
+          updateFirestore(fetchedData, probs); // Store the computed values
+        }
         setError(null);
       } else {
         setError("No match data found for this tournament.");
@@ -140,19 +156,16 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
       setLoading(false);
     });
 
-
     // Cleanup listener on unmount or when dependencies change
     return () => unsubscribe();
-  }, [isOpen, predictionData, safeTournamentId]);
-
+  }, [isOpen, predictionData, safeTournamentId, battingBalls, maxOvers]);
 
   if (!isOpen) return null;
-
 
   const data = displayData || {};
   const {
     Chasing,
-    TeamA ,
+    TeamA,
     TeamB,
     battingScore,
     bowlingScore,
@@ -161,27 +174,18 @@ export default function AIMatchCompanionModal({ isOpen, onClose, predictionData,
     alternateOutcome,
   } = data;
 
-
-const { winA, winB } = calculateWinProbability(
-  battingScore,           // current runs for batting team
-  battingBalls,           // balls faced by batting team, e.g. over*6 + balls
-  bowlingScore,           // target (first innings total)
-  maxOvers,               // max overs for the match
-  data.wickets || 0
-);
-
+  const { winA, winB } = winProbabilities;
 
   let probableWinner = null;
   if (typeof battingScore === "number" && typeof bowlingScore === "number") {
     if (winA > winB) {
-      probableWinner = Chasing?TeamB:TeamA;
+      probableWinner = Chasing ? TeamB : TeamA;
     } else if (winB > winA) {
-      probableWinner = Chasing?TeamA:TeamB;
+      probableWinner = Chasing ? TeamA : TeamB;
     } else {
       probableWinner = "It's a tie";
     }
   }
-
 
   return (
     <AnimatePresence>
@@ -200,13 +204,11 @@ const { winA, winB } = calculateWinProbability(
           {/* Close Button (add your onClose logic here if needed) */}
           {/* <button onClick={onClose} className="absolute top-4 right-4"><X className="w-5 h-5 text-gray-400" /></button> */}
 
-
           {/* Header */}
           <div className="flex items-center gap-2 mb-6">
             <Trophy className="w-5 h-5 text-yellow-400" />
             <h2 className="text-xl font-semibold">AI Match Companion</h2>
           </div>
-
 
           {loading ? (
             <p className="text-sm text-gray-500 italic">Loading match insights…</p>
@@ -219,17 +221,16 @@ const { winA, winB } = calculateWinProbability(
                 <div className="text-sm font-medium text-gray-300 mb-2">Current Scores</div>
                 <div className="flex justify-between text-sm font-semibold mb-1">
                   <span>
-                    {Chasing?TeamB:TeamA}{" "}
+                    {Chasing ? TeamB : TeamA}{" "}
                     {typeof battingScore === "number" ? `(${battingScore} runs)` : ""}
                   </span>
                   <span>Ov-{overNumber}</span>
                   <span>
-                    {Chasing?TeamA:TeamB}{" "}
+                    {Chasing ? TeamA : TeamB}{" "}
                     {typeof bowlingScore === "number" ? `(${bowlingScore} runs)` : ""}
                   </span>
                 </div>
               </div>
-
 
               {/* Probable Winner */}
               <div className="text-sm font-medium text-gray-300 mb-2">
@@ -239,45 +240,42 @@ const { winA, winB } = calculateWinProbability(
                 </span>
               </div>
 
-
               {/* Win Probability */}
               {winA !== null ? (
                 <div>
                   <div className="text-sm font-medium text-gray-300 mb-2">Win Probability</div>
                   <div className="flex justify-between text-sm text-gray-400 mb-2">
                     <span>
-                      {Chasing?TeamB:TeamA}:{" "}
+                      {Chasing ? TeamB : TeamA}:{" "}
                       <span className={`${winA === 0 ? "text-gray-500" : "text-green-400"} font-semibold`}>
                         {winA}%
                       </span>
                     </span>
                     <span>
-                      {Chasing?TeamA:TeamB}:{" "}
+                      {Chasing ? TeamA : TeamB}:{" "}
                       <span className={`${winB === 0 ? "text-gray-500" : "text-red-400"} font-semibold`}>
                         {winB}%
                       </span>
                     </span>
                   </div>
 
-
                   {/* Probability Bar */}
                   <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
                     <div
                       className="h-full bg-green-500 transition-all duration-500"
                       style={{ width: `${winA}%` }}
-                      title={`${Chasing?TeamB:TeamA}: ${winA}%`}
+                      title={`${Chasing ? TeamB : TeamA}: ${winA}%`}
                     />
                     <div
                       className="h-full bg-red-500 transition-all duration-500"
                       style={{ width: `${winB}%` }}
-                      title={`${Chasing?TeamA:TeamB}: ${winB}%`}
+                      title={`${Chasing ? TeamA : TeamB}: ${winB}%`}
                     />
                   </div>
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">Win probability available only during chasing innings.</p>
               )}
-
 
               {/* Next Over Impact */}
               {nextOverProjection && (
@@ -289,7 +287,6 @@ const { winA, winB } = calculateWinProbability(
                   <p className="text-sm text-gray-400">{nextOverProjection}</p>
                 </div>
               )}
-
 
               {/* What If Scenario */}
               {alternateOutcome && (

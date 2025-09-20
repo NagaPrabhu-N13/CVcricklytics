@@ -495,12 +495,20 @@ const Clubsmain = () => {
                             className="p-3 sm:p-4 flex items-center"
                           >
                             <div className="flex-shrink-0 mr-3 sm:mr-4">
-                              <motion.img
+                              <motion.div
                                 whileHover={{ rotate: 5, scale: 1.1 }}
-                                src={club.logo || 'https://via.placeholder.com/60'}
-                                alt={`${club.name} logo`}
-                                className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400"
-                              />
+                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-blue-400 flex items-center justify-center bg-gray-700 text-white text-xl font-bold overflow-hidden"
+                              >
+                                {club.logo ? (
+                                  <img
+                                    src={club.logo}
+                                    alt={`${club.name} logo`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                ) : (
+                                  <span>{club.clubName ? club.name.charAt(0).toUpperCase() : 'C'}</span>
+                                )}
+                              </motion.div>
                             </div>
                             <div className="flex-grow overflow-hidden">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

@@ -1051,22 +1051,48 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
 
 // PlayerSelector Component
 const PlayerSelector = ({ teamA, teamB, overs, origin, scorer, onPlayerAdded }) => {
+  // State declarations at the top
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState({ left: [], right: [] });
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [selectedTeamForPlayer, setSelectedTeamForPlayer] = useState(null);
+  const [teamAPlayers, setTeamAPlayers] = useState([]); // New state for fetched players
+  const [teamBPlayers, setTeamBPlayers] = useState([]); // New state for fetched players
+
   const navigate = useNavigate();
 
-  const playersTeamAData = teamA?.players || [];
-  const playersTeamBData = teamB?.players || [];
+  // Fetch players from PlayerDetails on mount/update
+  useEffect(() => {
+    const fetchPlayersForTeam = async (team, side) => {
+      if (!team?.teamName) return; // Skip if no teamName
+      try {
+        const q = query(collection(db, "PlayerDetails"), where("teamName", "==", team.teamName));
+        const querySnapshot = await getDocs(q);
+        const fetchedPlayers = querySnapshot.docs.map(doc => doc.data());
+        if (side === 'left') setTeamAPlayers(fetchedPlayers);
+        if (side === 'right') setTeamBPlayers(fetchedPlayers);
+      } catch (err) {
+        console.error(`Error fetching players for ${team.teamName}:`, err);
+      }
+    };
 
+    fetchPlayersForTeam(teamA, 'left');
+    fetchPlayersForTeam(teamB, 'right');
+  }, [teamA, teamB]);
+
+  // Use fetched state (fallback to empty arrays to prevent initialization errors)
+  const playersTeamAData = teamAPlayers || [];
+  const playersTeamBData = teamBPlayers || [];
+
+  // Filtering now uses the initialized variables
   const filteredLeftPlayers = playersTeamAData.filter(player =>
     player.name.toLowerCase().includes(leftSearch.toLowerCase())
   );
   const filteredRightPlayers = playersTeamBData.filter(player =>
     player.name.toLowerCase().includes(rightSearch.toLowerCase())
   );
+
 
   const togglePlayerSelection = (side, player) => {
     setSelectedPlayers(prev => {

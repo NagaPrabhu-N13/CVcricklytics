@@ -662,7 +662,7 @@ useEffect(() => {
   const handleBack = () => {
     switch (activeTab) {
       case 'Start Match':
-        navigate('/Selection2', { state: { tournamentName, tournamentId, information } });
+        navigate('/tournament', { state: { tournamentName, tournamentId, information } });
         break;
       case 'Live Score':
         setActiveTab('Start Match');

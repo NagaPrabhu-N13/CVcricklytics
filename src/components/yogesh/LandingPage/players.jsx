@@ -286,12 +286,16 @@ const PlayersList = () => {
                   <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4"
                     onClick={() => handlePlayerClick(player)}
                   >
-                    <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gray-600 flex-shrink-0">
-                      <img
-                        src={player.image || 'https://via.placeholder.com/150'}
-                        alt={player.name || 'N/A'}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gray-600 flex-shrink-0 flex items-center justify-center bg-gray-700 text-white text-3xl font-bold">
+                      {player.image ? (
+                        <img
+                          src={player.image}
+                          alt={player.name || 'N/A'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{player.name ? player.name.charAt(0).toUpperCase() : 'N/A'}</span>
+                      )}
                     </div>
                     <div className="text-center sm:text-left">
                       <h2 className="text-xl font-bold text-white">{player.name || 'N/A'}</h2>
@@ -316,7 +320,7 @@ const PlayersList = () => {
         </div>
       )}
 
-      {/* Add Player Modal  */}
+      {/* Add Player Modal */}
       {/* {isAddPlayerModalOpen && userRole === 'admin' && currentUserId && (
         <AddPlayerModal
           onClose={() => setIsAddPlayerModalOpen(false)}

@@ -18,7 +18,7 @@ import { db, storage } from "../firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where, onSnapshot, addDoc, arrayUnion, arrayRemove, updateDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { getAuth } from "firebase/auth";
-import { serverTimestamp } from "firebase/firestore"; // Added for timestamps
+import { serverTimestamp } from "firebase/firestore";
 
 const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const navigate = useNavigate();
@@ -51,23 +51,20 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const [showShareBox, setShowShareBox] = useState(null);
   const [commentsCount, setCommentsCount] = useState({});
 
-  const [highlightsData, setHighlightsData] = useState([]); // Initialized as empty array
-  const [followersData, setFollowersData] = useState([]); // Dynamic from Firestore
-  const [reelsData, setReelsData] = useState([]); // Dynamic from Firestore
+  const [highlightsData, setHighlightsData] = useState([]); 
+  const [followersData, setFollowersData] = useState([]); 
+  const [reelsData, setReelsData] = useState([]); 
 
-  // New states for stories
-  const [userStories, setUserStories] = useState([]); // Current viewed user's stories
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0); // For autoplay
-  const [showStoryUpload, setShowStoryUpload] = useState(false); // Modal for uploading
-  const storyInputRef = useRef(null); // For file input
+  const [userStories, setUserStories] = useState([]); 
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0); 
+  const [showStoryUpload, setShowStoryUpload] = useState(false); 
+  const storyInputRef = useRef(null); 
 
-  // New states for story upload with mentions
   const [selectedStoryMedia, setSelectedStoryMedia] = useState([]);
   const [storyMentions, setStoryMentions] = useState('');
-  const [availableUsers, setAvailableUsers] = useState([]); // Users for mentioning
+  const [availableUsers, setAvailableUsers] = useState([]); 
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
 
-  // New state for story reply input
   const [storyReply, setStoryReply] = useState('');
 
   const highlightRef = useRef(null);
@@ -89,7 +86,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
 
-  // New state for search in following tab
   const [followingSearchTerm, setFollowingSearchTerm] = useState('');
 
   const shareOptions = [
@@ -109,22 +105,19 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     general: []
   };
 
-  // States for upload modal
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [description, setDescription] = useState('');
   const [mediaType, setMediaType] = useState(null);
 
-  // States for description truncation
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
-  // New states for profile tab
   const [postCount, setPostCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
 
-  const auth = getAuth(); // Added for current user
+  const auth = getAuth();
 
   const handleToggleSearch = () => {
     setShowSearch(!showSearch);
@@ -140,14 +133,12 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     }
   };
 
-  // Comment handlers
   const handleCommentClick = async (highlight, e) => {
     e.stopPropagation();
     setSelectedHighlight(highlight);
     setShowCommentBox(showCommentBox === highlight.id ? null : highlight.id);
     setShowShareBox(null); 
     
-    // Fetch comments from Firestore when opening
     const commentsRef = collection(db, "landingFeed", highlight.id, "comments");
     const commentsSnapshot = await getDocs(commentsRef);
     const fetchedComments = commentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
@@ -171,7 +162,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
       try {
         await addDoc(commentsRef, commentData);
 
-        // Fetch comments again to refresh display
         const commentsSnapshot = await getDocs(commentsRef);
         const updatedComments = commentsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
@@ -180,7 +170,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
           [selectedHighlight.id]: updatedComments
         }));
 
-        // Update comment count
         setCommentsCount(prev => ({
           ...prev,
           [selectedHighlight.id]: updatedComments.length
@@ -188,11 +177,11 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
 
         setNewComment('');
       } catch (error) {
-        console.error("Error PROGRESS adding comment:", error);
+        console.error("Error adding comment:", error);
       }
     }
   };
-  // Share handlers
+
   const handleShareClick = (highlight, e) => {
     e.stopPropagation();
     setSelectedHighlight(highlight);
@@ -204,14 +193,12 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     setShowShareBox(null);
     alert(`Shared "${selectedHighlight.title}" via ${platform}`);
   };
-  // Handle clicks outside comment/share boxes
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Close comment box if clicked outside
       if (showCommentBox !== null) {
         const commentBox = commentRefs.current[showCommentBox];
         if (commentBox && !commentBox.contains(event.target)) {
-          // Check if click was on the comment icon
           const commentIcon = document.querySelector(`.comment-icon-${showCommentBox}`);
           if (!commentIcon?.contains(event.target)) {
             setShowCommentBox(null);
@@ -219,11 +206,9 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         }
       }
       
-      // Close share box if clicked outside
       if (showShareBox !== null) {
         const shareBox = shareRefs.current[showShareBox];
         if (shareBox && !shareBox.contains(event.target)) {
-          // Check if click was on the share icon
           const shareIcon = document.querySelector(`.share-icon-${showShareBox}`);
           if (!shareIcon?.contains(event.target)) {
             setShowShareBox(null);
@@ -266,7 +251,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     };
   }, [messageInput, newComment, showCommentBox, showShareBox]);
 
-  // Fetch users for Following tab with firstName and profileImageUrl
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -274,25 +258,23 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
         const users = usersSnapshot.docs.map(doc => ({
           id: doc.id,
           firstName: doc.data().firstName || 'Unknown',
-          profileImageUrl: doc.data().profileImageUrl || '', // Changed to empty string for conditional check
-          isFollowing: false // Will update based on current user's following
+          profileImageUrl: doc.data().profileImageUrl || '',
+          isFollowing: false
         }));
         
-        // Fetch current user's following to set isFollowing
         if (userProfile?.uid) {
           const followingSnapshot = await getDocs(collection(db, "following", userProfile.uid, "myFollowing"));
           const followingIds = followingSnapshot.docs.map(doc => doc.id);
           users.forEach(user => {
-            if (user.id !== userProfile.uid) { // Exclude current user from the list
+            if (user.id !== userProfile.uid) {
               user.isFollowing = followingIds.includes(user.id);
             }
           });
         }
         
-        // Filter out current user
         const filteredUsers = users.filter(user => user.id !== userProfile?.uid);
         setFollowersData(filteredUsers);
-        setAvailableUsers(filteredUsers); // Set available users for mentions
+        setAvailableUsers(filteredUsers);
       } catch (err) {
         console.error("Error fetching users:", err);
       }
@@ -301,7 +283,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     fetchUsers();
   }, [userProfile?.uid]);
 
-  // Fetch reels for Reels tab from landingFeed - only current user's reels
   const fetchReels = async () => {
     if (!userProfile?.uid) return;
     try {
@@ -313,7 +294,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
       }));
       setReelsData(reels);
 
-      // Set likedVideos with likes count and check if liked by current user
       const likedState = {};
       for (const item of reels) {
         const likesRef = collection(db, "landingFeed", item.id, "likes");
@@ -332,14 +312,14 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   useEffect(() => {
     fetchReels();
   }, [userProfile?.uid]);
-  // Fetch reels for For You tab: current user's and followed users'
+
   useEffect(() => {
     if (activeTab === 'forYou' && userProfile?.uid) {
       const fetchForYouReels = async () => {
         try {
           const followingSnapshot = await getDocs(collection(db, "following", userProfile.uid, "myFollowing"));
           const followedIds = followingSnapshot.docs.map(doc => doc.id);
-          followedIds.push(userProfile.uid); // Include current user
+          followedIds.push(userProfile.uid);
           const q = query(collection(db, "landingFeed"), where("userId", "in", followedIds));
           const querySnapshot = await getDocs(q);
           const reels = querySnapshot.docs.map(doc => ({
@@ -347,7 +327,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
             ...doc.data()
           }));
           setHighlightsData(reels);
-           // Set likedVideos with likes count and check if liked by current user
           const likedState = {};
           for (const item of reels) {
             const likesRef = collection(db, "landingFeed", item.id, "likes");
@@ -367,7 +346,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     }
   }, [activeTab, userProfile?.uid]);
 
-  // Fetch comments counts for all highlights
   useEffect(() => {
     const fetchCommentsCounts = async () => {
       try {
@@ -386,16 +364,13 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     if (highlightsData.length) fetchCommentsCounts();
   }, [highlightsData]);
 
-  // Like toggle with Firestore update
   const toggleLike = async (id) => {
     if (!userProfile?.uid) return;
 
     const docRef = doc(db, "landingFeed", id, "likes", userProfile.uid);
 
-    // Get current state
     const isLiked = likedVideos[id]?.liked || false;
 
-    // Optimistically update UI
     setLikedVideos(prev => ({
       ...prev,
       [id]: {
@@ -412,7 +387,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
       }
     } catch (error) {
       console.error("Error updating like:", error);
-      // Rollback UI
       setLikedVideos(prev => ({
         ...prev,
         [id]: {
@@ -483,7 +457,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     setShowShareBox(null); 
   };
 
-  // Fetch stories for a user, filtering active stories < 24h
   const fetchStories = async (targetUserId) => {
     if (!targetUserId) return;
     try {
@@ -500,14 +473,12 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     }
   };
 
-  // Handle profile click: fetch stories for selected user
   const handleProfileClick = (profile) => {
     setSelectedProfile(profile);
     setProfileStoryVisible(true);
     fetchStories(profile.id === 'user' ? userProfile.uid : profile.id);
   };
 
-  // Story media selection handler
   const handleStoryMediaSelect = (e) => {
     const files = Array.from(e.target.files);
     setSelectedStoryMedia(files);
@@ -516,7 +487,6 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
     setShowStoryUpload(true);
   };
 
-  // Story upload handler
   const handleStoryUpload = async () => {
     if (!userProfile?.uid || !selectedStoryMedia.length) return;
 
@@ -536,64 +506,59 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
               mediaUrl,
               type: isVideo ? 'video' : 'image',
               timestamp: Date.now(),
-              mentions: mentionsArray // Store mentions as array
+              mentions: mentionsArray
             });
             resolve();
           });
         });
       }
 
-for (const mention of mentionsArray) {
-  const trimmedMention = mention.trim();   // remove front/back spaces
-  console.log(`Processing mention: "${trimmedMention}"`);
+      for (const mention of mentionsArray) {
+        const trimmedMention = mention.trim();
+        console.log(`Processing mention: "${trimmedMention}"`);
 
-  // Query Firestore users collection
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("firstName", "==", trimmedMention));
-  const querySnapshot = await getDocs(q);
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("firstName", "==", trimmedMention));
+        const querySnapshot = await getDocs(q);
 
-  if (!querySnapshot.empty) {
-    const mentionedUserDoc = querySnapshot.docs[0];
-    const mentionedUser = { id: mentionedUserDoc.id, ...mentionedUserDoc.data() };
+        if (!querySnapshot.empty) {
+          const mentionedUserDoc = querySnapshot.docs[0];
+          const mentionedUser = { id: mentionedUserDoc.id, ...mentionedUserDoc.data() };
 
-    console.log("✅ Mentioned user found:", mentionedUser);
+          console.log("✅ Mentioned user found:", mentionedUser);
 
-    const recipientId = mentionedUser.id;
-    const currentUserId = userProfile.uid;
+          const recipientId = mentionedUser.id;
+          const currentUserId = userProfile.uid;
 
-    // Generate unique chatId
-    const generateChatId = (uid1, uid2) => {
-      return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
-    };
-    const chatId = generateChatId(currentUserId, recipientId);
-    // Ensure chat document exists
-    const chatRef = doc(db, "chats", chatId);
-    const chatSnap = await getDoc(chatRef);
-    if (!chatSnap.exists()) {
-      await setDoc(chatRef, {
-        participants: [currentUserId, recipientId],
-        lastMessage: "",
-        lastUpdated: serverTimestamp()
-      });
-    }
-    // Add the mention message
-    await addDoc(collection(db, "chats", chatId, "messages"), {
-      senderId: currentUserId,
-      text: "Mentioned You in their Story",
-      createdAt: serverTimestamp(),
-      read: false
-    });
+          const generateChatId = (uid1, uid2) => {
+            return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+          };
+          const chatId = generateChatId(currentUserId, recipientId);
+          const chatRef = doc(db, "chats", chatId);
+          const chatSnap = await getDoc(chatRef);
+          if (!chatSnap.exists()) {
+            await setDoc(chatRef, {
+              participants: [currentUserId, recipientId],
+              lastMessage: "",
+              lastUpdated: serverTimestamp()
+            });
+          }
+          await addDoc(collection(db, "chats", chatId, "messages"), {
+            senderId: currentUserId,
+            text: "Mentioned You in their Story",
+            createdAt: serverTimestamp(),
+            read: false
+          });
 
-    // Update lastMessage in chat doc
-    await setDoc(chatRef, {
-      lastMessage: "Mentioned You in their Story",
-      lastUpdated: serverTimestamp()
-    }, { merge: true });
+          await setDoc(chatRef, {
+            lastMessage: "Mentioned You in their Story",
+            lastUpdated: serverTimestamp()
+          }, { merge: true });
 
-  } else {
-    console.warn(`❌ No user found in Firestore with firstName: "${trimmedMention}"`);
-  }
-}
+        } else {
+          console.warn(`❌ No user found in Firestore with firstName: "${trimmedMention}"`);
+        }
+      }
 
       setShowStoryUpload(false);
       setSelectedStoryMedia([]);
@@ -605,7 +570,6 @@ for (const mention of mentionsArray) {
     }
   };
 
-  // Handle mention input change
   const handleMentionChange = (e) => {
     const text = e.target.value;
     setStoryMentions(text);
@@ -622,14 +586,12 @@ for (const mention of mentionsArray) {
     }
   };
 
-  // Handle suggestion click
   const handleSuggestionClick = (suggestion) => {
     const text = storyMentions.replace(/#(\w*)$/, `#${suggestion} `);
     setStoryMentions(text);
     setMentionSuggestions([]);
   };
 
-  // Autoplay stories effect
   useEffect(() => {
     if (!profileStoryVisible || userStories.length === 0) return;
 
@@ -655,7 +617,6 @@ for (const mention of mentionsArray) {
     setHighlightVisible(true);
   };
 
-  // Reel upload modal handler
   const handleUploadReelClick = () => {
     reelInputRef.current.click();
   };
@@ -683,7 +644,6 @@ for (const mention of mentionsArray) {
       await new Promise((resolve, reject) => {
         uploadTask.on('state_changed', null, reject, async () => {
           const mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          // Store in Firestore with description
           await addDoc(collection(db, "landingFeed"), {
             userId: userProfile.uid,
             mediaUrl,
@@ -694,7 +654,6 @@ for (const mention of mentionsArray) {
           resolve();
         });
       });
-      // Refresh reels - only current user's
       await fetchReels();
       setShowUploadModal(false);
       setSelectedMedia(null);
@@ -706,7 +665,6 @@ for (const mention of mentionsArray) {
     }
   };
 
-  // Delete reel handler
   const handleDeleteReel = async (reelId) => {
     if (!window.confirm('Are you sure you want to delete this reel?')) return;
     try {
@@ -741,7 +699,6 @@ for (const mention of mentionsArray) {
     setEditingProfileId(null);
   };
 
-  // Updated toggleFollow to use Firestore for both following and followers
   const toggleFollow = async (id) => {
     if (!userProfile?.uid) return;
     const targetUser = followersData.find(f => f.id === id);
@@ -751,16 +708,13 @@ for (const mention of mentionsArray) {
     const theirFollowersRef = doc(db, "followers", id, "myFollowers", userProfile.uid);
 
     if (targetUser.isFollowing) {
-      // Unfollow: remove from both
       await deleteDoc(myFollowingRef);
       await deleteDoc(theirFollowersRef);
     } else {
-      // Follow: add to both
       await setDoc(myFollowingRef, { uid: id, followedAt: new Date() });
       await setDoc(theirFollowersRef, { uid: userProfile.uid, followedAt: new Date() });
     }
 
-    // Update local state
     setFollowersData(prev => 
       prev.map(follower => 
         follower.id === id 
@@ -770,14 +724,12 @@ for (const mention of mentionsArray) {
     );
   };
 
-  // Function to send story reply to chat
   const handleSendStoryReply = async (storyOwnerId) => {
     if (!storyReply.trim() || !userProfile?.uid) return;
 
     const currentUserId = userProfile.uid;
     const recipientId = storyOwnerId;
 
-    // Generate unique chatId (same as in Chat.jsx)
     const generateChatId = (uid1, uid2) => {
       return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
     };
@@ -785,7 +737,6 @@ for (const mention of mentionsArray) {
     const chatId = generateChatId(currentUserId, recipientId);
 
     try {
-      // Ensure chat document exists
       const chatRef = doc(db, "chats", chatId);
       const chatSnap = await getDoc(chatRef);
       if (!chatSnap.exists()) {
@@ -796,21 +747,18 @@ for (const mention of mentionsArray) {
         });
       }
 
-      // Add the reply as a message
       await addDoc(collection(db, "chats", chatId, "messages"), {
         senderId: currentUserId,
-        text: `Reply to your story: ${storyReply}`, // Prefix to indicate it's a story reply
+        text: `Reply to your story: ${storyReply}`,
         createdAt: serverTimestamp(),
         read: false
       });
 
-      // Update lastMessage in chat doc
       await setDoc(chatRef, {
         lastMessage: `Reply to your story: ${storyReply}`,
         lastUpdated: serverTimestamp()
       }, { merge: true });
 
-      // Clear the reply input
       setStoryReply('');
       alert('Reply sent successfully!');
     } catch (err) {
@@ -818,7 +766,6 @@ for (const mention of mentionsArray) {
     }
   };
 
-  // Navigation for stories
   const handlePrevStory = () => {
     setCurrentStoryIndex(prev => Math.max(0, prev - 1));
   };
@@ -828,7 +775,7 @@ for (const mention of mentionsArray) {
     if (nextIndex < userStories.length) {
       setCurrentStoryIndex(nextIndex);
     } else {
-      setProfileStoryVisible(false); // Close modal if at the end
+      setProfileStoryVisible(false);
     }
   };
 
@@ -836,21 +783,17 @@ for (const mention of mentionsArray) {
     setHighlightVisible(prev => !prev);
   };
 
-  // Fetch profile data when profile tab is active
   useEffect(() => {
     if (activeTab === 'profile' && userProfile?.uid) {
       const fetchProfileData = async () => {
         try {
-          // Post count
           const postsQuery = query(collection(db, "landingFeed"), where("userId", "==", userProfile.uid));
           const postsSnapshot = await getDocs(postsQuery);
           setPostCount(postsSnapshot.size);
 
-          // Following count
           const followingSnapshot = await getDocs(collection(db, "following", userProfile.uid, "myFollowing"));
           setFollowingCount(followingSnapshot.size);
 
-          // Followers count
           const followersSnapshot = await getDocs(collection(db, "followers", userProfile.uid, "myFollowers"));
           setFollowersCount(followersSnapshot.size);
         } catch (err) {
@@ -868,7 +811,6 @@ for (const mention of mentionsArray) {
         onClick={handleMainClick}
         className={`fixed inset-0 z-10 bg-[#02101E] transition-all duration-700 ease-in-out ${highlightVisible ? "bg-opacity-40 backdrop-blur-md" : ""}`}
       >
-        {/* Hidden file inputs */}
         <input
           type="file"
           ref={fileInputRef}
@@ -883,7 +825,6 @@ for (const mention of mentionsArray) {
           accept="video/*,image/*"
           onChange={handleReelInputChange}
         />
-        {/* Story Upload Hidden Input */}
         <input
           type="file"
           ref={storyInputRef}
@@ -893,7 +834,6 @@ for (const mention of mentionsArray) {
           onChange={handleStoryMediaSelect}
         />
 
-        {/* Upload Reel Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
@@ -930,7 +870,7 @@ for (const mention of mentionsArray) {
               </div>
             </div>
           </div>
-        )} {/* Profile Story Modal */}
+        )}
         {profileStoryVisible && selectedProfile && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
@@ -965,7 +905,6 @@ for (const mention of mentionsArray) {
                   </div>
                 </div>
                 
-                {/* Story Display Area */}
                 <div className="w-full h-64 md:h-96 rounded-lg bg-yellow-300 m-3 md:m-5 relative overflow-hidden">
                   {userStories.length > 0 ? (
                     <>
@@ -982,12 +921,11 @@ for (const mention of mentionsArray) {
                           onEnded={() => {
                             const nextIndex = (currentStoryIndex + 1) % userStories.length;
                             setCurrentStoryIndex(nextIndex);
-                            if (nextIndex === 0) setProfileStoryVisible(false); // Close after full cycle
+                            if (nextIndex === 0) setProfileStoryVisible(false);
                           }}
                           className="w-full h-full object-contain"
                         />
                       )}
-                      {/* Navigation Arrows */}
                       <button 
                         onClick={handlePrevStory}
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white bg-black bg-opacity-50 p-2 rounded-full"
@@ -1010,15 +948,15 @@ for (const mention of mentionsArray) {
                   <input
                     type="text"
                     placeholder="Reply"
-                    value={storyReply} // Added state binding
-                    onChange={(e) => setStoryReply(e.target.value)} // Added change handler
+                    value={storyReply}
+                    onChange={(e) => setStoryReply(e.target.value)}
                     className="bg-transparent border border-white border-[2px] h-8 md:h-10 rounded-3xl text-white w-full pl-3 md:pl-5 text-sm md:text-base"
                   />
                   <button
                     className="w-fit p-1 px-2 md:px-3 text-center rounded-2xl text-sm md:text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
                     onClick={() => {
-                      handleSendStoryReply(selectedProfile.id); // Send reply to chat
-                      setStoryReply(''); // Clear input after sending
+                      handleSendStoryReply(selectedProfile.id);
+                      setStoryReply('');
                     }}
                   >
                     send
@@ -1028,11 +966,10 @@ for (const mention of mentionsArray) {
             </div>
           </div>
         )}
-        {/* Story Upload Modal */}
         {showStoryUpload && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
             <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
-               <button
+              <button
                 className="absolute top-4 right-4 text-2xl text-white cursor-pointer"
                 onClick={() => setShowStoryUpload(false)}
               >
@@ -1083,7 +1020,6 @@ for (const mention of mentionsArray) {
             </div>
           </div>
         )}
-        {/* Navbar */}
         <nav className="fixed top-0 z-[1000] h-20 md:h-30 flex w-full items-center justify-between bg-gradient-to-b from-[#02101E] to-[#040C15] px-3 md:px-5 py-2 text-white">
           <div className="flex items-center">
             <button
@@ -1099,7 +1035,11 @@ for (const mention of mentionsArray) {
             </button>
             <span
               id="cricklytics-title" 
-              className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold cursor-pointer select-none" onClick={toggleHighlightVisibility} >Cricklytics</span>
+              className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold cursor-pointer select-none" 
+              onClick={toggleHighlightVisibility}
+            >
+              Cricklytics
+            </span>
           </div>
           <div className="fixed inset-0 -z-10 flex items-center justify-center">
             <img
@@ -1127,7 +1067,6 @@ for (const mention of mentionsArray) {
             </div>
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
 
-            {/* Message Icon */}
             <div className="relative">
               <FaComment
                 className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
@@ -1138,7 +1077,6 @@ for (const mention of mentionsArray) {
           </div>
         </nav>
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
-        {/* Content */}
         <div
           className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${
             highlightVisible ? "top-16 md:top-23" : "top-[50%]"
@@ -1147,131 +1085,143 @@ for (const mention of mentionsArray) {
         >
           <div ref={stickyHeaderRef} className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
-              <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
-                {userProfile && (
-                  <div key={userProfile.uid} className="relative profile-image-container" id="user-profile-image-container">
-                    <button
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white flex items-center justify-center"
-                      style={{
-                        backgroundImage: userProfile.profileImageUrl
-                          ? `url(${userProfile.profileImageUrl})`
-                          : 'none',
-                        backgroundColor: userProfile.profileImageUrl ? 'transparent' : 'gray',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProfileClick({ id: 'user', image: userProfile.profileImageUrl || 'path/to/default/image.png', name: userProfile.userName || 'You' });
-                      }}
+              <div className="w-full md:w-[50%] flex justify-center text-white text-sm md:text-xl">
+                <div className="flex gap-2 md:gap-3 md:ml-5 overflow-x-auto whitespace-nowrap scrollbar-hide px-2">
+                  {userProfile && (
+                    <div
+                      key={userProfile.uid}
+                      className="relative profile-image-container inline-block"
+                      id="user-profile-image-container"
                     >
-                      {!userProfile.profileImageUrl && (
-                        <span className="text-white font-bold text-xl md:text-2xl">
-                          {userProfile?.userName?.charAt(0).toUpperCase() || 'Y'}
-                        </span>
-                      )}
-                    </button>
-                    {!userProfile.profileImageUrl && (
                       <button
-                        className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
-                        onClick={(e) => handleAddImageClick(e, 'user')}
+                        className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white flex items-center justify-center"
+                        style={{
+                          backgroundImage: userProfile.profileImageUrl
+                            ? `url(${userProfile.profileImageUrl})`
+                            : 'none',
+                          backgroundColor: userProfile.profileImageUrl ? 'transparent' : 'gray',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProfileClick({
+                            id: 'user',
+                            image:
+                              userProfile.profileImageUrl || 'path/to/default/image.png',
+                            name: userProfile.userName || 'You',
+                          });
+                        }}
                       >
-                        +
+                        {!userProfile.profileImageUrl && (
+                          <span className="text-white font-bold text-xl md:text-2xl">
+                            {userProfile?.userName?.charAt(0).toUpperCase() || 'Y'}
+                          </span>
+                        )}
                       </button>
-                    )}
-                  </div>
-                )}
-                {/* Display followed users' profile images dynamically */}
-                {followersData.filter(f => f.isFollowing).map((follower) => (
-                  <div key={follower.id} className="relative profile-image-container">
-                    <button
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center flex items-center justify-center"
-                      style={{ 
-                        backgroundImage: follower.profileImageUrl ? `url(${follower.profileImageUrl})` : 'none',
-                        backgroundColor: follower.profileImageUrl ? 'transparent' : 'gray',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProfileClick({ id: follower.id, image: follower.profileImageUrl, name: follower.firstName });
-                      }}
-                    >
-                      {!follower.profileImageUrl && (
-                        <span className="text-white font-bold text-xl md:text-2xl">
-                          {follower.firstName.charAt(0).toUpperCase()}
-                        </span>
+                      {!userProfile.profileImageUrl && (
+                        <button
+                          className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
+                          onClick={(e) => handleAddImageClick(e, 'user')}
+                        >
+                          +
+                        </button>
                       )}
-                    </button>
-                  </div>
-                ))}
+                    </div>
+                  )}
+
+                  {followersData
+                    .filter((f) => f.isFollowing)
+                    .map((follower) => (
+                      <div
+                        key={follower.id}
+                        className="relative profile-image-container inline-block"
+                      >
+                        <button
+                          className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center flex items-center justify-center"
+                          style={{
+                            backgroundImage: follower.profileImageUrl
+                              ? `url(${follower.profileImageUrl})`
+                              : 'none',
+                            backgroundColor: follower.profileImageUrl
+                              ? 'transparent'
+                              : 'gray',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleProfileClick({
+                              id: follower.id,
+                              image: follower.profileImageUrl,
+                              name: follower.firstName,
+                            });
+                          }}
+                        >
+                          {!follower.profileImageUrl && (
+                            <span className="text-white font-bold text-xl md:text-2xl">
+                              {follower.firstName.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-            {/* Tabs */}
+
             <div className="w-full flex justify-center mt-2 md:mt-4">
               <div className="w-full md:w-[60%] flex justify-around text-white text-sm md:text-xl cursor-pointer">
                 <span
-                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
-                    hover:text-[#800080] 
-                    ${activeTab === 'forYou' ? 'text-[#800080] border border-white' : ''}`}
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded ${activeTab === 'profile' ? 'bg-[#1c8fe8] border rounded-lg border-white' : ''}`}
+                  onClick={() => setActiveTab('profile')}
+                >
+                  My Profile
+                </span>
+                <span
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded ${activeTab === 'forYou' ? 'bg-[#1c8fe8] border rounded-lg border-white' : ''}`}
                   onClick={() => setActiveTab('forYou')}
                 >
                   Following
                 </span>
                 <span
-                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
-                    hover:text-[#800080] 
-                    ${activeTab === 'following' ? 'text-[#800080] border border-white' : ''}`}
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded ${activeTab === 'following' ? 'bg-[#1c8fe8] border rounded-lg border-white' : ''}`}
                   onClick={() => setActiveTab('following')}
                 >
                   People You May Know
                 </span>
                 <span
-                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
-                    hover:text-[#800080] 
-                    ${activeTab === 'reels' ? 'text-[#800080] border border-white' : ''}`}
+                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded ${activeTab === 'reels' ? 'bg-[#1c8fe8] border rounded-lg border-white' : ''}`}
                   onClick={() => setActiveTab('reels')}
                 >
                   For You
                 </span>
-                <span
-                  className={`text-base md:text-2xl font-bold px-3 py-1 rounded 
-                    hover:text-[#800080] 
-                    ${activeTab === 'profile' ? 'text-[#800080] border border-white' : ''}`}
-                  onClick={() => setActiveTab('profile')}
-                >
-                  My Profile
-                </span>
               </div>
             </div>
           </div>
-          {/* Content based on active tab */}
           <div
             id="highlight"
             ref={highlightRef}
             className={`transition-opacity duration-700 ease-in-out mt-4 md:mt-0 flex flex-col md:flex-row md:flex-wrap justify-center items-center w-full h-full overflow-y-auto scrollbar-hide gap-4 md:gap-6 px-2 md:px-4 ${highlightVisible && !isAIExpanded ? "opacity-100" : "opacity-0"} flex-grow`}
           >
-           {activeTab === 'forYou' && (
-            highlightsData.length > 0 ? highlightsData.map((item) => (
-            <div
-              key={item.id}
-              className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-t-3xl md:rounded-t-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
-            >
-              {/* Media container with fixed aspect ratio and local overflow control */}
-              <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl md:rounded-t-3xl">
-                {item.type === 'image' ? (
-              <img
-                src={item.mediaUrl}
-                alt="Highlight"
-                className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
-              />
-              ) : (
-                <video
-                  src={item.mediaUrl}
-                  controls
-                  className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
-                />
-              )}
-              </div>
-                {/* Title and actions below the video */}
-                <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl flex flex-col">
-                  {/* Description */}
+            {activeTab === 'forYou' && (
+              highlightsData.length > 0 ? highlightsData.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative flex flex-col w-full sm:w-[95%] md:w-[48%] lg:w-[32%] bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-t-3xl md:rounded-t-3xl mx-2 md:mx-10 my-4 md:my-6 shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+                >
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-3xl md:rounded-t-3xl">
+                    {item.type === 'image' ? (
+                      <img
+                        src={item.mediaUrl}
+                        alt="Highlight"
+                        className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
+                      />
+                    ) : (
+                      <video
+                        src={item.mediaUrl}
+                        controls
+                        className="absolute top-0 left-0 w-full h-full object-contain brightness-125"
+                      />
+                    )}
+                  </div>
+                  <div className="p-2 md:p-3 bg-gradient-to-b from-[#0A5F68] to-[#000000] rounded-b-3xl md:rounded-b-3xl flex flex-col">
                     {item.description && (
                       <div className="flex flex-col">
                         <p className={`${expandedDescriptions[item.id] ? '' : 'line-clamp-1'} text-white text-sm md:text-base`}>
@@ -1288,99 +1238,108 @@ for (const mention of mentionsArray) {
                       </div>
                     )}
                     <div className="flex justify-between items-center mt-2 mb-1 md:mb-2">
-                      {/* Left side: Like + Comment */}
-                      <div className="flex items-center gap-6">
-                        < button
+                      <div className="flex items-center gap-4 md:gap-6">
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleLike(item.id);
                           }}
-                          className="z-10 flex items-center"
+                          className="z-10 flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors"
                         >
-                          < img src={likedVideos[item.id]?.liked ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
-                          < span className="text-white text-sm md:text-base ml-1">{likedVideos[item.id]?.count || 0}</span>
+                          <img 
+                            src={likedVideos[item.id]?.liked ? alike : blike} 
+                            alt="Like" 
+                            className="w-7 h-7 md:w-9 md:h-9"
+                          />
+                          <span className="text-white text-sm md:text-base ml-2">{likedVideos[item.id]?.count || 0}</span>
                         </button>
-                        {/* Comment Button and Box */}
                         <div className="relative">
-                          < button
+                          <button
                             onClick={(e) => handleCommentClick(item, e)}
-                            className={`comment-icon-${item.id} flex items-center`}
+                            className={`comment-icon-${item.id} flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors`}
                           >
-                            < img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-                            < span className="text-white text-sm md:text-base ml-1">{commentsCount[item.id] || 0}</span>
+                            <img 
+                              src={comment} 
+                              alt="Comment" 
+                              className="w-7 h-7 md:w-9 md:h-9"
+                            />
+                            <span className="text-white text-sm md:text-base ml-2">{commentsCount[item.id] || 0}</span>
                           </button>
                           {showCommentBox === item.id && (
-                            < div
+                            <div
                               ref={(el) => (commentRefs.current[item.id] = el)}
                               className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
                             >
-                              < div className="max-h-40 overflow-y-auto mb-2">
+                              <div className="max-h-40 overflow-y-auto mb-2">
                                 {comments[item.id]?.length > 0 ? (
                                   comments[item.id].map((comment) => (
-                                    < div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
-                                      < p className="text-white text-sm">{comment.text}</p>
-                                      < p className="text-gray-400 text-xs">{comment.user}</p>
+                                    <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+                                      <p className="text-white text-sm">{comment.text}</p>
+                                      <p className="text-gray-400 text-xs">{comment.user}</p>
                                     </div>
                                   ))
-                                  ) : (
-                                   < p className="text-gray-400 text-sm">No comments yet</p>
+                                ) : (
+                                  <p className="text-gray-400 text-sm">No comments yet</p>
                                 )}
                               </div>
-                              < div className="flex gap-2">
-                                < input
+                              <div className="flex gap-2">
+                                <input
                                   type="text"
                                   value={newComment}
                                   onChange={(e) => setNewComment(e.target.value)}
                                   placeholder="Add a comment..."
                                   className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
                                 />
-                                < button
+                                <button
                                   onClick={handleAddComment}
                                   className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
                                   disabled={!newComment.trim()}
-                                  >
+                                >
                                   Post
                                 </button>
                               </div>
                             </div>
                           )}
                         </div>
-                      </div>
-                      {/* Right side: Share */}
-                      <div className="relative">
-                        <button
-                          onClick={(e) => handleShareClick(item, e)}
-                          className={`share-icon-${item.id}`}
-                        >
-                          <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
-                        </button>
-                        {showShareBox === item.id && (
-                          <div
-                            ref={(el) => (shareRefs.current[item.id] = el)}
-                            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-48 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                        <div className="relative">
+                          <button
+                            onClick={(e) => handleShareClick(item, e)}
+                            className={`share-icon-${item.id} flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors`}
                           >
-                            <h4 className="text-white text-sm mb-2">Share via</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                              {shareOptions.map((option) => (
-                                <button
-                                  key={option.name}
-                                  onClick={() => handleShare(option.name)}
-                                  className="flex flex-col items-center p-2 hover:bg-gray-800 rounded"
-                                >
-                                  <span className="text-lg">{option.icon}</span>
-                                  <span className="text-white text-xs">{option.name}</span>
-                                </button>
-                              ))}
+                            <img 
+                              src={share} 
+                              alt="Share" 
+                              className="w-7 h-7 md:w-9 md:h-9"
+                            />
+                          </button>
+                          {showShareBox === item.id && (
+                            <div
+                              ref={(el) => (shareRefs.current[item.id] = el)}
+                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-48 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                            >
+                              <h4 className="text-white text-sm mb-2">Share via</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {shareOptions.map((option) => (
+                                  <button
+                                    key={option.name}
+                                    onClick={() => handleShare(option.name)}
+                                    className="flex flex-col items-center p-2 hover:bg-gray-800 rounded"
+                                  >
+                                    <span className="text-lg">{option.icon}</span>
+                                    <span className="text-white text-xs">{option.name}</span>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </div>
                 </div>
-              </div>
-            )) : (
-            <p className="text-white mt-10 text-center">No highlights yet. Please add some!</p>
-            )
+              )) : (
+                <p className="text-white mt-10 text-center">No highlights yet. Please add some!</p>
+              )
             )}
             {activeTab === 'following' && (
               <div className="w-full p-4 overflow-y-auto">
@@ -1397,46 +1356,45 @@ for (const mention of mentionsArray) {
                 <div className="flex flex-col gap-4">
                   {followersData
                     .filter(follower => follower.firstName.toLowerCase().includes(followingSearchTerm.toLowerCase()))
-                    .sort((a, b) => b.isFollowing - a.isFollowing) // Followed first
+                    .sort((a, b) => b.isFollowing - a.isFollowing)
                     .map(follower => (
-                    <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between">
-                      <div className="flex items-center mb-2 sm:mb-0">
-                        {follower.profileImageUrl ? (
-                          <img 
-                            src={follower.profileImageUrl} 
-                            alt={follower.firstName}
-                            className="w-12 h-12 rounded-full object-cover mr-0 sm:mr-4"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold text-xl mr-0 sm:mr-4">
-                            {follower.firstName.charAt(0).toUpperCase()}
+                      <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between">
+                        <div className="flex items-center mb-2 sm:mb-0">
+                          {follower.profileImageUrl ? (
+                            <img 
+                              src={follower.profileImageUrl} 
+                              alt={follower.firstName}
+                              className="w-12 h-12 rounded-full object-cover mr-0 sm:mr-4"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold text-xl mr-0 sm:mr-4">
+                              {follower.firstName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="text-white font-semibold text-center sm:text-left">{follower.firstName}</h3>
+                            <p className="text-gray-400 text-sm text-center sm:text-left">
+                              {follower.isFollowing ? "Following" : "Not Following"}
+                            </p>
                           </div>
-                        )}
-                        <div>
-                          <h3 className="text-white font-semibold text-center sm:text-left">{follower.firstName}</h3>
-                          <p className="text-gray-400 text-sm text-center sm:text-left">
-                            {follower.isFollowing ? "Following" : "Not Following"}
-                          </p>
                         </div>
+                        <button
+                          onClick={() => toggleFollow(follower.id)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium w-full sm:w-auto mt-2 sm:mt-0 ${
+                            follower.isFollowing 
+                              ? "bg-gray-700 text-white hover:bg-gray-600"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          {follower.isFollowing ? "Unfollow" : "Follow"}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => toggleFollow(follower.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium w-full sm:w-auto mt-2 sm:mt-0 ${
-                          follower.isFollowing 
-                            ? "bg-gray-700 text-white hover:bg-gray-600"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
-                      >
-                        {follower.isFollowing ? "Unfollow" : "Follow"}
-                      </button>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
             {activeTab === 'reels' && (
               <div className="w-full px-2 md:px-4">
-                {/* Upload Reel Button */}
                 <div className="p-4 flex justify-center">
                   <button
                     onClick={handleUploadReelClick}
@@ -1446,7 +1404,6 @@ for (const mention of mentionsArray) {
                     Upload Reel
                   </button>
                 </div>
-                {/* Reels Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {reelsData.map(reel => (
                     <div key={reel.id} className="bg-[#0D171E] rounded-xl overflow-hidden shadow-lg">
@@ -1471,33 +1428,116 @@ for (const mention of mentionsArray) {
                             <p className={`${expandedDescriptions[reel.id] ? '' : 'line-clamp-1'} text-white`}>
                               {reel.description}
                             </p>
-                            {reel.description.length > 100 && (  // Change this line: check length instead of split('\n')
+                            {reel.description.length > 100 && (
                               <button
                                 onClick={() => toggleDescription(reel.id)}
-                                className="text-blue-500 text-sm mt-1"  // Add basic styling for visibility
+                                className="text-blue-500 text-sm mt-1"
                               >
                                 {expandedDescriptions[reel.id] ? 'Show less' : 'Show more'}
                               </button>
                             )}
                           </div>
                         )}
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <button onClick={() => toggleLike(reel.id)} className="mr-2 flex items-center">
-                              <img src={likedVideos[reel.id]?.liked ? alike : blike} alt="Like" className="w-5 h-5 md:w-6 md:h-6" />
-                              <span className="text-white text-sm ml-1">{likedVideos[reel.id]?.count || 0}</span>
+                        <div className="flex justify-between items-center mt-2">
+                          <div className="flex items-center gap-4 md:gap-6">
+                            <button 
+                              onClick={() => toggleLike(reel.id)} 
+                              className="flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors"
+                            >
+                              <img 
+                                src={likedVideos[reel.id]?.liked ? alike : blike} 
+                                alt="Like" 
+                                className="w-7 h-7 md:w-9 md:h-9"
+                              />
+                              <span className="text-white text-sm ml-2">{likedVideos[reel.id]?.count || 0}</span>
                             </button>
+                            <div className="relative">
+                              <button 
+                                onClick={(e) => handleCommentClick(reel, e)}
+                                className={`comment-icon-${reel.id} flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors`}
+                              >
+                                <img 
+                                  src={comment} 
+                                  alt="Comment" 
+                                  className="w-7 h-7 md:w-9 md:h-9"
+                                />
+                                <span className="text-white text-sm ml-2">{commentsCount[reel.id] || 0}</span>
+                              </button>
+                              {showCommentBox === reel.id && (
+                                <div
+                                  ref={(el) => (commentRefs.current[reel.id] = el)}
+                                  className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                                >
+                                  <div className="max-h-40 overflow-y-auto mb-2">
+                                    {comments[reel.id]?.length > 0 ? (
+                                      comments[reel.id].map((comment) => (
+                                        <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+                                          <p className="text-white text-sm">{comment.text}</p>
+                                          <p className="text-gray-400 text-xs">{comment.user}</p>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <p className="text-gray-400 text-sm">No comments yet</p>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={newComment}
+                                      onChange={(e) => setNewComment(e.target.value)}
+                                      placeholder="Add a comment..."
+                                      className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
+                                    />
+                                    <button
+                                      onClick={handleAddComment}
+                                      className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
+                                      disabled={!newComment.trim()}
+                                    >
+                                      Post
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <button 
+                                onClick={(e) => handleShareClick(reel, e)}
+                                className={`share-icon-${reel.id} flex items-center p-2 rounded-full hover:bg-gray-700/50 transition-colors`}
+                              >
+                                <img 
+                                  src={share} 
+                                  alt="Share" 
+                                  className="w-7 h-7 md:w-9 md:h-9"
+                                />
+                              </button>
+                              {showShareBox === reel.id && (
+                                <div
+                                  ref={(el) => (shareRefs.current[reel.id] = el)}
+                                  className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-48 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                                >
+                                  <h4 className="text-white text-sm mb-2">Share via</h4>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {shareOptions.map((option) => (
+                                      <button
+                                        key={option.name}
+                                        onClick={() => handleShare(option.name)}
+                                        className="flex flex-col items-center p-2 hover:bg-gray-800 rounded"
+                                      >
+                                        <span className="text-lg">{option.icon}</span>
+                                        <span className="text-white text-xs">{option.name}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex gap-3">
-                            <button className="text-white flex items-center">
-                              <img src={comment} alt="Comment" className="w-5 h-5 md:w-6 md:h-6" />
-                              <span className="text-white text-sm ml-1">{commentsCount[reel.id] || 0}</span>
-                            </button>
-                            <button className="text-white">
-                              <img src={share} alt="Share" className="w-5 h-5 md:w-6 md:h-6" />
-                            </button>
-                            <button onClick={() => handleDeleteReel(reel.id)} className="text-red-500">
-                              <FaTrash className="w-5 h-5 md:w-6 md:h-6" />
+                          <div className="flex items-center">
+                            <button 
+                              onClick={() => handleDeleteReel(reel.id)} 
+                              className="p-2 rounded-full hover:bg-gray-700/50 transition-colors text-red-500"
+                            >
+                              <FaTrash className="w-6 h-6 md:w-7 md:h-7" />
                             </button>
                           </div>
                         </div>

@@ -5,7 +5,7 @@ import AddTeamModal from '../LandingPage/AddTeamModal';
 import TeamSquadModal from '../LandingPage/TeamSquadModal';
 import AddClubPlayer from '../../../pages/AddClubPlayer';
 import { db, auth, storage } from '../../../firebase';
-import { collection, onSnapshot, query, doc, deleteDoc, where, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, deleteDoc, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { FiPlusCircle, FiTrash2 } from 'react-icons/fi';
@@ -25,6 +25,7 @@ const Teams = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isClubCreator, setIsClubCreator] = useState(false);
   const [clubCreatorLoading, setClubCreatorLoading] = useState(true);
+  const [isAnyCaptain, setIsAnyCaptain] = useState(false);
 
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
@@ -47,6 +48,8 @@ const Teams = () => {
   const [matches, setMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [matchesError, setMatchesError] = useState(null);
+
+  const [clubTeams, setClubTeams] = useState([]); // Team names
 
   const handleSelectRole = (role) => {
     setUserRole(role);
@@ -174,6 +177,12 @@ const Teams = () => {
   }, [currentUserId, clubName]);
 
   useEffect(() => {
+    if (currentUserId && players.length > 0) {
+      setIsAnyCaptain(players.some((p) => p.captain && p.userId === currentUserId));
+    }
+  }, [players, currentUserId]);
+
+  useEffect(() => {
     if (!clubName) {
       setLoadingTeams(false);
       setTeams([]);
@@ -196,6 +205,7 @@ const Teams = () => {
           ...doc.data(),
         }));
         setTeams(fetchedTeams);
+        setClubTeams(fetchedTeams.map(team => team.teamName));
         setLoadingTeams(false);
       },
       (err) => {
@@ -243,73 +253,173 @@ const Teams = () => {
     return () => unsubscribe();
   }, [clubName]);
 
+  // Fetch matches from scoringpage and roundrobin
   useEffect(() => {
-    if (!currentUserId || !clubName) {
-      setLoadingMatches(false);
+    if (!clubTeams.length) {
       setMatches([]);
+      setLoadingMatches(false);
       return;
     }
 
     setLoadingMatches(true);
     setMatchesError(null);
 
-    const q = query(
-      collection(db, 'tournamentMatches'),
-      where('clubName', '==', clubName)
-    );
+    // Fetch from scoringpage
+    const qScoring = collection(db, 'scoringpage');
+    const unsubscribeScoring = onSnapshot(qScoring, (querySnapshot) => {
+      const scoringMatches = [];
+      const now = new Date();
+      querySnapshot.forEach((doc) => {
+        const match = doc.data();
+        if (
+          (match?.teamA?.name && clubTeams.includes(match.teamA.name)) ||
+          (match?.teamB?.name && clubTeams.includes(match.teamB.name))
+        ) {
+          const status = getMatchStatus(match, now);
+          scoringMatches.push({ id: doc.id, ...match, status });
+        }
+      });
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedMatches = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setMatches(fetchedMatches);
+      // Fetch from roundrobin for upcoming
+      getDocs(collection(db, 'roundrobin')).then((snapshot) => {
+        let rrMatches = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const tournamentName = data.tournamentName || 'Round Robin Tournament';
+          (data?.matchSchedule || []).forEach((sched, idx) => {
+            if (!sched.match) return;
+            const [teamA, teamB] = sched.match.split(' vs ').map(x => x.trim());
+            if (
+              (clubTeams.includes(teamA) || clubTeams.includes(teamB)) &&
+              sched.winner == null
+            ) {
+              rrMatches.push({
+                key: `${doc.id}_${idx}`,
+                tournamentName,
+                match: sched.match,
+                date: sched.date,
+                time: sched.time,
+                matchId: sched.matchId,
+                teamA: { name: teamA },
+                teamB: { name: teamB },
+                status: 'upcoming',
+                matchResult: null
+              });
+            }
+          });
+        });
+
+        // Combine scoring matches and upcoming from roundrobin
+        const allMatches = [
+          ...scoringMatches,
+          ...rrMatches
+        ];
+
+        setMatches(allMatches);
         setLoadingMatches(false);
-      },
-      (err) => {
-        console.error('Error fetching matches: ', err);
+        if (allMatches.length === 0) {
+          setMatchesError('No matches found.');
+        }
+      }).catch((err) => {
+        console.error('Error fetching roundrobin: ', err);
         setMatchesError('Failed to load matches: ' + err.message);
         setLoadingMatches(false);
-      }
-    );
+      });
+    }, (err) => {
+      console.error('Error fetching scoringpage: ', err);
+      setMatchesError('Failed to load matches: ' + err.message);
+      setLoadingMatches(false);
+    });
 
-    return () => unsubscribe();
-  }, [currentUserId, clubName]);
+    return () => unsubscribeScoring();
+  }, [clubTeams]);
+
+  const getMatchStatus = (match, now) => {
+    if (match.status) {
+      if (match.status === 'live') return 'live';
+      if (match.status === 'past') return 'past';
+    }
+
+    if (!match.date || !match.time) {
+      return 'past';
+    }
+
+    let matchDateTime;
+    try {
+      matchDateTime = new Date(`${match.date}T${match.time}:00`);
+      if (isNaN(matchDateTime.getTime())) {
+        throw new Error('Invalid date');
+      }
+    } catch (e) {
+      console.error(`Invalid date/time for match ${match.id}: ${match.date} ${match.time}`);
+      return 'past';
+    }
+
+    const delta = matchDateTime.getTime() - now.getTime();
+    const threeHoursMs = 3 * 60 * 60 * 1000;
+
+    if (match.matchResult == null) {
+      return 'upcoming';
+    }
+
+    if (delta > 0) {
+      if (delta <= threeHoursMs) {
+        return 'live';
+      }
+      return 'upcoming';
+    }
+
+    return 'past';
+  };
+
+  const safeSplitTotalScore = (totalScore) => {
+    if (!totalScore) return [0, 0];
+    const strScore = typeof totalScore === 'string' ? totalScore : String(totalScore);
+    const parts = strScore.split('/').map(s => s.trim());
+    const runs = parts[0] && !isNaN(parseInt(parts[0])) ? parseInt(parts[0]) : 0;
+    const wickets = parts[1] && !isNaN(parseInt(parts[1])) ? parseInt(parts[1]) : 0;
+    return [runs, wickets];
+  };
 
   const getMatchStats = () => {
     const teamTotals = [];
     const victories = [];
 
-    matches.forEach((match) => {
-      if (match.score1 && match.team1) {
-        const [runs, wickets] = match.score1.split('/').map((s) => parseInt(s)) || [0, 0];
+    // Only process 'past' matches for stats
+    const pastMatches = matches.filter(m => m.status === 'past');
+
+    pastMatches.forEach((match) => {
+      // Team A
+      if (match.teamA?.totalScore && match.teamA.name) {
+        const [runs, wickets] = safeSplitTotalScore(match.teamA.totalScore);
         teamTotals.push({
-          score: match.score1,
+          score: match.teamA.totalScore,
           runs,
           wickets,
-          team: match.team1,
-          opponent: match.team2,
+          team: match.teamA.name,
+          opponent: match.teamB.name,
         });
       }
-      if (match.score2 && match.team2) {
-        const [runs, wickets] = match.score2.split('/').map((s) => parseInt(s)) || [0, 0];
+      // Team B
+      if (match.teamB?.totalScore && match.teamB.name) {
+        const [runs, wickets] = safeSplitTotalScore(match.teamB.totalScore);
         teamTotals.push({
-          score: match.score2,
+          score: match.teamB.totalScore,
           runs,
           wickets,
-          team: match.team2,
-          opponent: match.team1,
+          team: match.teamB.name,
+          opponent: match.teamA.name,
         });
       }
-      if (match.result && match.team1 && match.team2) {
-        const runsMatch = match.result.match(/(\d+)\s*runs/i);
-        const wicketsMatch = match.result.match(/(\d+)\s*wickets/i);
+      // Victories
+      if (match.matchResult && match.teamA.name && match.teamB.name) {
+        const resultStr = typeof match.matchResult === 'string' ? match.matchResult : String(match.matchResult);
+        const runsMatch = resultStr.match(/(\d+)\s*runs/i);
+        const wicketsMatch = resultStr.match(/(\d+)\s*wickets/i);
         if (runsMatch || wicketsMatch) {
           const margin = runsMatch ? `${runsMatch[1]} runs` : `${wicketsMatch[1]} wickets`;
-          const winner = match.result.includes(match.team1) ? match.team1 : match.team2;
-          const loser = match.result.includes(match.team1) ? match.team2 : match.team1;
+          const winner = resultStr.includes(match.teamA.name) ? match.teamA.name : match.teamB.name;
+          const loser = resultStr.includes(match.teamA.name) ? match.teamB.name : match.teamA.name;
           victories.push({
             margin,
             teams: `${winner} vs ${loser}`,
@@ -387,7 +497,7 @@ const Teams = () => {
             <div>
               <h1 className="text-3xl font-bold text-purple-400">Teams</h1>
             </div>
-            {userRole === 'admin' && isClubCreator && (
+            {((userRole === 'admin' && isClubCreator) || isAnyCaptain) && (
               <div className="flex gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -397,14 +507,16 @@ const Teams = () => {
                 >
                   <FiPlusCircle /> Add Player
                 </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowAddTeamModal(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                >
-                  <FiPlusCircle /> Add Team
-                </motion.button>
+                {userRole === 'admin' && isClubCreator && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAddTeamModal(true)}
+                    className="flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <FiPlusCircle /> Add Team
+                  </motion.button>
+                )}
               </div>
             )}
           </div>
@@ -423,6 +535,9 @@ const Teams = () => {
                 const teamPlayers = players.filter((player) => player.teamName === team.teamName);
                 const displayedPlayers = teamPlayers.slice(0, 3);
                 const captainPlayer = getCaptainPlayer(team.teamName);
+                const isTeamCaptain = currentUserId && players.some(
+                  (p) => p.teamName === team.teamName && p.captain === team.teamName && p.userId === currentUserId
+                );
                 return (
                   <div
                     key={team.id}
@@ -442,27 +557,27 @@ const Teams = () => {
                     )}
                     <div className="bg-purple-800 p-4 text-white">
                       <h2 className="text-xl font-bold truncate">{team.teamName}</h2>
-                      {userRole === 'admin' && isClubCreator && (
-                        <>
-                          {captainPlayer ? (
-                            <div className="flex items-center justify-between mt-2">
-                              <p className="text-sm opacity-90">Captain: {captainPlayer.name}</p>
-                              <button
-                                onClick={() => handleOpenAssignCaptain(team)}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                              >
-                                Change Captain
-                              </button>
-                            </div>
-                          ) : (
+                      {captainPlayer ? (
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-sm opacity-90">Captain: {captainPlayer.name}</p>
+                          {userRole === 'admin' && isClubCreator && (
                             <button
                               onClick={() => handleOpenAssignCaptain(team)}
-                              className="mt-2 px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                              className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                             >
-                              Assign Captain
+                              Change Captain
                             </button>
                           )}
-                        </>
+                        </div>
+                      ) : (
+                        userRole === 'admin' && isClubCreator && (
+                          <button
+                            onClick={() => handleOpenAssignCaptain(team)}
+                            className="mt-2 px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            Assign Captain
+                          </button>
+                        )
                       )}
                     </div>
                     <div className="p-4">
@@ -495,7 +610,7 @@ const Teams = () => {
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <p className="text-sm font-medium text-gray-400">Key Players</p>
-                          {userRole === 'admin' && isClubCreator && (
+                          {((userRole === 'admin' && isClubCreator) || isTeamCaptain) && (
                             <button
                               onClick={() => handleOpenAddPlayer(team)}
                               className="text-green-400 hover:text-green-500"
@@ -709,7 +824,7 @@ const Teams = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {isAddPlayerModalOpen && userRole === 'admin' && isClubCreator && (
+            {isAddPlayerModalOpen && (
               <AddClubPlayer
                 onClose={() => setIsAddPlayerModalOpen(false)}
                 team={selectedTeamForPlayer}
