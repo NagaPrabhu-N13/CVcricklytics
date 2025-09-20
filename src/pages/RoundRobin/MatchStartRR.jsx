@@ -854,102 +854,117 @@ useEffect(() => {
             </div>
           )}
 
-          {activeTab === 'Match Results' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center overflow-hidden"
-              style={{
-                background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)',
-              }}
-            >
-              <FireworksCanvas />
-              <div className="relative z-20 text-center p-8 flex flex-col items-center justify-between h-full w-full">
-                <div className='w-full flex flex-col items-center'>
-                  <img
-                    src={location.state?.tournamentImageUrl || tournamentName}
-                    alt="Tournament Logo"
-                    className="w-[150px] h-auto mb-4 drop-shadow-lg mx-auto"
-                  />
-                  <img
-                    src={trophy}
-                    alt="Trophy"
-                    className="w-[350px] h-auto mb-4 drop-shadow-lg mx-auto"
-                  />
-                  {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
-                    <div className="flex items-center justify-center mb-4">
-                      <img
-                        src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
-                        alt={`${matchData.matchResult} Flag`}
-                        className="w-12 h-12 mr-2 rounded-full object-cover"
-                        onError={(e) => (e.target.src = placeholderFlag)}
-                      />
-                      <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
-                        {matchData.matchResult} won the match!
-                      </h1>
-                    </div>
-                  )}
-                  {matchData && matchData.matchResult === 'Tie' && (
-                    <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
-                      The match was a Tie!
-                    </h1>
-                  )}
-                  {!matchData && (
-                    <p>No match results available yet.</p>
-                  )}
-                  {pointsTable.length > 0 ? (
-                    <div className="mt-4 w-[80%] bg-white/80 p-4 rounded-lg shadow-md">
-                      <h2 className="text-2xl font-bold text-center mb-2 text-gray-800">Points Table</h2>
-                      <table className="w-full text-left text-sm text-gray-700">
-                        <thead className="bg-gray-200">
-                          <tr>
-                            <th className="p-2">S.No</th> {/* Serial number column */}
-                            <th className="p-2">Team</th>
-                            <th className="p-2">Matches</th>
-                            <th className="p-2">Wins</th>
-                            <th className="p-2">Loss</th>
-                            <th className="p-2">Drawn</th>
-                            <th className="p-2">Pts</th>
-                            <th className="p-2">NRR</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pointsTable
-                            .slice() // copy array so we don’t mutate original
-                            .sort((a, b) => b.points - a.points) // sort by wins (highest first)
-                            .map((team, index) => (
-                              <tr key={index} className="border-b">
-                                <td className="p-2">{index + 1}</td> {/* Serial number */}
-                                <td className="p-2">{team.teamName}</td>
-                                <td className="p-2">{team.matches}</td>
-                                <td className="p-2">{team.wins}</td>
-                                <td className="p-2">{team.losses}</td>
-                                <td className="p-2">{team.draws}</td>
-                                <td className="p-2">{team.points}</td>
-                                <td className="p-2">{team.nrr}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="mt-4 text-gray-600">No points table data available.</p>
-                  )}
-                </div>
-                <div className="self-end">
-                  <motion.button
-                    onClick={() => setActiveTab('Start Match')}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Next
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          )}
+      {activeTab === 'Match Results' && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center overflow-hidden"
+    style={{
+      background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)',
+    }}
+  >
+    <FireworksCanvas />
+    
+    {/* Tournament Logo - Top Center */}
+    <div className="relative z-20 w-full flex justify-center pt-6">
+      <img
+        src={location.state?.tournamentImageUrl || tournamentName}
+        alt="Tournament Logo"
+        className="w-[100px] h-auto drop-shadow-lg"
+      />
+    </div>
+
+    <div className="relative z-20 p-8 flex flex-col md:flex-row items-start justify-between h-full w-full gap-8 mt-4">
+      {/* Trophy and Winner - Left Side */}
+      <div className="w-full md:w-1/2 flex flex-col items-center justify-center order-2 md:order-1">
+        <img
+          src={trophy}
+          alt="Trophy"
+          className="w-[250px] h-auto mb-6 drop-shadow-lg"
+        />
+        
+        {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
+          <div className="flex flex-col items-center justify-center mb-6">
+            <img
+              src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
+              alt={`${matchData.matchResult} Flag`}
+              className="w-16 h-16 mb-3 rounded-full object-cover border-2 border-yellow-400 shadow-md"
+              onError={(e) => (e.target.src = placeholderFlag)}
+            />
+            <h1 className="text-3xl text-green-600 font-bold drop-shadow-[0_0_8px_#16a34a] text-center">
+              {matchData.matchResult} won the match!
+            </h1>
+          </div>
+        )}
+        
+        {matchData && matchData.matchResult === 'Tie' && (
+          <h1 className="text-2xl text-amber-600 font-bold drop-shadow-[0_0_8px_#d97706] text-center mb-6">
+            The match was a Tie!
+          </h1>
+        )}
+        
+        {!matchData && (
+          <p className="text-gray-600 text-lg">No match results available yet.</p>
+        )}
+      </div>
+
+      {/* Points Table - Right Side */}
+      {pointsTable.length > 0 ? (
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border border-blue-200 order-1 md:order-2">
+          <h2 className="text-2xl font-bold text-center mb-4 text-blue-800">Points Table</h2>
+          <table className="w-full text-left text-sm text-gray-700">
+            <thead className="bg-blue-200">
+              <tr>
+                <th className="p-2 text-blue-900">S.No</th>
+                <th className="p-2 text-blue-900">Team</th>
+                <th className="p-2 text-blue-900">Matches</th>
+                <th className="p-2 text-blue-900">Wins</th>
+                <th className="p-2 text-blue-900">Loss</th>
+                <th className="p-2 text-blue-900">Drawn</th>
+                <th className="p-2 text-blue-900">Pts</th>
+                <th className="p-2 text-blue-900">NRR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pointsTable
+                .slice()
+                .sort((a, b) => b.points - a.points)
+                .map((team, index) => (
+                  <tr key={index} className="border-b border-blue-100 hover:bg-blue-50 transition-colors">
+                    <td className="p-2">{index + 1}</td>
+                    <td className="p-2 font-medium text-blue-900">{team.teamName}</td>
+                    <td className="p-2">{team.matches}</td>
+                    <td className="p-2 text-green-600 font-semibold">{team.wins}</td>
+                    <td className="p-2 text-red-600">{team.losses}</td>
+                    <td className="p-2 text-gray-600">{team.draws}</td>
+                    <td className="p-2 font-semibold text-blue-700">{team.points}</td>
+                    <td className="p-2">{team.nrr}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow-md border border-blue-200 flex items-center justify-center order-1 md:order-2">
+          <p className="text-blue-600 text-lg">No points table data available.</p>
+        </div>
+      )}
+    </div>
+
+    {/* Next Button - Bottom Center */}
+    <div className="relative z-20 w-full flex justify-center pb-6 mt-4">
+      <motion.button
+        onClick={() => setActiveTab('Start Match')}
+        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-full shadow-md transition-all"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        Next
+      </motion.button>
+    </div>
+  </motion.div>
+)}
 
 
           {activeTab === 'Highlights' && (

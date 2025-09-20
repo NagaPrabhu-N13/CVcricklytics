@@ -337,12 +337,18 @@ function Tournamentseries() {
 <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
     <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
     <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
-        <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
+        <div className={`w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg transition-all duration-300 ${imagePreview ? 'w-[6rem]' : ''}`}>
             <div className="flex items-center justify-center w-full">
-                <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
-                        <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                <label htmlFor="image-upload" className={`flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all duration-300 ${imagePreview ? 'h-[3rem] py-1' : 'h-[4rem]'}`}>
+                    <div className={`flex flex-col items-center justify-center ${imagePreview ? 'pt-1 pb-2' : 'pt-5 pb-6'}`}>
+                        <img 
+                            className={`transition-all duration-300 ${imagePreview ? 'w-[1.2rem] h-[1.2rem]' : 'w-[2rem] h-[2rem]'}`} 
+                            src={upload} 
+                            alt="upload" 
+                        />
+                        {!imagePreview && (
+                            <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
+                        )}
                     </div>
                     <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
                 </label>
@@ -355,7 +361,7 @@ function Tournamentseries() {
                 <img 
                     src={imagePreview} 
                     alt="Tournament preview" 
-                    className="w-20 h-20 object-cover rounded-lg border border-white"
+                    className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-md"
                 />
                 <div className="flex items-center mt-1">
                     <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">

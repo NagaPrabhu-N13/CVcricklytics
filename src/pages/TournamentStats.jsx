@@ -250,19 +250,19 @@ function TournamentStats() {
         <Frame1321317519 />
       </div>
       <div className="container mx-auto px-4 sm:px-6 pt-8 pb-6">
-        <div className="flex justify-center mb-6">
-          <select
-            value={selectedTournamentId}
-            onChange={e => setSelectedTournamentId(e.target.value)}
-            className="bg-blue-900/30 backdrop-blur-md p-3 rounded-xl border border-white/10 text-white font-medium text-center min-w-[200px] cursor-pointer"
-          >
-            {tournaments.map(tournament => (
-              <option key={tournament.id} value={tournament.tournamentId}>
-                {tournament.name}
-              </option>
-            ))}
-          </select>
-        </div>
+   <div className="flex justify-center mb-6">
+  <select
+    value={selectedTournamentId}
+    onChange={e => setSelectedTournamentId(e.target.value)}
+    className="bg-gradient-to-br from-purple-700 via-blue-700 to-indigo-800 backdrop-blur-md p-3 rounded-xl border border-violet-400/50 text-white font-medium text-center min-w-[200px] cursor-pointer transition-all duration-300 hover:from-purple-600 hover:via-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent shadow-lg"
+  >
+    {tournaments.map(tournament => (
+      <option key={tournament.id} value={tournament.tournamentId} className="text-white bg-indigo-900">
+        {tournament.name}
+      </option>
+    ))}
+  </select>
+</div>
         <div className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">{selectedTournament?.name || 'Tournament'} <span className="text-yellow-400">Statistics</span></h1>
           <p className="text-blue-200 max-w-2xl mx-auto">
