@@ -6,7 +6,10 @@ import {
   FaEye, FaEyeSlash, FaShieldAlt, FaUserCog, FaCreditCard,
   FaTag, FaAt, FaComment, FaPalette, FaCheck, FaEnvelope,
   FaMobile, FaCalendarAlt, FaIdCard, FaKey, FaBell,
-  FaFacebook, FaWhatsapp, FaInstagram, FaTwitter, FaSearch, FaCog
+  FaFacebook, FaWhatsapp, FaInstagram, FaTwitter, FaSearch, FaCog ,FaVideo, 
+  FaMicrophone, 
+  FaMapMarkerAlt, 
+  FaImage
 } from "react-icons/fa";
 // import { LockKeyholeIcon } from "lucide-react";
 import { auth, db } from "../../../firebase";
@@ -237,40 +240,83 @@ const WhereYoureLoggedIn = ({ selectedColor, isMobileView, userProfile }) => {
     },
   ]);
   
-  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+    const getTextStyleClass = () => (isMobileView ? 'text-gray-800' : 'text-white');
+  
+// Use a lighter background for mobile view
+const getBgStyle = () => {
+  if (isMobileView) {
+    // For mobile, use a very light white gradient background
+    return 'bg-gradient-to-br from-white to-gray-100';
+  }
+  // For desktop, use the normal semi-transparent background with theme color
+  const rgb = hexToRgb(selectedColor);
+  return `rgba(${rgb}, 0.15)`;
+};
 
-  const handleLogoutDevice = (deviceId) => {
-    setActiveSessions(activeSessions.filter(session => session.id !== deviceId));
-  };
+const handleLogoutDevice = (deviceId) => {
+  setActiveSessions(activeSessions.filter(session => session.id !== deviceId));
+};
 
-  return (
-    <div className={`p-4 ${getTextStyleClass()}`}>
-      <h3 className="text-lg font-medium mb-4">Where You're Logged In</h3>
-      <p className="text-sm mb-4">These are the devices where you're currently logged in:</p>
-      
-      <div className="space-y-4">
-        {activeSessions.map(session => (
-          <div key={session.id} className="p-3 bg-white/10 rounded-lg">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="font-medium text-sm">{session.device}</div>
-                <div className="text-xs text-gray-400 mt-1">{session.location}</div>
-                <div className="text-xs text-gray-400">
-                  Last active: {new Date(session.lastActive).toLocaleString()}
-                </div>
-                {session.current && (
-                  <div className="text-xs mt-1" style={{ color: selectedColor }}>
-                    Current session
-                  </div>
-                )}
+return (
+  <div className={`p-4 ${getTextStyleClass()}`}>
+    <h3 className="text-lg font-medium mb-4">Where You're Logged In</h3>
+    <p className="text-sm mb-4">These are the devices where you're currently logged in:</p>
+    
+    <div className="space-y-4">
+      {activeSessions.map(session => (
+        <div 
+          key={session.id} 
+          className={`p-4 rounded-lg relative overflow-hidden ${
+            isMobileView 
+              ? 'border border-gray-300 bg-gradient-to-br from-white to-gray-50 shadow-sm' 
+              : ''
+          }`}
+          style={{ 
+            backgroundColor: getBgStyle(),
+            border: !isMobileView ? `2px solid ${selectedColor}` : '',
+            boxShadow: !isMobileView 
+              ? `0 4px 12px rgba(${hexToRgb(selectedColor)}, 0.2)`
+              : '',
+          }}
+        >
+          {/* Accent bar - different color for mobile vs desktop */}
+          <div 
+            className="absolute top-0 left-0 h-full"
+            style={{ 
+              backgroundColor: isMobileView ? '#6b7280' : selectedColor, // Grey for mobile
+              width: '4px'
+            }}
+          ></div>
+          
+          <div className="flex justify-between items-start ml-4">
+            <div className="flex-1">
+              <div className="font-medium text-sm flex items-center gap-2">
+                <div 
+                  className="rounded-full flex-shrink-0"
+                  style={{ 
+                    backgroundColor: isMobileView ? '#6b7280' : selectedColor,
+                    width: '14px',
+                    height: '14px'
+                  }}
+                ></div>
+                <span className={isMobileView ? 'text-gray-900' : 'text-white'}>
+                  {session.device}
+                </span>
               </div>
-              {!session.current && (
-                <button
-                  onClick={() => handleLogoutDevice(session.id)}
-                  className="text-xs px-2 py-1 rounded bg-red-500 hover:bg-red-600"
-                >
-                  Log out
-                </button>
+              <div className={`text-xs mt-2 ml-5 ${isMobileView ? 'text-gray-700' : 'text-gray-300'}`}>
+                {session.location}
+              </div>
+              <div className={`text-xs ml-5 ${isMobileView ? 'text-gray-700' : 'text-gray-300'}`}>
+                Last active: {new Date(session.lastActive).toLocaleString()}
+              </div>
+            </div>
+            {!session.current && (
+              <button
+                onClick={() => handleLogoutDevice(session.id)}
+                className="text-xs px-3 py-1 rounded-md bg-red-500 hover:bg-red-600 text-white transition-colors border border-red-600 shadow-sm"
+              >
+                Log out
+              </button>
               )}
             </div>
           </div>
@@ -282,7 +328,26 @@ const WhereYoureLoggedIn = ({ selectedColor, isMobileView, userProfile }) => {
 
 const LoginDetails = ({ selectedColor, isMobileView, userProfile }) => {
   const [loginDetails, setLoginDetails] = useState([]);
-  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+  
+  // Add these helper functions
+  const getTextStyleClass = () => (isMobileView ? 'text-gray-800' : 'text-white');
+  
+  const getBgStyle = () => {
+    if (isMobileView) {
+      return 'bg-gradient-to-br from-white to-gray-50';
+    }
+    const rgb = hexToRgb(selectedColor);
+    return `rgba(${rgb}, 0.15)`;
+  };
+
+  // Add hexToRgb function
+  const hexToRgb = (hex) => {
+    hex = hex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+  };
 
   useEffect(() => {
     const fetchLoginDetails = async () => {
@@ -302,13 +367,23 @@ const LoginDetails = ({ selectedColor, isMobileView, userProfile }) => {
     fetchLoginDetails();
   }, []);
 
-
   return (
    <div className={`p-4 ${getTextStyleClass()}`}>
       <h3 className="text-lg font-medium mb-4">Login Details</h3>
       
       {/* User Information Section */}
-      <div className="mb-6 p-3 bg-white/5 rounded-lg">
+      <div className={`mb-6 p-3 rounded-lg ${
+        isMobileView 
+          ? 'border border-gray-300 bg-gradient-to-br from-white to-gray-50 shadow-sm' 
+          : ''
+      }`}
+      style={{ 
+        backgroundColor: getBgStyle(),
+        border: !isMobileView ? `2px solid ${selectedColor}` : '',
+        boxShadow: !isMobileView 
+          ? `0 4px 12px rgba(${hexToRgb(selectedColor)}, 0.2)`
+          : '',
+      }}>
         <h4 className="font-medium text-sm mb-2">Account Information</h4>
         <div className="text-xs space-y-1">
           <div>Name: {userProfile?.firstName || userProfile?.userName || "Not available"}</div>
@@ -569,19 +644,19 @@ const PasswordSecurityContent = ({ selectedColor, isMobileView, userProfile }) =
         {showPasswordOptions ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
       </div>
       
-      {showPasswordOptions && (
-        <div className="pl-8 space-y-2 text-xs">
-          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer" onClick={() => setShowPasswordForm(true)}>
-            Change password
-          </div>
-          <p className="text-xs text-gray-400 p-1">
-            Choose a strong password and don't reuse it for other accounts.
-          </p>
-          <p className="text-xs text-gray-400 p-1">
-            You may be signed out of your account on some devices.
-          </p>
-        </div>
-      )}
+     {showPasswordOptions && (
+  <div className="pl-8 space-y-2 text-xs">
+    <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer" onClick={() => setShowPasswordForm(true)}>
+      Change password
+    </div>
+    <p className={`text-xs p-1 ${isMobileView ? 'text-gray-600' : 'text-gray-400'}`}>
+      Choose a strong password and don't reuse it for other accounts.
+    </p>
+    <p className={`text-xs p-1 ${isMobileView ? 'text-gray-600' : 'text-gray-400'}`}>
+      You may be signed out of your account on some devices.
+    </p>
+  </div>
+)}
       
       <div 
         className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
@@ -717,15 +792,17 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
       </div>
       
       <div 
-        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setShowDOBInput(!showDOBInput)}
-      >
-        <div className="flex items-center gap-3">
-          <FaCalendarAlt style={getIconStyle()} />
-          <span>Date of Birth: {dob || "Not set"}</span>
-        </div>
-        {showDOBInput ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
-      </div>
+  className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+  onClick={() => setShowDOBInput(!showDOBInput)}
+>
+  <div className="flex items-center gap-3">
+    <FaCalendarAlt style={getIconStyle()} />
+    <span className={isMobileView ? 'text-gray-800' : ''}>
+      Date of Birth: {dob || "Not set"}
+    </span>
+  </div>
+  {showDOBInput ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+</div>
       
       {showDOBInput && (
         <div className="pl-8 space-y-2">
@@ -884,117 +961,239 @@ const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) =>
 
 const DevicePermissionsContent = ({ selectedColor, isMobileView }) => {
   const [permissions, setPermissions] = useState({
-    camera: true,
-    contacts: true,
-    location: true,
-    microphone: true,
-    notifications: true,
-    photos: true
+    camera: false,
+    contacts: false,
+    location: false,
+    microphone: false,
+    notifications: false,
+    photos: false
   });
+  
   const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
   const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
 
-  const handlePermissionToggle = async (permission) => {
-    const newPermissions = {
-      ...permissions,
-      [permission]: !permissions[permission]
-    };
-    setPermissions(newPermissions);
-
+  // Function to request actual device permissions
+  const requestDevicePermission = async (permission) => {
     try {
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        devicePermissions: newPermissions
-      });
+      switch (permission) {
+        case 'camera':
+          const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          // Stop the stream immediately since we just needed permission
+          cameraStream.getTracks().forEach(track => track.stop());
+          return true;
+          
+        case 'microphone':
+          const microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          microphoneStream.getTracks().forEach(track => track.stop());
+          return true;
+          
+        case 'location':
+          return new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              () => resolve(true),
+              () => resolve(false)
+            );
+          });
+          
+        case 'notifications':
+          if ('Notification' in window) {
+            const result = await Notification.requestPermission();
+            return result === 'granted';
+          }
+          return false;
+          
+        case 'contacts':
+          if ('contacts' in navigator && 'ContactsManager' in window) {
+            try {
+              const contacts = await navigator.contacts.select(['name', 'email'], { multiple: true });
+              return !!contacts;
+            } catch (error) {
+              console.error('Contacts access error:', error);
+              return false;
+            }
+          }
+          return false;
+          
+        case 'photos':
+          // This would typically use a file input for photo access
+          return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = () => resolve(true);
+            input.oncancel = () => resolve(false);
+            input.click();
+          });
+          
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`Error requesting ${permission} permission:`, error);
+      return false;
+    }
+  };
+
+  // Check current permission status
+  const checkPermissionStatus = async (permission) => {
+    try {
+      switch (permission) {
+        case 'camera':
+        case 'microphone':
+          const mediaStatus = await navigator.permissions.query({ name: permission });
+          return mediaStatus.state === 'granted';
+          
+        case 'location':
+          const locationStatus = await navigator.permissions.query({ name: 'geolocation' });
+          return locationStatus.state === 'granted';
+          
+        case 'notifications':
+          return Notification.permission === 'granted';
+          
+        case 'contacts':
+        case 'photos':
+          // These typically don't have a simple permission query API
+          // We'll rely on the user interaction to determine status
+          return permissions[permission];
+          
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`Error checking ${permission} status:`, error);
+      return false;
+    }
+  };
+
+  const handlePermissionToggle = async (permission) => {
+    try {
+      // If turning ON, request the actual permission
+      if (!permissions[permission]) {
+        const hasPermission = await requestDevicePermission(permission);
+        
+        if (hasPermission) {
+          const newPermissions = {
+            ...permissions,
+            [permission]: true
+          };
+          
+          setPermissions(newPermissions);
+          
+          // Update Firebase
+          await updateDoc(doc(db, "users", auth.currentUser.uid), {
+            devicePermissions: newPermissions
+          });
+        }
+      } else {
+        // If turning OFF, just update the state
+        const newPermissions = {
+          ...permissions,
+          [permission]: false
+        };
+        
+        setPermissions(newPermissions);
+        
+        // Update Firebase
+        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+          devicePermissions: newPermissions
+        });
+      }
     } catch (err) {
       console.error("Error updating device permissions:", err);
     }
   };
 
+  // Initialize permissions from Firebase and device status
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const initializePermissions = async () => {
       try {
         const user = auth.currentUser;
         if (user) {
+          // Get saved permissions from Firebase
           const userDoc = await getDoc(doc(db, "users", user.uid));
+          
           if (userDoc.exists()) {
             const data = userDoc.data();
+            let initialPermissions = {
+              camera: false,
+              contacts: false,
+              location: false,
+              microphone: false,
+              notifications: false,
+              photos: false
+            };
+            
             if (data.devicePermissions) {
-              setPermissions(data.devicePermissions);
+              initialPermissions = { ...data.devicePermissions };
             }
+            
+            // Check actual device permission status for browser-based permissions
+            const updatedPermissions = { ...initialPermissions };
+            
+            for (const permission of ['camera', 'microphone', 'location', 'notifications']) {
+              const hasPermission = await checkPermissionStatus(permission);
+              updatedPermissions[permission] = hasPermission;
+            }
+            
+            setPermissions(updatedPermissions);
+            
+            // Update Firebase with current status
+            await updateDoc(doc(db, "users", user.uid), {
+              devicePermissions: updatedPermissions
+            });
           }
         }
       } catch (err) {
-        console.error("Error fetching device permissions:", err);
+        console.error("Error initializing device permissions:", err);
       }
     };
-    fetchPermissions();
+    
+    initializePermissions();
   }, []);
 
   return (
     <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
       <h3 className="text-lg font-medium mb-2">Device permissions</h3>
-      <p className="text-sm mb-4">Your preferences</p>
+      <p className="text-sm mb-4">Manage what this app can access on your device</p>
       
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span>Camera</span>
-          <button
-            onClick={() => handlePermissionToggle('camera')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.camera ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.camera ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span>Contacts</span>
-          <button
-            onClick={() => handlePermissionToggle('contacts')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.contacts ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.contacts ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span>Location services</span>
-          <button
-            onClick={() => handlePermissionToggle('location')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.location ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.location ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span>Microphone</span>
-          <button
-            onClick={() => handlePermissionToggle('microphone')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.microphone ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.microphone ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span>Notifications</span>
-          <button
-            onClick={() => handlePermissionToggle('notifications')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.notifications ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.notifications ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span>Photos</span>
-          <button
-            onClick={() => handlePermissionToggle('photos')}
-            className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${permissions.photos ? 'bg-blue-500' : 'bg-gray-300'}`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${permissions.photos ? 'translate-x-5' : 'translate-x-0'}`}></div>
-          </button>
-        </div>
+      <div className="space-y-4">
+        {Object.entries({
+          camera: 'Camera',
+          microphone: 'Microphone',
+          location: 'Location services',
+          notifications: 'Notifications',
+          contacts: 'Contacts',
+          photos: 'Photos'
+        }).map(([key, label]) => (
+          <div key={key} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-3">
+              {key === 'camera' && <FaVideo style={getIconStyle()} />}
+              {key === 'microphone' && <FaMicrophone style={getIconStyle()} />}
+              {key === 'location' && <FaMapMarkerAlt style={getIconStyle()} />}
+              {key === 'notifications' && <FaBell style={getIconStyle()} />}
+              {key === 'contacts' && <FaUsers style={getIconStyle()} />}
+              {key === 'photos' && <FaImage style={getIconStyle()} />}
+              <span>{label}</span>
+            </div>
+            <button
+              onClick={() => handlePermissionToggle(key)}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 flex items-center ${
+                permissions[key] 
+                  ? 'justify-end bg-blue-500' 
+                  : 'justify-start bg-gray-300'
+              }`}
+            >
+              <div className="w-4 h-4 rounded-full bg-white"></div>
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-4 p-3 bg-white/10 rounded-lg">
+        <p className="text-xs text-gray-400">
+          Note: Some permissions require explicit user approval through browser dialogs.
+          The toggle will update once you grant or deny the permission.
+        </p>
       </div>
     </div>
   );
