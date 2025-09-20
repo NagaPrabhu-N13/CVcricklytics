@@ -177,14 +177,15 @@ const AddClubPlayerModal = ({ onClose, team, onPlayerAdded }) => {
             getDocs(playerDetailsRef),
           ]);
 
-          const clubPlayerIds = clubPlayersSnapshot.docs
-            .map(doc => ({ playerId: doc.data().playerId, source: 'clubPlayers', ...doc.data() }))
-            .filter(player => player.playerId.toString().includes(playerIdSearch));
+          // const clubPlayerIds = clubPlayersSnapshot.docs
+          //   .map(doc => ({ playerId: doc.data().playerId, source: 'clubPlayers', ...doc.data() }))
+          //   .filter(player => player.playerId.toString().includes(playerIdSearch));
           const playerDetailsIds = playerDetailsSnapshot.docs
             .map(doc => ({ playerId: doc.data().playerId, source: 'PlayerDetails', ...doc.data() }))
-            .filter(player => player.playerId.toString().includes(playerIdSearch));
+            .filter(player => player.playerId && player.playerId.toString().includes(playerIdSearch))
 
-          const allFilteredPlayerIds = [...clubPlayerIds, ...playerDetailsIds]
+
+          const allFilteredPlayerIds = [...playerDetailsIds]
             .filter((player, index, self) => 
               index === self.findIndex(p => p.playerId === player.playerId)
             );

@@ -27,6 +27,9 @@ const CommentatorsPage = () => {
     experience: '',
     imageSource: 'url',
     imageFile: null,
+    phone: '',
+    email: '',
+    website: '',
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +79,7 @@ const CommentatorsPage = () => {
   };
 
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.location.trim() || !formData.matches || !formData.rating || !formData.reviews || !formData.languages.length || !formData.bio.trim() || !formData.experience.trim()) {
+    if (!formData.name.trim() || !formData.location.trim() || !formData.matches || !formData.rating || !formData.reviews || !formData.languages.length || !formData.bio.trim() || !formData.experience.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -111,6 +114,9 @@ const CommentatorsPage = () => {
         bio: formData.bio,
         available: formData.available,
         experience: formData.experience,
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        website: formData.website.trim(),
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -135,6 +141,9 @@ const CommentatorsPage = () => {
         experience: '',
         imageSource: 'url',
         imageFile: null,
+        phone: '',
+        email: '',
+        website: '',
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -183,6 +192,9 @@ const CommentatorsPage = () => {
       experience: commentator.experience,
       imageSource: 'url',
       imageFile: null,
+      phone: commentator.phone || '',
+      email: commentator.email || '',
+      website: commentator.website || '',
     });
     setEditingId(commentator.id);
     setIsModalOpen(true);
@@ -244,6 +256,9 @@ const CommentatorsPage = () => {
                 experience: '',
                 imageSource: 'url',
                 imageFile: null,
+                phone: '',
+                email: '',
+                website: '',
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -309,18 +324,33 @@ const CommentatorsPage = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-4 mb-4">
-                  <div className="flex items-center text-blue-300">
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiMapPin className="mr-2" />
-                    <span>{selectedCommentator.location}</span>
+                    <span className="text-gray-400">Location:</span>
+                    <span className="text-blue-300 ml-2">{selectedCommentator.location}</span>
                   </div>
-                  <div className="flex items-center text-blue-300">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiCalendar className="mr-2" />
-                    <span>{selectedCommentator.experience} experience</span>
+                    <span className="text-gray-400">Experience:</span>
+                    <span className="text-blue-300 ml-2">{selectedCommentator.experience}</span>
                   </div>
-                  <div className="flex items-center text-blue-300">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiUser className="mr-2" />
-                    <span>{selectedCommentator.matches} matches commented</span>
+                    <span className="text-gray-400">Matches:</span>
+                    <span className="text-blue-300 ml-2">{selectedCommentator.matches} commented</span>
+                  </div>
+                  <div className="flex items-center text-blue-300 text-sm">
+                    <span className="text-gray-400">Phone:</span>
+                    <span className="text-blue-300 ml-2">{selectedCommentator.phone}</span>
+                  </div>
+                  <div className="flex items-center text-blue-300 text-sm">
+                    <span className="text-gray-400">Email:</span>
+                    <span className="text-blue-300 ml-2">{selectedCommentator.email}</span>
+                  </div>
+                  <div className="flex items-center text-blue-300 text-sm">
+                    <span className="text-gray-400">Website:</span>
+                    <a href={selectedCommentator.website} className="text-blue-300 hover:underline ml-2">{selectedCommentator.website}</a>
                   </div>
                 </div>
 
@@ -353,15 +383,30 @@ const CommentatorsPage = () => {
                     className="w-16 h-16 rounded-full object-cover border-2 border-blue-500"
                     onError={(e) => { e.target.src = cuslogo; }}
                   />
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-bold">{commentator.name}</h3>
                     <div className="flex items-center text-yellow-400 text-sm">
                       <FiStar className="mr-1" />
                       <span>{commentator.rating}</span>
                     </div>
-                    <div className="flex items-center text-blue-300 text-sm mt-1">
-                      <FiMapPin className="mr-1" />
-                      <span>{commentator.location}</span>
+                    <div className="flex flex-col gap-1 mt-1">
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <FiMapPin className="mr-2" />
+                        <span className="text-gray-400">Location:</span>
+                        <span className="text-blue-300 ml-2">{commentator.location}</span>
+                      </div>
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <span className="text-gray-400">Phone:</span>
+                        <span className="text-blue-300 ml-2">{commentator.phone}</span>
+                      </div>
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <span className="text-gray-400">Email:</span>
+                        <span className="text-blue-300 ml-2">{commentator.email}</span>
+                      </div>
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <span className="text-gray-400">Website:</span>
+                        <a href={commentator.website} className="text-blue-300 hover:underline ml-2">{commentator.website}</a>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -425,7 +470,7 @@ const CommentatorsPage = () => {
         {isModalOpen && (
           <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
@@ -596,6 +641,42 @@ const CommentatorsPage = () => {
                 rows={3}
                 disabled={isLoading}
               />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <label className="block mb-1 text-white font-semibold" htmlFor="available">
                 Available
               </label>
@@ -638,6 +719,9 @@ const CommentatorsPage = () => {
                       experience: '',
                       imageSource: 'url',
                       imageFile: null,
+                      phone: '',
+                      email: '',
+                      website: '',
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

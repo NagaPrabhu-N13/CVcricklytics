@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useClub } from './ClubContext';
 
@@ -14,6 +14,7 @@ const LeaderboardContent = () => {
   const [error, setError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [clubTeams, setClubTeams] = useState([]);
 
   // Effect to listen for auth state changes
   useEffect(() => {
@@ -54,32 +55,44 @@ const LeaderboardContent = () => {
     return () => unsubscribe();
   }, [currentUserId, clubName]);
 
-  // Effect to fetch players
+  // Fetch club teams for this clubName
   useEffect(() => {
     if (!clubName) {
-      setLoading(false);
+      setClubTeams([]);
       return;
     }
+    getDocs(query(collection(db, 'clubTeams'), where('clubName', '==', clubName)))
+      .then(res => {
+        const teams = res.docs.map(doc => doc.data().teamName);
+        setClubTeams(teams);
+      })
+      .catch(() => setClubTeams([]));
+  }, [clubName]);
 
+  // Effect to fetch players from PlayerDetails
+  useEffect(() => {
+    if (!clubTeams.length) {
+      setBattingStats([]);
+      return;
+    }
     setLoading(true);
     setError(null);
 
+    // Assuming clubTeams length <= 10 for the demo
     const q = query(
-      collection(db, 'clubPlayers'),
-      where('clubName', '==', clubName),
-      // orderBy('runs', 'desc')
+      collection(db, 'PlayerDetails'),
+      where('teamName', 'in', clubTeams)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const players = [];
-      querySnapshot.forEach((doc) => {
+      const players = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        players.push({
+        return {
           id: doc.id,
           name: data.name,
-          matches: data.careerStats?.batting?.matches || 0,
+          matches: data.matches || 0,
           innings: data.careerStats?.batting?.innings || 0,
-          runs: data.careerStats?.batting?.runs || 0, // Use top-level runs field as per orderBy
+          runs: data.careerStats?.batting?.runs || 0,
           highestScore: data.careerStats?.batting?.highest || 0,
           notOuts: data.careerStats?.batting?.notOuts || 0,
           average: data.careerStats?.batting?.average || 0,
@@ -87,19 +100,19 @@ const LeaderboardContent = () => {
           centuries: data.careerStats?.batting?.centuries || 0,
           fifties: data.careerStats?.batting?.fifties || 0,
           fours: data.careerStats?.batting?.fours || 0,
-          sixes: data.careerStats?.batting?.sixes || 0,
-        });
+          sixes: data.careerStats?.batting?.sixes || 0
+        };
       });
+
       setBattingStats(players.sort((a, b) => b.runs - a.runs));
       setLoading(false);
     }, (err) => {
-      console.error("Error fetching club players:", err);
       setError("Failed to load players: " + err.message);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [clubName]);
+  }, [clubTeams]);
 
   if (authLoading) {
     return <div className="text-white text-center p-4 bg-gray-900 min-h-screen">Loading authentication...</div>;

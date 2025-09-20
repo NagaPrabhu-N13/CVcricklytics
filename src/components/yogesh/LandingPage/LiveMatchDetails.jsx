@@ -208,6 +208,43 @@ const MatchDetails = () => {
               Target: {targetScore} ({match.teamA?.name || "Team A"}: {match.teamA?.totalScore || 0}/{match.teamA?.wickets || 0} in {match.teamA?.overs || 0} Ov)
             </p>
           )}
+          {/* Current Players */}
+          <div className="text-sm text-gray-300 mb-6 flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Striker:</span>
+              <span>{match.player?.striker?.name || 'N/A'}</span>
+              {/* {match.player?.striker?.photoUrl && (
+                <img 
+                  src={match.player.striker.photoUrl} 
+                  alt={match.player.striker.name} 
+                  className="w-6 h-6 rounded-full object-cover" 
+                />
+              )} */}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Non-Striker:</span>
+              <span>{match.player?.nonStriker?.name || 'N/A'}</span>
+              {/* {match.player?.nonStriker?.photoUrl && (
+                <img 
+                  src={match.player.nonStriker.photoUrl} 
+                  alt={match.player.nonStriker.name} 
+                  className="w-6 h-6 rounded-full object-cover" 
+                />
+              )} */}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Bowler:</span>
+              <span>{match.player?.bowler?.name || 'N/A'}</span>
+              {/* {match.player?.bowler?.photoUrl && (
+                <img 
+                  src={match.player.bowler.photoUrl} 
+                  alt={match.player.bowler.name} 
+                  className="w-6 h-6 rounded-full object-cover" 
+                />
+              )} */}
+            </div>
+          </div>
+
 
            {/* Batters Dropdown */}
           <div className="mb-6">

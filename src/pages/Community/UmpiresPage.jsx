@@ -24,6 +24,9 @@ const UmpiresPage = () => {
     availability: 'Available',
     imageSource: 'url',
     imageFile: null,
+    phone: '',
+    email: '',
+    website: '',
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,7 +94,6 @@ const UmpiresPage = () => {
       return;
     }
 
-    // Check the limit: only allow add if under 4 and not editing
     // Count only the current user's umpires for the limit
     const userUmpiresCount = umpiresData.filter(u => u.userId === auth.currentUser.uid).length;
     if (!editingId && userUmpiresCount >= 4) {
@@ -110,6 +112,9 @@ const UmpiresPage = () => {
         image: formData.image || cuslogo,
         bio: formData.bio,
         availability: formData.availability,
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        website: formData.website.trim() || null,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -131,6 +136,9 @@ const UmpiresPage = () => {
         availability: 'Available',
         imageSource: 'url',
         imageFile: null,
+        phone: '',
+        email: '',
+        website: '',
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -178,6 +186,9 @@ const UmpiresPage = () => {
       availability: umpire.availability,
       imageSource: 'url',
       imageFile: null,
+      phone: umpire.phone || '',
+      email: umpire.email || '',
+      website: umpire.website || '',
     });
     setEditingId(umpire.id);
     setIsModalOpen(true);
@@ -245,6 +256,9 @@ const UmpiresPage = () => {
                 availability: 'Available',
                 imageSource: 'url',
                 imageFile: null,
+                phone: '',
+                email: '',
+                website: '',
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -299,19 +313,40 @@ const UmpiresPage = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-4 mb-4">
-                  <div className="flex items-center text-blue-300">
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiMapPin className="mr-2" />
-                    <span>{selectedUmpire.location}</span>
+                    <span className="text-gray-400">Location:</span>
+                    <span className="text-blue-300 ml-2">{selectedUmpire.location}</span>
                   </div>
-                  <div className="flex items-center text-blue-300">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiCalendar className="mr-2" />
-                    <span>{selectedUmpire.experience} experience</span>
+                    <span className="text-gray-400">Experience:</span>
+                    <span className="text-blue-300 ml-2">{selectedUmpire.experience}</span>
                   </div>
-                  <div className="flex items-center text-blue-300">
+                  <div className="flex items-center text-blue-300 text-sm">
                     <FiUser className="mr-2" />
-                    <span>{selectedUmpire.matches} matches officiated</span>
+                    <span className="text-gray-400">Matches:</span>
+                    <span className="text-blue-300 ml-2">{selectedUmpire.matches} officiated</span>
                   </div>
+                  {selectedUmpire.phone && (
+                    <div className="flex items-center text-blue-300 text-sm">
+                      <span className="text-gray-400">Phone:</span>
+                      <span className="text-blue-300 ml-2">{selectedUmpire.phone}</span>
+                    </div>
+                  )}
+                  {selectedUmpire.email && (
+                    <div className="flex items-center text-blue-300 text-sm">
+                      <span className="text-gray-400">Email:</span>
+                      <span className="text-blue-300 ml-2">{selectedUmpire.email}</span>
+                    </div>
+                  )}
+                  {selectedUmpire.website && (
+                    <div className="flex items-center text-blue-300 text-sm">
+                      <span className="text-gray-400">Website:</span>
+                      <a href={selectedUmpire.website} className="text-blue-300 hover:underline ml-2">{selectedUmpire.website}</a>
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-gray-300 mb-6">{selectedUmpire.bio}</p>
@@ -321,7 +356,7 @@ const UmpiresPage = () => {
                     <FiMessageSquare className="mr-2" />
                     Send Message
                   </button>
-                  <button className="border border-blue-500 text-blue-400 hover:bg-blue-900/50 px-6 py-2 eligible rounded-lg transition-colors">
+                  <button className="border border-blue-500 text-blue-400 hover:bg-blue-900/50 px-6 py-2 rounded-lg transition-colors">
                     View Schedule
                   </button>
                 </div>
@@ -343,15 +378,36 @@ const UmpiresPage = () => {
                     className="w-16 h-16 rounded-full object-cover border-2 border-blue-500"
                     onError={(e) => { e.target.src = cuslogo; }}
                   />
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-bold">{umpire.name}</h3>
                     <div className="flex items-center text-yellow-400 text-sm">
                       <FiStar className="mr-1" />
                       <span>{umpire.rating}</span>
                     </div>
-                    <div className="flex items-center text-blue-300 text-sm mt-1">
-                      <FiMapPin className="mr-1" />
-                      <span>{umpire.location}</span>
+                    <div className="flex flex-col gap-1 mt-1">
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <FiMapPin className="mr-2" />
+                        <span className="text-gray-400">Location:</span>
+                        <span className="text-blue-300 ml-2">{umpire.location}</span>
+                      </div>
+                      {umpire.phone && (
+                        <div className="flex items-center text-blue-300 text-sm">
+                          <span className="text-gray-400">Phone:</span>
+                          <span className="text-blue-300 ml-2">{umpire.phone}</span>
+                        </div>
+                      )}
+                      {umpire.email && (
+                        <div className="flex items-center text-blue-300 text-sm">
+                          <span className="text-gray-400">Email:</span>
+                          <span className="text-blue-300 ml-2">{umpire.email}</span>
+                        </div>
+                      )}
+                      {umpire.website && (
+                        <div className="flex items-center text-blue-300 text-sm">
+                          <span className="text-gray-400">Website:</span>
+                          <a href={umpire.website} className="text-blue-300 hover:underline ml-2">{umpire.website}</a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -364,7 +420,7 @@ const UmpiresPage = () => {
                 {umpire.userId === auth.currentUser.uid && (
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent card click
+                      e.stopPropagation();
                       handleDeleteData(umpire.id);
                     }}
                     className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
@@ -405,11 +461,10 @@ const UmpiresPage = () => {
           </div>
         )}
 
-        {/* Modal for Adding/Editing Umpire */}
         {isModalOpen && (
           <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
@@ -553,6 +608,42 @@ const UmpiresPage = () => {
                 rows={3}
                 disabled={isLoading}
               />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number (Optional)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email (Optional)
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website (Optional)
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <label className="block mb-1 text-white font-semibold" htmlFor="availability">
                 Availability
               </label>
@@ -563,9 +654,9 @@ const UmpiresPage = () => {
                 className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               >
-                <option className='text-black' value="Available">Available</option>
-                <option className='text-black' value="Not Available">Not Available</option>
-                <option className='text-black' value="Booked">Booked</option>
+                <option className="text-black" value="Available">Available</option>
+                <option className="text-black" value="Not Available">Not Available</option>
+                <option className="text-black" value="Booked">Booked</option>
               </select>
               <div className="flex justify-between">
                 <button
@@ -583,6 +674,9 @@ const UmpiresPage = () => {
                       availability: 'Available',
                       imageSource: 'url',
                       imageFile: null,
+                      phone: '',
+                      email: '',
+                      website: '',
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

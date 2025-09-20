@@ -5,7 +5,7 @@ import AddTeamModal from '../LandingPage/AddTeamModal';
 import TeamSquadModal from '../LandingPage/TeamSquadModal';
 import AddClubPlayer from '../../../pages/AddClubPlayer';
 import { db, auth, storage } from '../../../firebase';
-import { collection, onSnapshot, query, doc, deleteDoc, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, deleteDoc, where, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { FiPlusCircle, FiTrash2 } from 'react-icons/fi';
@@ -33,6 +33,8 @@ const Teams = () => {
   const [teamToDelete, setTeamToDelete] = useState(null);
   const [showTeamSquadModal, setShowTeamSquadModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [showAssignCaptainModal, setShowAssignCaptainModal] = useState(false);
+  const [selectedTeamForCaptain, setSelectedTeamForCaptain] = useState(null);
 
   const [teams, setTeams] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
@@ -60,6 +62,32 @@ const Teams = () => {
   const handleOpenAddPlayer = (team) => {
     setSelectedTeamForPlayer(team);
     setIsAddPlayerModalOpen(true);
+  };
+
+  const handleOpenAssignCaptain = (team) => {
+    setSelectedTeamForCaptain(team);
+    setShowAssignCaptainModal(true);
+  };
+
+  const getCaptainPlayer = (teamName) => {
+    return players.find((player) => player.teamName === teamName && player.captain === teamName);
+  };
+
+  const handleAssignCaptain = async (newCaptain) => {
+    try {
+      const oldCaptain = getCaptainPlayer(selectedTeamForCaptain.teamName);
+
+      if (oldCaptain) {
+        await updateDoc(doc(db, 'PlayerDetails', oldCaptain.id), { captain: '' });
+      }
+
+      await updateDoc(doc(db, 'PlayerDetails', newCaptain.id), { captain: selectedTeamForCaptain.teamName });
+
+      setShowAssignCaptainModal(false);
+      setSelectedTeamForCaptain(null);
+    } catch (err) {
+      console.error('Error assigning captain: ', err);
+    }
   };
 
   const handleImageUpload = async (file, playerName, teamId) => {
@@ -394,6 +422,7 @@ const Teams = () => {
               {teams.map((team) => {
                 const teamPlayers = players.filter((player) => player.teamName === team.teamName);
                 const displayedPlayers = teamPlayers.slice(0, 3);
+                const captainPlayer = getCaptainPlayer(team.teamName);
                 return (
                   <div
                     key={team.id}
@@ -413,7 +442,28 @@ const Teams = () => {
                     )}
                     <div className="bg-purple-800 p-4 text-white">
                       <h2 className="text-xl font-bold truncate">{team.teamName}</h2>
-                      <p className="text-sm opacity-90">Captain: {team.captain}</p>
+                      {userRole === 'admin' && isClubCreator && (
+                        <>
+                          {captainPlayer ? (
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-sm opacity-90">Captain: {captainPlayer.name}</p>
+                              <button
+                                onClick={() => handleOpenAssignCaptain(team)}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                Change Captain
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenAssignCaptain(team)}
+                              className="mt-2 px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Assign Captain
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                     <div className="p-4">
                       <div className="grid grid-cols-3 gap-2 mb-4 text-center">
@@ -719,6 +769,45 @@ const Teams = () => {
                       Cancel
                     </button>
                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showAssignCaptainModal && selectedTeamForCaptain && userRole === 'admin' && isClubCreator && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+              >
+                <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+                  <h3 className="text-lg font-bold text-gray-200 mb-4">Assign Captain for {selectedTeamForCaptain.teamName}</h3>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {players
+                      .filter((player) => player.teamName === selectedTeamForCaptain.teamName)
+                      .map((player) => (
+                        <div key={player.id} className="flex justify-between items-center bg-gray-700 p-2 rounded">
+                          <span className="text-gray-300">{player.name}</span>
+                          <button
+                            onClick={() => handleAssignCaptain(player)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAssignCaptainModal(false);
+                      setSelectedTeamForCaptain(null);
+                    }}
+                    className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 w-full"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </motion.div>
             )}

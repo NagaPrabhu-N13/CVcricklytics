@@ -340,6 +340,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [predictionData, setPredictionData] = useState(null);
   const [currentBattingTeam, setCurrentBattingTeam] = useState(null);
   const [currentBowlingTeam, setCurrentBowlingTeam] = useState(null);
+
+  const [matchTime, setMatchTime] = useState(null);
+  const [matchDate, setMatchDate] = useState(null);
   // New state for button freeze and hurry message
   const [isButtonFrozen, setIsButtonFrozen] = useState(false);
   const [showHurryMessage, setShowHurryMessage] = useState(false);
@@ -367,6 +370,36 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     };
     setPredictionData(generatedPrediction);
   }, [playerScore, outCount, overNumber, validBalls, isChasing]);
+  // Fetch time and date on mount
+useEffect(() => {
+  const fetchMatchDetails = async () => {
+    try {
+      const roundRobinRef = doc(db, "roundrobin", tournamentId);
+      const roundRobinSnap = await getDoc(roundRobinRef);
+      if (roundRobinSnap.exists()) {
+        const roundRobinData = roundRobinSnap.data();
+        const matchSchedule = roundRobinData.matchSchedule || [];
+        const currentMatch = matchSchedule.find((ms) => ms.matchId === matchId);
+        if (currentMatch) {
+          setMatchTime(currentMatch.time || null);
+          setMatchDate(currentMatch.date || null);
+        } else {
+          console.error(`Match with ID ${matchId} not found in matchSchedule.`);
+        }
+      } else {
+        console.error(`Roundrobin document for tournament ${tournamentId} not found.`);
+      }
+    } catch (error) {
+      console.error("Error fetching match details:", error);
+    }
+  };
+
+  fetchMatchDetails();
+}, []); // Empty dependency array: runs once on mount
+// Initial save on component mount to set status to "live"
+useEffect(() => {
+  saveMatchData();  // Call without isFinal=true to set "live"
+}, []);  // Empty dependency array: runs once on mount
 
   useEffect(() => {
     if (!gameFinished && matchId) {
@@ -826,6 +859,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           bowlerStats: bowlerStatsArray
         } : null,
         matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.name || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.name || 'Team B') : null,
+        player: {
+          striker: striker ? { name: striker.name, index: striker.index, role: striker.role } : null,
+          nonStriker: nonStriker ? { name: nonStriker.name, index: nonStriker.index, role: nonStriker.role } : null,
+          bowler: selectedBowler ? { name: selectedBowler.name, index: selectedBowler.index, role: selectedBowler.role } : null
+        },
+        // New: Add time and date (fetched at start)
+        time: matchTime,
+        date: matchDate,
+        // New: Add status field
+        status: isFinal ? "past" : "live",
       };
       const docId = `${tournamentId}_${matchId}`;
       await setDoc(doc(db, 'scoringpage', docId), matchData);

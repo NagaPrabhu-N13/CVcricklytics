@@ -6,9 +6,9 @@ import {
   FiHeart,
   FiStar,
 } from 'react-icons/fi';
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaEnvelope, FaPhone, FaGlobe } from "react-icons/fa";
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth, storage } from "../../firebase"; // Adjust path as needed, include storage
+import { db, auth, storage } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -29,7 +29,10 @@ const ShopsPage = () => {
     discount: '',
     category: 'gear',
     imageSource: 'url',
-    imageFile: null
+    imageFile: null,
+    email: '',
+    phone: '',
+    website: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +52,7 @@ const ShopsPage = () => {
 
   // Handle saving or updating product data
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.price || !formData.rating || !formData.reviews || !formData.category) {
+    if (!formData.name.trim() || !formData.price || !formData.rating || !formData.reviews || !formData.category || !formData.email.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -81,6 +84,14 @@ const ShopsPage = () => {
       alert("Please select a valid image file (jpg, jpeg, png, gif)!");
       return;
     }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      alert("Please provide a valid email address!");
+      return;
+    }
+    if (formData.website && !formData.website.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/i)) {
+      alert("Please provide a valid website URL (e.g., https://example.com)!");
+      return;
+    }
 
     // Check add limit for current user
     const userProductsCount = products.filter(p => p.userId === auth.currentUser.uid).length;
@@ -106,6 +117,9 @@ const ShopsPage = () => {
         image: imageUrl || '',
         discount: formData.discount ? parseInt(formData.discount) : 0,
         category: formData.category,
+        email: formData.email,
+        phone: formData.phone.trim() || null,
+        website: formData.website.trim() || null,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -125,7 +139,10 @@ const ShopsPage = () => {
         discount: '',
         category: 'gear',
         imageSource: 'url',
-        imageFile: null
+        imageFile: null,
+        email: '',
+        phone: '',
+        website: ''
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -171,7 +188,10 @@ const ShopsPage = () => {
       discount: product.discount.toString(),
       category: product.category,
       imageSource: product.image ? 'url' : 'none',
-      imageFile: null
+      imageFile: null,
+      email: product.email || '',
+      phone: product.phone || '',
+      website: product.website || ''
     });
     setEditingId(product.id);
     setIsModalOpen(true);
@@ -202,11 +222,11 @@ const ShopsPage = () => {
   return (
     <section className="bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white min-h-screen py-10 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Red Back Button */}
+        {/* Back Button */}
         <img
           src={backButton}
           alt="Back"
-          className="h-8 w-8 cursor-pointer -scale-x-100"
+          className="h-8 w-8 cursor-pointer -scale-x-100 mb-6"
           onClick={() => window.history.back()}
         />
 
@@ -220,7 +240,7 @@ const ShopsPage = () => {
         </div>
 
         <div className="flex justify-center mb-6">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-[85vw] sm:max-w-md">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-100" />
             <input
               type="text"
@@ -237,7 +257,7 @@ const ShopsPage = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 mx-2 rounded-full ${
+              className={`px-4 py-2 mx-2 rounded-full min-w-[80px] ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 border border-gray-300'
@@ -260,7 +280,10 @@ const ShopsPage = () => {
                 discount: '',
                 category: 'gear',
                 imageSource: 'url',
-                imageFile: null
+                imageFile: null,
+                email: '',
+                phone: '',
+                website: ''
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -274,8 +297,8 @@ const ShopsPage = () => {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filteredProducts.map((item) => (
-              <div key={item.id} className="bg-[#111936] p-4 rounded-xl border border-blue-600/20 shadow-md relative group">
-                <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+              <div key={item.id} className="bg-[#111936] p-4 rounded-xl border border-blue-600/20 shadow-md relative group overflow-hidden">
+                <div className="absolute top-2 left-2 flex flex-col items-start gap-2 min-h-[40px] z-10">
                   {item.discount > 0 && (
                     <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
                       {item.discount}% OFF
@@ -308,16 +331,39 @@ const ShopsPage = () => {
                 <img
                   src={item.image || 'https://via.placeholder.com/150'}
                   alt={item.name}
-                  className="w-full h-48 object-contain rounded-lg mb-3"
+                  className="w-full h-40 sm:h-48 object-contain rounded-lg mb-3"
                   onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
                 />
-                <h3 className="text-lg font-semibold text-white mb-1">{item.name}</h3>
+                <h3 className="text-lg font-semibold text-white mb-1 truncate" title={item.name}>{item.name}</h3>
                 <p className="text-blue-400 font-semibold mb-1">₹{item.price.toFixed(2)}</p>
                 <div className="flex items-center text-yellow-400 text-sm mb-2">
                   {[...Array(Math.round(item.rating))].map((_, idx) => (
                     <FiStar key={idx} />
                   ))}
                   <span className="text-gray-300 ml-2">({item.reviews})</span>
+                </div>
+                <div className="flex flex-col gap-2 text-sm sm:text-base mb-2 min-w-0 max-w-full">
+                  {item.email && (
+                    <div className="flex items-center gap-2">
+                      <FaEnvelope className="text-blue-400 text-base flex-shrink-0" />
+                      <span className="text-gray-400 font-medium">Email:</span>
+                      <span className="text-blue-300 font-medium ml-2 truncate" title={item.email}>{item.email}</span>
+                    </div>
+                  )}
+                  {item.phone && (
+                    <div className="flex items-center gap-2">
+                      <FaPhone className="text-blue-400 text-base flex-shrink-0" />
+                      <span className="text-gray-400 font-medium">Phone:</span>
+                      <span className="text-blue-300 font-medium ml-2 truncate" title={item.phone}>{item.phone}</span>
+                    </div>
+                  )}
+                  {item.website && (
+                    <div className="flex items-center gap-2">
+                      <FaGlobe className="text-blue-400 text-base flex-shrink-0" />
+                      <span className="text-gray-400 font-medium">Website:</span>
+                      <a href={item.website} className="text-blue-300 font-medium ml-2 truncate hover:underline" title={item.website}>{item.website}</a>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <button
@@ -347,7 +393,7 @@ const ShopsPage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-[90vw] sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -365,7 +411,7 @@ const ShopsPage = () => {
                 placeholder="Enter product name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="price">
@@ -377,7 +423,7 @@ const ShopsPage = () => {
                 placeholder="Enter price"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 min="0"
                 step="0.01"
                 disabled={isLoading}
@@ -391,7 +437,7 @@ const ShopsPage = () => {
                 placeholder="Enter rating"
                 value={formData.rating}
                 onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 min="0"
                 max="5"
                 step="0.1"
@@ -406,7 +452,7 @@ const ShopsPage = () => {
                 placeholder="Enter number of reviews"
                 value={formData.reviews}
                 onChange={(e) => setFormData({ ...formData, reviews: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 min="0"
                 disabled={isLoading}
               />
@@ -448,7 +494,7 @@ const ShopsPage = () => {
                     placeholder="Enter image URL"
                     value={formData.image}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                     disabled={isLoading}
                   />
                 </>
@@ -462,7 +508,7 @@ const ShopsPage = () => {
                     type="file"
                     accept="image/jpeg,image/png,image/gif"
                     onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
-                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                     disabled={isLoading}
                   />
                 </>
@@ -476,7 +522,7 @@ const ShopsPage = () => {
                 placeholder="Enter discount (optional)"
                 value={formData.discount}
                 onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 min="0"
                 max="100"
                 disabled={isLoading}
@@ -488,14 +534,49 @@ const ShopsPage = () => {
                 id="category"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                
-                className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
                 disabled={isLoading}
               >
-                <option className="bg-white text-gray-700" value="gear">Gear</option>
-                <option className="bg-white text-gray-700" value="jerseys">Jerseys</option>
-                <option  className="bg-white text-gray-700" value="accessories">Accessories</option>
+                <option className="bg-[#111936] text-white" value="gear">Gear</option>
+                <option className="bg-[#111936] text-white" value="jerseys">Jerseys</option>
+                <option className="bg-[#111936] text-white" value="accessories">Accessories</option>
               </select>
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number (Optional)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website (Optional)
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website (e.g., https://example.com)"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-0"
+                disabled={isLoading}
+              />
               <div className="flex justify-between">
                 <button
                   onClick={() => {
@@ -510,7 +591,10 @@ const ShopsPage = () => {
                       discount: '',
                       category: 'gear',
                       imageSource: 'url',
-                      imageFile: null
+                      imageFile: null,
+                      email: '',
+                      phone: '',
+                      website: ''
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

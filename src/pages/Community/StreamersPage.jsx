@@ -29,6 +29,9 @@ const StreamersPage = () => {
     match: '',
     rating: '',
     tags: [],
+    phone: '', // Added
+    email: '', // Added
+    website: '', // Added
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,6 +93,9 @@ const StreamersPage = () => {
         match: formData.match,
         rating: parseFloat(formData.rating),
         tags: formData.tags,
+        phone: formData.phone.trim() || null, // Added
+        email: formData.email.trim() || null, // Added
+        website: formData.website.trim() || null, // Added
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -110,6 +116,9 @@ const StreamersPage = () => {
         match: '',
         rating: '',
         tags: [],
+        phone: '', // Added
+        email: '', // Added
+        website: '', // Added
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -156,6 +165,9 @@ const StreamersPage = () => {
       match: streamer.match,
       rating: streamer.rating.toString(),
       tags: streamer.tags,
+      phone: streamer.phone || '', // Added
+      email: streamer.email || '', // Added
+      website: streamer.website || '', // Added
     });
     setEditingId(streamer.id);
     setIsModalOpen(true);
@@ -194,6 +206,9 @@ const StreamersPage = () => {
                 match: '',
                 rating: '',
                 tags: [],
+                phone: '', // Added
+                email: '', // Added
+                website: '', // Added
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -269,6 +284,28 @@ const StreamersPage = () => {
                   </p>
                 </div>
 
+                {/* Contact Info */}
+                <div className="mb-3 space-y-1">
+                  {streamer.phone && (
+                    <p className="text-xs">
+                      <span className="text-gray-400">Phone: </span>
+                      <span className="text-blue-300">{streamer.phone}</span>
+                    </p>
+                  )}
+                  {streamer.email && (
+                    <p className="text-xs">
+                      <span className="text-gray-400">Email: </span>
+                      <span className="text-blue-300">{streamer.email}</span>
+                    </p>
+                  )}
+                  {streamer.website && (
+                    <p className="text-xs">
+                      <span className="text-gray-400">Website: </span>
+                      <a href={streamer.website} className="text-blue-300 hover:underline">{streamer.website}</a>
+                    </p>
+                  )}
+                </div>
+
                 {/* Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {streamer.tags.map((tag, i) => (
@@ -286,12 +323,9 @@ const StreamersPage = () => {
                       <span className="font-medium">{streamer.uptime}</span>
                     </div>
                   )}
-                  {/* <UptimeBar percentage={parseInt(streamer.uptime)} /> */}
-
                   <div className="flex justify-between items-center text-xs mt-2">
                     <div className="flex items-center text-gray-400">
-                      <FaUserFriends className="mr-1" /> {streamer.name}
-                      <p>{streamer.followers}</p>
+                      <FaUserFriends className="mr-1" /> {streamer.followers}
                     </div>
                     <button className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
                       streamer.isLive
@@ -321,7 +355,7 @@ const StreamersPage = () => {
         {isModalOpen && (
           <div className="border-2 border-b-white fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -340,8 +374,8 @@ const StreamersPage = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={isLoading}>
-              </input>
+                disabled={isLoading}
+              />
               <label className="block mb-1 text-white font-semibold" htmlFor="platform">
                 Platform
               </label>
@@ -349,11 +383,7 @@ const StreamersPage = () => {
                 id="platform"
                 value={formData.platform}
                 onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-white bg-transparent text-white focus:outline-none focus:ring-white"
-
-
-
-
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               >
                 <option className="bg-white text-gray-700" value="YouTube">YouTube</option>
@@ -379,9 +409,9 @@ const StreamersPage = () => {
                 placeholder="Enter avatar URL"
                 value={formData.avatar}
                 onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={isLoading}>
-              </input>
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <label className="block mb-1 text-white font-semibold" htmlFor="viewers">
                 Viewers
               </label>
@@ -391,7 +421,7 @@ const StreamersPage = () => {
                 placeholder="Enter viewers (e.g., 12.5K)"
                 value={formData.viewers}
                 onChange={(e) => setFormData({ ...formData, viewers: e.target.value })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="followers">
@@ -403,7 +433,7 @@ const StreamersPage = () => {
                 placeholder="Enter followers (e.g., 245K)"
                 value={formData.followers}
                 onChange={(e) => setFormData({ ...formData, followers: e.target.value })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="match">
@@ -415,7 +445,7 @@ const StreamersPage = () => {
                 placeholder="Enter match (e.g., IND vs AUS • 3rd Test)"
                 value={formData.match}
                 onChange={(e) => setFormData({ ...formData, match: e.target.value })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="rating">
@@ -427,10 +457,46 @@ const StreamersPage = () => {
                 placeholder="Enter rating"
                 value={formData.rating}
                 onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 min="0"
                 max="5"
                 step="0.1"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number (Optional)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email (Optional)
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website (Optional)
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="tags">
@@ -441,7 +507,7 @@ const StreamersPage = () => {
                 multiple
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: Array.from(e.target.selectedOptions, option => option.value) })}
-                className="w-full mb-3 p-2 rounded mb-4 border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               >
                 {tagOptions.map(tag => (
@@ -463,6 +529,9 @@ const StreamersPage = () => {
                       match: '',
                       rating: '',
                       tags: [],
+                      phone: '',
+                      email: '',
+                      website: '',
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

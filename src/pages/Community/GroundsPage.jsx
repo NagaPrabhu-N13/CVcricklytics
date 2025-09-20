@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Users, CalendarCheck, Info, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Users, CalendarCheck, Info, ArrowLeft, Edit, Trash2, Phone, Mail, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth, storage } from "../../firebase"; // Adjust path as needed
+import { db, auth, storage } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -23,13 +23,15 @@ const GroundsPage = () => {
     facilities: [],
     featured: false,
     imageSource: 'url',
-    imageFile: null
+    imageFile: null,
+    phone: '',
+    email: '',
+    website: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch all ground data from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'Grounds'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -41,7 +43,6 @@ const GroundsPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calculate stats for "Grounds Network"
   const calculateStats = () => {
     const totalGrounds = groundsData.length;
     const featuredVenues = groundsData.filter(g => g.featured).length;
@@ -58,9 +59,9 @@ const GroundsPage = () => {
 
   const { totalGrounds, featuredVenues, totalMatches, totalPlayerCapacity } = calculateStats();
 
-  // Handle saving or updating ground data
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.location.trim() || !formData.players || !formData.matches || !formData.bio.trim()) {
+    if (!formData.name.trim() || !formData.location.trim() || !formData.players || !formData.matches || !formData.bio.trim() ||
+        !formData.phone.trim() || !formData.email.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -88,6 +89,14 @@ const GroundsPage = () => {
       alert("Please add at least one facility!");
       return;
     }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      alert("Please provide a valid email address!");
+      return;
+    }
+    if (!formData.website.match(/^https?:\/\/[^\s$.?#].[^\s]*$/)) {
+      alert("Please provide a valid website URL!");
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -109,6 +118,9 @@ const GroundsPage = () => {
         featured: formData.featured,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
+        phone: formData.phone,
+        email: formData.email,
+        website: formData.website
       };
 
       if (editingId) {
@@ -127,7 +139,10 @@ const GroundsPage = () => {
         facilities: [],
         featured: false,
         imageSource: 'url',
-        imageFile: null
+        imageFile: null,
+        phone: '',
+        email: '',
+        website: ''
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -139,7 +154,6 @@ const GroundsPage = () => {
     }
   };
 
-  // Handle deleting ground data
   const handleDeleteData = async (id) => {
     const ground = groundsData.find(g => g.id === id);
     if (!ground || ground.userId !== auth.currentUser.uid) {
@@ -160,7 +174,6 @@ const GroundsPage = () => {
     }
   };
 
-  // Handle editing ground data
   const handleEditData = (ground) => {
     if (ground.userId !== auth.currentUser.uid) {
       alert("You can only edit your own grounds.");
@@ -177,13 +190,15 @@ const GroundsPage = () => {
       facilities: ground.facilities,
       featured: ground.featured,
       imageSource: ground.image ? 'url' : 'none',
-      imageFile: null
+      imageFile: null,
+      phone: ground.phone || '',
+      email: ground.email || '',
+      website: ground.website || ''
     });
     setEditingId(ground.id);
     setIsModalOpen(true);
   };
 
-  // Add facility
   const addFacility = () => {
     const newFacility = prompt("Enter facility (e.g., floodlights, pavilion):");
     if (newFacility && newFacility.trim()) {
@@ -191,7 +206,6 @@ const GroundsPage = () => {
     }
   };
 
-  // Remove facility
   const removeFacility = (index) => {
     setFormData({ ...formData, facilities: formData.facilities.filter((_, i) => i !== index) });
   };
@@ -223,7 +237,6 @@ const GroundsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
         <div className="flex justify-between items-center mb-8">
           <img
             src={backButton}
@@ -235,10 +248,9 @@ const GroundsPage = () => {
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Cricket Grounds</h1>
             <p className="text-blue-300">Find and book premium cricket grounds for your matches</p>
           </div>
-          <div className="w-24"></div> {/* Spacer for alignment */}
+          <div className="w-24"></div>
         </div>
 
-        {/* Search and Filter */}
         <div className="mb-6 flex flex-col md:flex-row gap-4">
           <div className="relative flex-grow">
             <MapPin className="absolute left-3 top-3 text-gray-400" />
@@ -272,7 +284,10 @@ const GroundsPage = () => {
                 facilities: [],
                 featured: false,
                 imageSource: 'url',
-                imageFile: null
+                imageFile: null,
+                phone: '',
+                email: '',
+                website: ''
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -283,9 +298,7 @@ const GroundsPage = () => {
           </button>
         </div>
 
-        {/* Main Content */}
         {selectedGround ? (
-          // Ground Detail View
           <div className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-6 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <button 
@@ -339,6 +352,43 @@ const GroundsPage = () => {
                     ))}
                   </div>
                 </div>
+
+                {(selectedGround.phone || selectedGround.email || selectedGround.website) && (
+                  <div className="mt-4 bg-[#1a2342] p-4 rounded-lg border border-blue-600/30">
+                    <h3 className="font-bold text-blue-400 mb-2">Contact Information</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedGround.phone && (
+                        <div className="flex items-center">
+                          <Phone className="text-blue-400 mr-2" size={20} />
+                          <div>
+                            <p className="text-sm text-gray-400">Phone</p>
+                            <p className="text-white font-medium">{selectedGround.phone}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedGround.email && (
+                        <div className="flex items-center">
+                          <Mail className="text-blue-400 mr-2" size={20} />
+                          <div>
+                            <p className="text-sm text-gray-400">Email</p>
+                            <p className="text-white font-medium">{selectedGround.email}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedGround.website && (
+                        <div className="flex items-center">
+                          <Globe className="text-blue-400 mr-2" size={20} />
+                          <div>
+                            <p className="text-sm text-gray-400">Website</p>
+                            <a href={selectedGround.website} target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:underline">
+                              {selectedGround.website}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="md:w-2/3">
@@ -361,7 +411,6 @@ const GroundsPage = () => {
             </div>
           </div>
         ) : (
-          // Ground List View
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredGrounds.map(ground => (
               <div 
@@ -431,11 +480,10 @@ const GroundsPage = () => {
           </div>
         )}
 
-        {/* Ground Input Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -492,6 +540,42 @@ const GroundsPage = () => {
                 onChange={(e) => setFormData({ ...formData, matches: e.target.value })}
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 min="0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website URL"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
               <label className="block mb-1 text-white font-semibold">Image Source</label>
@@ -611,7 +695,10 @@ const GroundsPage = () => {
                       facilities: [],
                       featured: false,
                       imageSource: 'url',
-                      imageFile: null
+                      imageFile: null,
+                      phone: '',
+                      email: '',
+                      website: ''
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
@@ -631,7 +718,6 @@ const GroundsPage = () => {
           </div>
         )}
 
-        {/* Community Stats */}
         {!selectedGround && (
           <div className="mt-12 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-xl p-6">
             <h2 className="text-xl font-bold mb-4">Grounds Network</h2>

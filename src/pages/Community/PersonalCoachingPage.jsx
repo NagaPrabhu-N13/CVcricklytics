@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaRegStar, FaUserTie, FaVideo, FaChartLine, FaCalendarAlt, FaComments, FaPhoneAlt, FaArrowLeft, FaPhone, FaEnvelope } from 'react-icons/fa';
+import { FaStar, FaRegStar, FaUserTie, FaVideo, FaChartLine, FaCalendarAlt, FaComments, FaPhoneAlt, FaArrowLeft, FaPhone, FaEnvelope, FaGlobe } from 'react-icons/fa';
 import { Edit, Trash2 } from 'lucide-react';
 import backButton from '../../assets/kumar/right-chevron.png';
 import { db, auth, storage } from "../../firebase"; // Adjust path as needed
@@ -27,6 +27,7 @@ const PersonalCoachingPage = () => {
     sessionTypes: [],
     phone: '',
     email: '',
+    website: '',
     imageSource: 'url',
     imageFile: null
   });
@@ -51,7 +52,8 @@ const PersonalCoachingPage = () => {
   // Handle saving or updating coach data
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.specialty.trim() || !formData.experience.trim() || 
-        !formData.rating || !formData.sessions || !formData.bio.trim() || !formData.category) {
+        !formData.rating || !formData.sessions || !formData.bio.trim() || !formData.category ||
+        !formData.phone.trim() || !formData.email.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -81,6 +83,14 @@ const PersonalCoachingPage = () => {
     }
     if (formData.sessionTypes.length === 0) {
       alert("Please add at least one session type!");
+      return;
+    }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      alert("Please provide a valid email address!");
+      return;
+    }
+    if (!formData.website.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/)) {
+      alert("Please provide a valid website URL!");
       return;
     }
 
@@ -117,6 +127,7 @@ const PersonalCoachingPage = () => {
         })),
         phone: formData.phone,
         email: formData.email,
+        website: formData.website,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -139,6 +150,7 @@ const PersonalCoachingPage = () => {
         sessionTypes: [],
         phone: '',
         email: '',
+        website: '',
         imageSource: 'url',
         imageFile: null
       });
@@ -189,6 +201,7 @@ const PersonalCoachingPage = () => {
       sessionTypes: coach.sessionTypes || [],
       phone: coach.phone || '',
       email: coach.email || '',
+      website: coach.website || '',
       imageSource: coach.image ? 'url' : 'none',
       imageFile: null
     });
@@ -263,6 +276,7 @@ const PersonalCoachingPage = () => {
                   sessionTypes: [],
                   phone: '',
                   email: '',
+                  website: '',
                   imageSource: 'url',
                   imageFile: null
                 });
@@ -372,9 +386,9 @@ const PersonalCoachingPage = () => {
 
       {/* Coach Input Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 px-4">
           <div
-            className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+            className="w-full max-w-md rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
             style={{
               background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
               boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -383,176 +397,212 @@ const PersonalCoachingPage = () => {
             <h2 className="text-xl font-bold mb-4 text-white text-center font-semibold">
               {editingId ? 'Edit Coach' : 'Add Coach'}
             </h2>
-            <label className="block mb-1 text-white font-semibold">Name</label>
-            <input
-              type="text"
-              placeholder="Enter coach name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Specialty</label>
-            <input
-              type="text"
-              placeholder="Enter specialty (e.g., Batting Technique)"
-              value={formData.specialty}
-              onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Experience</label>
-            <input
-              type="text"
-              placeholder="Enter experience (e.g., 10+ years)"
-              value={formData.experience}
-              onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Rating (0-5)</label>
-            <input
-              type="number"
-              placeholder="Enter rating"
-              value={formData.rating}
-              onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              min="0"
-              max="5"
-              step="0.1"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Sessions</label>
-            <input
-              type="number"
-              placeholder="Enter number of sessions"
-              value={formData.sessions}
-              onChange={(e) => setFormData({ ...formData, sessions: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              min="0"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Image Source</label>
-            <div className="flex gap-4 mb-3">
-              <label className="flex items-center text-white">
-                <input
-                  type="radio"
-                  name="imageSource"
-                  value="url"
-                  checked={formData.imageSource === 'url'}
-                  onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
-                  className="mr-2"
-                  disabled={isLoading}
-                />
-                URL
-              </label>
-              <label className="flex items-center text-white">
-                <input
-                  type="radio"
-                  name="imageSource"
-                  value="file"
-                  checked={formData.imageSource === 'file'}
-                  onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
-                  className="mr-2"
-                  disabled={isLoading}
-                />
-                Local File
-              </label>
-            </div>
-            {formData.imageSource === 'url' ? (
-              <>
-                <label className="block mb-1 text-white font-semibold">Image URL (Optional)</label>
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-1 text-white font-semibold">Name</label>
                 <input
                   type="text"
-                  placeholder="Enter image URL"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  placeholder="Enter coach name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                   disabled={isLoading}
                 />
-              </>
-            ) : (
-              <>
-                <label className="block mb-1 text-white font-semibold">Image File (Optional)</label>
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Specialty</label>
                 <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif"
-                  onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
-                  className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  type="text"
+                  placeholder="Enter specialty (e.g., Batting Technique)"
+                  value={formData.specialty}
+                  onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                   disabled={isLoading}
                 />
-              </>
-            )}
-            <label className="block mb-1 text-white font-semibold">Bio</label>
-            <textarea
-              placeholder="Enter coach bio"
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              rows="4"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Category</label>
-           <select
-  id="categories"
-  value={formData.category}
-  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-  className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
-  disabled={isLoading}
->
-  {categories.map((category) => (
-    <option
-      key={category}
-      value={category}
-      className="bg-white text-gray-700"
-    >
-      {category.charAt(0).toUpperCase() + category.slice(1)}
-    </option>
-  ))}
-</select>
-           <label className="block mb-1 text-white font-semibold">Session Types</label>
-<div className="mb-3">
-  {formData.sessionTypes.map((session, index) => (
-    <div key={index} className="flex items-center gap-2 mb-1">
-      <span className="text-gray-300">
-        {session.name} ({session.description}) - ₹{session.price}
-      </span>
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Experience</label>
+                <input
+                  type="text"
+                  placeholder="Enter experience (e.g., 10+ years)"
+                  value={formData.experience}
+                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Rating (0-5)</label>
+                <input
+                  type="number"
+                  placeholder="Enter rating"
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Sessions</label>
+                <input
+                  type="number"
+                  placeholder="Enter number of sessions"
+                  value={formData.sessions}
+                  onChange={(e) => setFormData({ ...formData, sessions: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  min="0"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Image Source</label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="url"
+                      checked={formData.imageSource === 'url'}
+                      onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    URL
+                  </label>
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="file"
+                      checked={formData.imageSource === 'file'}
+                      onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    Local File
+                  </label>
+                </div>
+                {formData.imageSource === 'url' ? (
+                  <>
+                    <label className="block mb-1 text-white font-semibold">Image URL (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="Enter image URL"
+                      value={formData.image}
+                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      disabled={isLoading}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="block mb-1 text-white font-semibold">Image File (Optional)</label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif"
+                      onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
+                      className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      disabled={isLoading}
+                    />
+                  </>
+                )}
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Bio</label>
+                <textarea
+                  placeholder="Enter coach bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  rows="4"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Category</label>
+                <select
+                  id="categories"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                >
+                  <option value="" className="bg-[#0b1a3b] text-gray-400">Select a category</option>
+                  {categories.map((category) => (
+                    <option
+                      key={category}
+                      value={category}
+                      className="bg-[#0b1a3b] text-white"
+                    >
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Session Types</label>
+                <div className="mb-3">
+                  {formData.sessionTypes.map((session, index) => (
+                    <div key={index} className="flex items-center gap-2 mb-1">
+                      <span className="text-gray-300">
+                        {session.name} ({session.description}) - ₹{session.price}
+                      </span>
+                      <button
+                        onClick={() => removeSessionType(index)}
+                        className="text-red-500 hover:text-red-600"
+                        disabled={isLoading}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                   <button
-                    onClick={() => removeSessionType(index)}
-                    className="text-red-500 hover:text-red-600"
+                    onClick={addSessionType}
+                    className="text-blue-400 hover:text-blue-500 text-sm"
                     disabled={isLoading}
                   >
-                    ✕
+                    + Add Session Type
                   </button>
                 </div>
-              ))}
-              <button
-                onClick={addSessionType}
-                className="text-blue-400 hover:text-blue-500 text-sm"
-                disabled={isLoading}
-              >
-                + Add Session Type
-              </button>
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Phone</label>
+                <input
+                  type="tel"
+                  placeholder="Enter phone number"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Email</label>
+                <input
+                  type="email"
+                  placeholder="Enter email address"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-white font-semibold">Website</label>
+                <input
+                  type="url"
+                  placeholder="Enter website URL"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
-            <label className="block mb-1 text-white font-semibold">Phone</label>
-            <input
-              type="tel"
-              placeholder="Enter phone number"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <label className="block mb-1 text-white font-semibold">Email</label>
-            <input
-              type="email"
-              placeholder="Enter email address"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <div className="flex justify-between">
+            <div className="flex justify-between mt-6">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -569,6 +619,7 @@ const PersonalCoachingPage = () => {
                     sessionTypes: [],
                     phone: '',
                     email: '',
+                    website: '',
                     imageSource: 'url',
                     imageFile: null
                   });
@@ -631,7 +682,7 @@ const PersonalCoachingPage = () => {
                 <p className="text-gray-400 mt-2">{selectedCoach.experience} experience</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="bg-[#0b1a3b]/50 border border-blue-600/30 p-4 rounded-lg">
                   <FaChartLine className="text-blue-400 text-2xl mb-2" />
                   <h4 className="font-semibold text-white">Performance Analysis</h4>
@@ -682,8 +733,29 @@ const PersonalCoachingPage = () => {
               </div>
               {showContact && (
                 <div className="mt-4 p-4 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-lg">
-                  <p className="flex items-center mb-2 text-white"><FaPhone className="mr-2 text-blue-400" /> {selectedCoach.phone}</p>
-                  <p className="flex items-center text-white"><FaEnvelope className="mr-2 text-blue-400" /> {selectedCoach.email}</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <span className="text-blue-400 font-semibold mr-2 w-24">Phone:</span>
+                      <p className="flex items-center text-white">
+                        <FaPhone className="mr-2 text-blue-400" /> {selectedCoach.phone}
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-blue-400 font-semibold mr-2 w-24">Email:</span>
+                      <p className="flex items-center text-white">
+                        <FaEnvelope className="mr-2 text-blue-400" /> {selectedCoach.email}
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-blue-400 font-semibold mr-2 w-24">Website:</span>
+                      <p className="flex items-center text-white">
+                        <FaGlobe className="mr-2 text-blue-400" />
+                        <a href={selectedCoach.website} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:underline">
+                          {selectedCoach.website}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

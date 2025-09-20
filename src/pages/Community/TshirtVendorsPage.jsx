@@ -8,7 +8,7 @@ import ENG from "../../assets/yogesh/communityimg/ENGflag.png";
 import PAK from "../../assets/yogesh/communityimg/PAKflag.png";
 import NZ from "../../assets/yogesh/communityimg/NZflag.png";
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth, storage } from "../../firebase"; // Adjust path as needed
+import { db, auth, storage } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -29,7 +29,10 @@ const TShirtVendorsPage = () => {
     team: '',
     description: '',
     logoSource: 'url',
-    logoFile: null
+    logoFile: null,
+    phoneNumber: '',
+    email: '',
+    website: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +45,6 @@ const TShirtVendorsPage = () => {
     { id: 5, name: 'New Zealand', logo: NZ },
   ];
 
-  // Fetch all vendor data from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'TShirtVendors'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -54,7 +56,6 @@ const TShirtVendorsPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calculate stats for "Merchandise Community Stats"
   const calculateStats = () => {
     const totalVendors = vendors.length;
     const totalTeams = new Set(vendors.map(v => v.team)).size;
@@ -71,9 +72,8 @@ const TShirtVendorsPage = () => {
 
   const { totalVendors, totalTeams, averageRating } = calculateStats();
 
-  // Handle saving or updating vendor data
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.rating || !formData.products || !formData.team.trim() || !formData.description.trim()) {
+    if (!formData.name.trim() || !formData.rating || !formData.products || !formData.team.trim() || !formData.description.trim() || !formData.phoneNumber.trim() || !formData.email.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -101,6 +101,14 @@ const TShirtVendorsPage = () => {
       alert("Please select a valid logo file (jpg, jpeg, png, gif)!");
       return;
     }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      alert("Please provide a valid email address!");
+      return;
+    }
+    if (!formData.website.match(/^https?:\/\/[^\s$.?#].[^\s]*$/)) {
+      alert("Please provide a valid website URL!");
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -121,6 +129,9 @@ const TShirtVendorsPage = () => {
         description: formData.description,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
+        phoneNumber: formData.phoneNumber,
+        email: formData.email,
+        website: formData.website
       };
 
       if (editingId) {
@@ -138,7 +149,10 @@ const TShirtVendorsPage = () => {
         team: '',
         description: '',
         logoSource: 'url',
-        logoFile: null
+        logoFile: null,
+        phoneNumber: '',
+        email: '',
+        website: ''
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -150,7 +164,6 @@ const TShirtVendorsPage = () => {
     }
   };
 
-  // Handle deleting vendor data
   const handleDeleteData = async (id) => {
     const vendor = vendors.find(v => v.id === id);
     if (!vendor || vendor.userId !== auth.currentUser.uid) {
@@ -168,7 +181,6 @@ const TShirtVendorsPage = () => {
     }
   };
 
-  // Handle editing vendor data
   const handleEditData = (vendor) => {
     if (vendor.userId !== auth.currentUser.uid) {
       alert("You can only edit your own vendors.");
@@ -184,7 +196,10 @@ const TShirtVendorsPage = () => {
       team: vendor.team,
       description: vendor.description,
       logoSource: vendor.logo ? 'url' : 'none',
-      logoFile: null
+      logoFile: null,
+      phoneNumber: vendor.phoneNumber,
+      email: vendor.email,
+      website: vendor.website
     });
     setEditingId(vendor.id);
     setIsModalOpen(true);
@@ -209,7 +224,6 @@ const TShirtVendorsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
         <div className="flex items-start mb-8">
           <img
             src={backButton}
@@ -227,7 +241,6 @@ const TShirtVendorsPage = () => {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative mb-8 max-w-md mx-auto">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -239,7 +252,6 @@ const TShirtVendorsPage = () => {
           />
         </div>
 
-        {/* Team Filter */}
         <div className="mb-8 overflow-x-auto">
           <h3 className="text-lg font-semibold mb-4 text-blue-300">Shop by Team</h3>
           <div className="flex space-x-2 pb-2">
@@ -262,8 +274,7 @@ const TShirtVendorsPage = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-blue-600/50 mb-6">
+        <div className="flex flex-wrap border-b border-blue-600/50 mb-6 gap-2">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 font-medium ${activeTab === 'all' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-white'}`}
@@ -293,7 +304,10 @@ const TShirtVendorsPage = () => {
                 team: '',
                 description: '',
                 logoSource: 'url',
-                logoFile: null
+                logoFile: null,
+                phoneNumber: '',
+                email: '',
+                website: ''
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -304,7 +318,6 @@ const TShirtVendorsPage = () => {
           </button>
         </div>
 
-        {/* Vendors Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVendors.map(vendor => (
             <div 
@@ -362,6 +375,30 @@ const TShirtVendorsPage = () => {
                   <span className="text-sm text-blue-300">{vendor.rating}</span>
                 </div>
                 <p className="text-gray-300 text-sm mb-3">{vendor.description}</p>
+                <div className="mb-3 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-lg p-3">
+                  <h4 className="text-sm font-semibold text-blue-300 mb-2">Contact Information</h4>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center">
+                      <span className="font-medium text-gray-400 sm:w-28">Phone:</span>
+                      <span className="text-white">{vendor.phoneNumber}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center">
+                      <span className="font-medium text-gray-400 sm:w-28">Email:</span>
+                      <span className="text-white">{vendor.email}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center">
+                      <span className="font-medium text-gray-400 sm:w-28">Website:</span>
+                      <a 
+                        href={vendor.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300"
+                      >
+                        {vendor.website}
+                      </a>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full">
                     {vendor.team}
@@ -391,11 +428,10 @@ const TShirtVendorsPage = () => {
           </div>
         )}
 
-        {/* Vendor Input Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -415,6 +451,7 @@ const TShirtVendorsPage = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
+                required
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="rating">
                 Rating (0-5)
@@ -430,6 +467,7 @@ const TShirtVendorsPage = () => {
                 max="5"
                 step="0.1"
                 disabled={isLoading}
+                required
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="products">
                 Number of Products
@@ -443,6 +481,7 @@ const TShirtVendorsPage = () => {
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 min="0"
                 disabled={isLoading}
+                required
               />
               <label className="block mb-1 text-white font-semibold">Logo Source</label>
               <div className="flex gap-4 mb-3">
@@ -501,28 +540,67 @@ const TShirtVendorsPage = () => {
                   />
                 </>
               )}
+              <label className="block mb-1 text-white font-semibold" htmlFor="phoneNumber">
+                Phone Number
+              </label>
+              <input
+                id="phoneNumber"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+                required
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+                required
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website URL"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+                required
+              />
               <label className="block mb-1 text-white font-semibold" htmlFor="team">
-  Team
-</label>
-<select
-  id="team"
-  value={formData.team}
-  onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-  className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
-  disabled={isLoading}
->
-  <option value="" className="bg-white text-gray-700">Select a team</option>
-  {teams.map((team) => (
-    <option
-      key={team.id}
-      value={team.name}
-      className="bg-white text-gray-700"
-    >
-      {team.name}
-    </option>
-  ))}
-</select>
-
+                Team
+              </label>
+              <select
+                id="team"
+                value={formData.team}
+                onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-white-600 bg-transparent text-white focus:outline-none focus:ring-white"
+                disabled={isLoading}
+                required
+              >
+                <option value="" className="bg-white text-gray-700">Select a team</option>
+                {teams.map((team) => (
+                  <option
+                    key={team.id}
+                    value={team.name}
+                    className="bg-white text-gray-700"
+                  >
+                    {team.name}
+                  </option>
+                ))}
+              </select>
               <label className="block mb-1 text-white font-semibold" htmlFor="description">
                 Description
               </label>
@@ -534,6 +612,7 @@ const TShirtVendorsPage = () => {
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 rows="4"
                 disabled={isLoading}
+                required
               />
               <label className="block mb-1 text-white font-semibold" htmlFor="featured">
                 Featured
@@ -560,7 +639,10 @@ const TShirtVendorsPage = () => {
                       team: '',
                       description: '',
                       logoSource: 'url',
-                      logoFile: null
+                      logoFile: null,
+                      phoneNumber: '',
+                      email: '',
+                      website: ''
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
@@ -580,7 +662,6 @@ const TShirtVendorsPage = () => {
           </div>
         )}
 
-        {/* Stats Section */}
         <div className="mt-12 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-xl p-6">
           <h2 className="text-xl font-bold mb-4">Merchandise Community Stats</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

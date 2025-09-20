@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaEnvelope, FaCalendarCheck, FaArrowLeft, FaEdit, FaTrash } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth, storage } from "../../firebase"; // Adjust path as needed, include storage
+import { db, auth, storage } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -16,8 +16,10 @@ const OrganisersPage = () => {
     events: '',
     avatar: '',
     email: '',
-    avatarSource: 'url', // Default to URL
-    avatarFile: null // For local file
+    phone: '',
+    website: '',
+    avatarSource: 'url',
+    avatarFile: null
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +38,7 @@ const OrganisersPage = () => {
 
   // Handle saving or updating organiser data
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.location.trim() || !formData.events.trim() || !formData.email.trim()) {
+    if (!formData.name.trim() || !formData.location.trim() || !formData.events.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -58,6 +60,10 @@ const OrganisersPage = () => {
     }
     if (formData.avatarSource === 'file' && formData.avatarFile && !formData.avatarFile.type.match(/image\/(jpg|jpeg|png|gif)/i)) {
       alert("Please select a valid image file (jpg, jpeg, png, gif)!");
+      return;
+    }
+    if (!formData.website.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/i)) {
+      alert("Please provide a valid website URL (e.g., https://example.com)!");
       return;
     }
 
@@ -83,6 +89,8 @@ const OrganisersPage = () => {
         events: parseInt(formData.events),
         avatar: avatarUrl || '',
         email: formData.email,
+        phone: formData.phone.trim(),
+        website: formData.website.trim(),
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -99,6 +107,8 @@ const OrganisersPage = () => {
         events: '',
         avatar: '',
         email: '',
+        phone: '',
+        website: '',
         avatarSource: 'url',
         avatarFile: null
       });
@@ -143,6 +153,8 @@ const OrganisersPage = () => {
       events: org.events.toString(),
       avatar: org.avatar,
       email: org.email,
+      phone: org.phone || '',
+      website: org.website || '',
       avatarSource: org.avatar ? 'url' : 'none',
       avatarFile: null
     });
@@ -186,6 +198,8 @@ const OrganisersPage = () => {
                 events: '',
                 avatar: '',
                 email: '',
+                phone: '',
+                website: '',
                 avatarSource: 'url',
                 avatarFile: null
               });
@@ -203,18 +217,18 @@ const OrganisersPage = () => {
             {organisers.map((org) => (
               <div
                 key={org.id}
-                className="bg-[#111936] rounded-xl p-5 border border-blue-600/30 hover:border-blue-400 shadow-md hover:shadow-blue-700/20 transition-all duration-300 hover:scale-[1.02]"
+                className="bg-[#111936] rounded-xl p-5 border border-blue-600/30 hover:border-blue-400 shadow-md hover:shadow-blue-700/20 transition-all duration-300 hover:scale-[1.02] overflow-hidden"
               >
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-start gap-4 mb-4">
                   <img
                     src={org.avatar || getAvatarPlaceholder(org.name)}
                     alt={org.name}
-                    className="w-16 h-16 rounded-full border-2 border-blue-500"
+                    className="w-16 h-16 rounded-full border-2 border-blue-500 flex-shrink-0"
                     onError={(e) => { e.target.src = getAvatarPlaceholder(org.name); }}
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold">{org.name}</h2>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-lg font-semibold truncate">{org.name}</h2>
                       {org.userId === auth.currentUser.uid && (
                         <div className="flex items-center gap-2">
                           <FaEdit
@@ -234,13 +248,36 @@ const OrganisersPage = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                      <FaMapMarkerAlt className="text-blue-400" />
-                      <span>{org.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                      <FaCalendarCheck className="text-green-400" />
-                      <span>{org.events} Events Hosted</span>
+                    <div className="flex flex-col gap-1.5 text-sm sm:text-base min-w-0">
+                      <div className="flex items-center gap-2">
+                        <FaMapMarkerAlt className="text-blue-400 text-base" />
+                        <span className="text-gray-400">Location:</span>
+                        <span className="text-blue-300 font-medium ml-2 truncate" title={org.location}>{org.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FaCalendarCheck className="text-green-400 text-base" />
+                        <span className="text-gray-400">Events Hosted:</span>
+                        <span className="text-blue-300 font-medium ml-2">{org.events}</span>
+                      </div>
+                      {org.email && (
+                        <div className="flex items-center gap-2">
+                          <FaEnvelope className="text-blue-400 text-base" />
+                          <span className="text-gray-400">Email:</span>
+                          <span className="text-blue-300 font-medium ml-2 truncate" title={org.email}>{org.email}</span>
+                        </div>
+                      )}
+                      {org.phone && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">Phone:</span>
+                          <span className="text-blue-300 font-medium ml-2 truncate" title={org.phone}>{org.phone}</span>
+                        </div>
+                      )}
+                      {org.website && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">Website:</span>
+                          <a href={org.website} className="text-blue-300 font-medium hover:underline ml-2 truncate" title={org.website}>{org.website}</a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -262,7 +299,7 @@ const OrganisersPage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -377,6 +414,30 @@ const OrganisersPage = () => {
                 className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website (e.g., https://example.com)"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <div className="flex justify-between">
                 <button
                   onClick={() => {
@@ -388,6 +449,8 @@ const OrganisersPage = () => {
                       events: '',
                       avatar: '',
                       email: '',
+                      phone: '',
+                      website: '',
                       avatarSource: 'url',
                       avatarFile: null
                     });

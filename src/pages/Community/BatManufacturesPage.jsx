@@ -23,7 +23,10 @@ const BatManufacturersPage = () => {
     featured: false,
     bats: [],
     logoSource: 'url',
-    logoFile: null
+    logoFile: null,
+    phoneNumber: '',
+    email: '',
+    website: ''
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -60,7 +63,7 @@ const BatManufacturersPage = () => {
 
   // Handle saving or updating manufacturer data
   const handleSaveData = async () => {
-    if (!formData.name.trim() || !formData.description.trim() || !formData.rating) {
+    if (!formData.name.trim() || !formData.description.trim() || !formData.rating || !formData.phoneNumber.trim() || !formData.email.trim() || !formData.website.trim()) {
       alert("Please fill all required fields!");
       return;
     }
@@ -82,6 +85,14 @@ const BatManufacturersPage = () => {
     }
     if (formData.bats.length === 0) {
       alert("Please add at least one bat!");
+      return;
+    }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      alert("Please provide a valid email address!");
+      return;
+    }
+    if (!formData.website.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/)) {
+      alert("Please provide a valid website URL!");
       return;
     }
 
@@ -115,6 +126,9 @@ const BatManufacturersPage = () => {
         })),
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
+        phoneNumber: formData.phoneNumber,
+        email: formData.email,
+        website: formData.website
       };
 
       if (editingId) {
@@ -131,7 +145,10 @@ const BatManufacturersPage = () => {
         featured: false,
         bats: [],
         logoSource: 'url',
-        logoFile: null
+        logoFile: null,
+        phoneNumber: '',
+        email: '',
+        website: ''
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -176,7 +193,10 @@ const BatManufacturersPage = () => {
       featured: manufacturer.featured,
       bats: manufacturer.bats || [],
       logoSource: manufacturer.logo ? 'url' : 'none',
-      logoFile: null
+      logoFile: null,
+      phoneNumber: manufacturer.phoneNumber || '',
+      email: manufacturer.email || '',
+      website: manufacturer.website || ''
     });
     setEditingId(manufacturer.id);
     setIsModalOpen(true);
@@ -292,7 +312,10 @@ const BatManufacturersPage = () => {
                   featured: false,
                   bats: [],
                   logoSource: 'url',
-                  logoFile: null
+                  logoFile: null,
+                  phoneNumber: '',
+                  email: '',
+                  website: ''
                 });
                 setEditingId(null);
                 setIsModalOpen(true);
@@ -369,6 +392,32 @@ const BatManufacturersPage = () => {
                   </div>
                   
                   <p className="text-gray-300 text-sm mb-3">{manufacturer.description}</p>
+
+                  {/* Contact Information Section */}
+                  <div className="mb-3 p-3 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-lg">
+                    <h3 className="text-sm font-semibold text-blue-400 mb-2">Contact Information</h3>
+                    <div className="text-sm space-y-1">
+                      <div className="flex items-center">
+                        <span className="font-medium text-gray-300 mr-2">Phone:</span>
+                        <span className="text-white">{manufacturer.phoneNumber}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="font-medium text-gray-300 mr-2">Email:</span>
+                        <span className="text-white">{manufacturer.email}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="font-medium text-gray-300 mr-2">Website:</span>
+                        <a
+                          href={manufacturer.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          {manufacturer.website}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                   
                   {manufacturer.featured && (
                     <span className="inline-block mb-3 px-2 py-1 text-xs font-semibold bg-blue-900/50 text-blue-400 rounded-full">
@@ -408,7 +457,7 @@ const BatManufacturersPage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
             <div
-              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md sm:w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,1))',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
@@ -486,6 +535,33 @@ const BatManufacturersPage = () => {
                 rows="4"
                 disabled={isLoading}
               />
+              <label className="block mb-1 text-white font-semibold">Phone Number</label>
+              <input
+                type="text"
+                placeholder="Enter phone number"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold">Email</label>
+              <input
+                type="email"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold">Website</label>
+              <input
+                type="text"
+                placeholder="Enter website URL"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <label className="block mb-1 text-white font-semibold">Rating (0-5)</label>
               <input
                 type="number"
@@ -541,7 +617,10 @@ const BatManufacturersPage = () => {
                       featured: false,
                       bats: [],
                       logoSource: 'url',
-                      logoFile: null
+                      logoFile: null,
+                      phoneNumber: '',
+                      email: '',
+                      website: ''
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

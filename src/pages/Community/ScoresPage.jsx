@@ -13,6 +13,9 @@ const ScoresPage = () => {
     matches: '',
     rating: '',
     reviews: '',
+    phone: '',
+    email: '',
+    website: '',
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +35,7 @@ const ScoresPage = () => {
   // Handle saving or updating player data
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.location.trim() || !formData.matches || !formData.rating || !formData.reviews) {
-      alert("Please fill all fields!");
+      alert("Please fill all required fields!");
       return;
     }
     if (isNaN(formData.matches) || formData.matches < 0) {
@@ -56,6 +59,9 @@ const ScoresPage = () => {
         matches: parseInt(formData.matches),
         rating: parseFloat(formData.rating),
         reviews: parseInt(formData.reviews),
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        website: formData.website.trim() || null,
         userId: auth.currentUser.uid,
         timestamp: new Date().toISOString(),
       };
@@ -66,7 +72,7 @@ const ScoresPage = () => {
         await addDoc(collection(db, 'PlayerScores'), entryData);
       }
 
-      setFormData({ name: '', location: '', matches: '', rating: '', reviews: '' });
+      setFormData({ name: '', location: '', matches: '', rating: '', reviews: '', phone: '', email: '', website: '' });
       setEditingId(null);
       setIsModalOpen(false);
     } catch (err) {
@@ -108,6 +114,9 @@ const ScoresPage = () => {
       matches: player.matches.toString(),
       rating: player.rating.toString(),
       reviews: player.reviews.toString(),
+      phone: player.phone || '',
+      email: player.email || '',
+      website: player.website || '',
     });
     setEditingId(player.id);
     setIsModalOpen(true);
@@ -141,7 +150,7 @@ const ScoresPage = () => {
         <div className="flex justify-center mb-6">
           <button
             onClick={() => {
-              setFormData({ name: '', location: '', matches: '', rating: '', reviews: '' });
+              setFormData({ name: '', location: '', matches: '', rating: '', reviews: '', phone: '', email: '', website: '' });
               setEditingId(null);
               setIsModalOpen(true);
             }}
@@ -187,6 +196,30 @@ const ScoresPage = () => {
                     </span>
                   </p>
                 </div>
+
+                {player.phone && (
+                  <div className="mb-2">
+                    <p className="text-gray-300">
+                      Phone: <span className="text-blue-300">{player.phone}</span>
+                    </p>
+                  </div>
+                )}
+
+                {player.email && (
+                  <div className="mb-2">
+                    <p className="text-gray-300">
+                      Email: <span className="text-blue-300">{player.email}</span>
+                    </p>
+                  </div>
+                )}
+
+                {player.website && (
+                  <div className="mb-2">
+                    <p className="text-gray-300">
+                      Website: <a href={player.website} className="text-blue-300 hover:underline">{player.website}</a>
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -299,12 +332,48 @@ const ScoresPage = () => {
                 min="0"
                 disabled={isLoading}
               />
+              <label className="block mb-1 text-white font-semibold" htmlFor="phone">
+                Phone Number (Optional)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="email">
+                Email (Optional)
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="website">
+                Website (Optional)
+              </label>
+              <input
+                id="website"
+                type="url"
+                placeholder="Enter website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
               <div className="flex justify-between">
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
                     setEditingId(null);
-                    setFormData({ name: '', location: '', matches: '', rating: '', reviews: '' });
+                    setFormData({ name: '', location: '', matches: '', rating: '', reviews: '', phone: '', email: '', website: '' });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
                   disabled={isLoading}

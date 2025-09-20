@@ -30,9 +30,22 @@ const Selection2 = () => {
   const hasFetchedData = useRef(false);
   const [isOwner, setIsOwner] = useState(true); // New state to track ownership
   // Check if tournament has started (compare current date with start date)
+  function isSameOrPastDay(dateA, dateB) {
+    return (
+      dateA.getFullYear() > dateB.getFullYear() ||
+      (dateA.getFullYear() === dateB.getFullYear() && dateA.getMonth() > dateB.getMonth()) ||
+      (
+        dateA.getFullYear() === dateB.getFullYear() &&
+        dateA.getMonth() === dateB.getMonth() &&
+        dateA.getDate() >= dateB.getDate()
+      )
+    );
+  }
+
   const now = new Date();
   const startDateObj = currentStartDate ? new Date(currentStartDate) : null;
-  const isTournamentStarted = startDateObj && now >= startDateObj;
+  const isTournamentStarted = startDateObj && isSameOrPastDay(now, startDateObj);
+
 
 
   const numberOfMatches = matchSchedule.length;
