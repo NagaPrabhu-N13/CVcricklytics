@@ -905,7 +905,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                   </div>
                 </div>
                 
-                <div className="w-full h-64 md:h-96 rounded-lg bg-yellow-300 m-3 md:m-5 relative overflow-hidden">
+                <div className="w-full h-64 md:h-96 rounded-lg m-3 md:m-5 relative overflow-hidden">
                   {userStories.length > 0 ? (
                     <>
                       {userStories[currentStoryIndex].type === 'image' ? (
@@ -1084,15 +1084,22 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
           style={{ height: "calc(100vh - 4rem)" }}
         >
           <div ref={stickyHeaderRef} className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
-              <div className="w-full md:w-[50%] flex justify-center text-white text-sm md:text-xl">
-                <div className="flex gap-2 md:gap-3 md:ml-5 overflow-x-auto whitespace-nowrap scrollbar-hide px-2">
-                  {userProfile && (
-                    <div
-                      key={userProfile.uid}
-                      className="relative profile-image-container inline-block"
-                      id="user-profile-image-container"
-                    >
+           <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
+  <div className="w-full md:w-[50%] flex justify-center text-white text-sm md:text-xl">
+    <div className="flex gap-2 md:gap-3 md:ml-5 overflow-x-auto whitespace-nowrap scrollbar-hide px-2 [-ms-overflow-style:none] [scrollbar-width:none]">
+      {/* Webkit browsers */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      
+      {userProfile && (
+        <div
+          key={userProfile.uid}
+          className="relative profile-image-container inline-block"
+          id="user-profile-image-container"
+        >
                       <button
                         className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white flex items-center justify-center"
                         style={{
@@ -1128,13 +1135,13 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                     </div>
                   )}
 
-                  {followersData
-                    .filter((f) => f.isFollowing)
-                    .map((follower) => (
-                      <div
-                        key={follower.id}
-                        className="relative profile-image-container inline-block"
-                      >
+                   {followersData
+        .filter((f) => f.isFollowing)
+        .map((follower) => (
+          <div
+            key={follower.id}
+            className="relative profile-image-container inline-block"
+          >
                         <button
                           className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center flex items-center justify-center"
                           style={{
