@@ -1065,7 +1065,7 @@ const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
                 Contacts
               </button>
             </div>
-            <FaBell className="cursor-pointer hover:scale-110" size={24} />
+            <FaBell className="cursor-pointer hover:scale-110" size={24} onClick={() => navigate('/notifications')}/>
 
             <div className="relative">
               <FaComment

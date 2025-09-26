@@ -1,4 +1,3 @@
-// src/pages/Message.jsx
 import React, { useState, useEffect } from "react";
 import { FaSearch, FaPaperPlane, FaChevronLeft, FaEllipsisV } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -11,8 +10,6 @@ const Message = () => {
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [primaryChats, setPrimaryChats] = useState([]);
-  const [requestsChats, setRequestsChats] = useState([]); // Placeholder for requests
-  const [generalChats, setGeneralChats] = useState([]); // Placeholder for general
   const db = getFirestore();
   const auth = getAuth();
 
@@ -55,13 +52,6 @@ const Message = () => {
     fetchFollowing();
   }, []);
 
-  // Chat data structure (requests and general are still placeholders)
-  const chatData = {
-    primary: primaryChats,
-    requests: requestsChats, // Implement fetching if needed
-    general: generalChats // Implement fetching if needed
-  };
-
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       console.log("Message sent:", messageInput);
@@ -70,7 +60,7 @@ const Message = () => {
   };
 
   // Filter chats based on search query
-  const filteredChats = chatData[activeChatTab].filter(chat =>
+  const filteredChats = primaryChats.filter(chat =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -107,23 +97,6 @@ const Message = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-
-        {/* Chat Tabs */}
-        <div className="flex border-b border-[#004e92]/50 mb-4">
-          {['primary', 'requests', 'general'].map((tab) => (
-            <button
-              key={tab}
-              className={`flex-1 py-2 text-sm text-center font-medium capitalize transition-colors ${
-                activeChatTab === tab 
-                  ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' 
-                  : 'text-[#5DE0E6]/60 hover:text-[#5DE0E6]'
-              }`}
-              onClick={() => setActiveChatTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
         </div>
 
         {/* Chat List */}
@@ -179,11 +152,7 @@ const Message = () => {
           ) : (
             <div className="text-center py-10">
               <p className="text-[#5DE0E6]/70">
-                {activeChatTab === 'requests'
-                  ? "No message requests"
-                  : searchQuery
-                    ? "No matches found"
-                    : "No messages yet"}
+                {searchQuery ? "No matches found" : "No messages yet"}
               </p>
             </div>
           )}

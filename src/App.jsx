@@ -73,6 +73,7 @@ import Match from './pages/Match';
 import Insights from './components/yogesh/LandingPage/Insights';
 import Subscription from './components/pawan/Subscription';
 import SubscriptionSuccess from './components/pawan/SubscriptionSuccess';
+import Notifications from './components/pawan/Notifications'
 
 
 import PendingTournaments from './components/kumar/pendingTournament';
@@ -257,6 +258,7 @@ function App() {
           <Route path="/termsandconditions" element={<Termsandconditions/>} />
           <Route path="/ChatMessage/:id" element={<ChatMessage/>} />
           <Route path="/tournamentStats" element={<TournamentStats />} />
+          <Route path="/notifications" element={<Notifications />} />
 
 
 
